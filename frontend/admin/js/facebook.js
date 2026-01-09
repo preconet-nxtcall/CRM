@@ -38,10 +38,19 @@ class FacebookManager {
 
     async checkConnectionStatus() {
         try {
-            // Using auth.fetchWithAuth from auth.js, which handles the Token
-            const res = await auth.fetchWithAuth('/api/facebook/status');
-            if (res && res.connected) { // Added null check
-                this.showConnected(res.page);
+            // Using auth.makeAuthenticatedRequest from auth.js, which handles the Token
+            const res = await auth.makeAuthenticatedRequest('/api/facebook/status');
+
+            // `makeAuthenticatedRequest` returns the Response object, we need to parse JSON
+            // But checking auth.js, it returns `resp` which is the fetch response object (or null).
+            // Wait, looking at auth.js: `return resp;`. So we need to await .json().
+            if (res) {
+                const data = await res.json();
+                if (data && data.connected) {
+                    this.showConnected(data.page);
+                } else {
+                    this.showDisconnected();
+                }
             } else {
                 this.showDisconnected();
             }
@@ -112,15 +121,18 @@ class FacebookManager {
                 page_access_token: page.access_token
             };
 
-            const response = await auth.fetchWithAuth('/api/facebook/connect', {
+            const response = await auth.makeAuthenticatedRequest('/api/facebook/connect', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
 
-            if (response && response.message) { // Added null check
-                alert("Connected Successfully!");
-                this.showConnected({ name: page.name, id: page.id });
+            if (response) {
+                const data = await response.json();
+                if (data && data.message) {
+                    alert("Connected Successfully!");
+                    this.showConnected({ name: page.name, id: page.id });
+                }
             }
         } catch (e) {
             console.error("Error connecting page", e);
@@ -131,10 +143,13 @@ class FacebookManager {
     async disconnect() {
         if (confirm("Are you sure you want to disconnect your Facebook Page? Lead sync will stop.")) {
             try {
-                await auth.fetchWithAuth('/api/facebook/disconnect', {
+                const resp = await auth.makeAuthenticatedRequest('/api/facebook/disconnect', {
                     method: 'POST'
                 });
-                this.showDisconnected();
+                if (resp && resp.ok) {
+                    this.showDisconnected();
+                    window.location.reload();
+                }
             } catch (e) {
                 console.error("Error disconnecting", e);
                 alert("Failed to disconnect.");
