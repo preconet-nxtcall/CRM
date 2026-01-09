@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: call-manager-pro
+    env: python
+    buildCommand: ./build.sh
+    startCommand: gunicorn wsgi:app --bind 0.0.0.0:10000
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.0
+      - key: SECRET_KEY
+        generateValue: true
+    autoDeploy: true
+    plan: free
+
+databases:
+  - name: call-manager-db
+    plan: free
+    databaseName: callmanager
+    user: callmanager
+
+envVarGroups:
+  - name: python-settings
+    envVars:
+      - key: SQLALCHEMY_DATABASE_URI
+        fromDatabase:
+          name: call-manager-db
+          property: connectionString

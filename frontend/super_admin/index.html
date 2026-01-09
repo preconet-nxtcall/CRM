@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>AI-Powered Call Tracking Software for Sales Teams</title>
+    <link rel="shortcut icon" href="../images/favicon.png" type="image/x-icon">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            dark: '#111827', // Sidebar bg
+                            primary: '#3B82F6', // Blue accent
+                            success: '#10B981', // Green accent
+                            warning: '#F59E0B', // Yellow accent
+                            danger: '#EF4444', // Red accent
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link rel="stylesheet" href="css/style.css">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+
+        /* Sidebar Transition */
+        #sidebar {
+            transition: transform 0.3s ease-in-out;
+            z-index: 50;
+        }
+
+        @media (max-width: 1023px) {
+            #sidebar {
+                transform: translateX(-100%);
+                position: fixed;
+                height: 100%;
+            }
+
+            #sidebar.active {
+                transform: translateX(0);
+            }
+        }
+
+        /* Overlay */
+        #overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 40;
+            backdrop-filter: blur(2px);
+        }
+
+        #overlay.active {
+            display: block;
+        }
+
+        /* Card Hover Effects */
+        .hover-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .hover-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Utility for hiding sections */
+        .hidden-section {
+            display: none !important;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 text-gray-800 antialiased">
+
+    <div id="overlay" aria-hidden="true"></div>
+
+    <div class="flex h-screen overflow-hidden">
+
+        <!-- SIDEBAR -->
+        <aside id="sidebar" class="w-64 bg-gray-900 text-white flex flex-col shadow-2xl">
+            <!-- Logo Area -->
+            <div class="h-16 flex items-center px-6 border-b border-gray-800 bg-gray-900">
+                <div class="flex items-center gap-3">
+                    <div
+                        class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/30">
+                        <i class="fas fa-shield-alt text-white text-sm"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-bold tracking-tight">Super<span class="text-blue-500">Admin</span></h1>
+                    </div>
+                </div>
+                <button id="closeSidebar" class="lg:hidden ml-auto text-gray-400 hover:text-white">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <!-- Navigation -->
+            <nav class="flex-1 px-3 py-6 space-y-1 overflow-y-auto">
+                <p class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Overview</p>
+
+                <a id="menuDashboard"
+                    class="menu-item group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg bg-blue-600 text-white shadow-md cursor-pointer">
+                    <i
+                        class="fas fa-chart-pie w-6 text-center text-blue-200 group-hover:text-white transition-colors"></i>
+                    <span class="ml-2">Dashboard</span>
+                </a>
+
+                <p class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mt-6 mb-2">Management</p>
+
+                <a id="menuAdmins"
+                    class="menu-item group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-all cursor-pointer">
+                    <i
+                        class="fas fa-users-cog w-6 text-center text-gray-400 group-hover:text-white transition-colors"></i>
+                    <span class="ml-2">Manage Admins</span>
+                </a>
+                <a id="menuFreeTrials"
+                    class="menu-item group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-all cursor-pointer">
+                    <i
+                        class="fas fa-list-alt w-6 text-center text-gray-400 group-hover:text-white transition-colors"></i>
+                    <span class="ml-2">Free Trial List</span>
+                </a>
+
+                <a id="menuExpiredAdmins"
+                    class="menu-item group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-all cursor-pointer">
+                    <i
+                        class="fas fa-user-times w-6 text-center text-gray-400 group-hover:text-white transition-colors"></i>
+                    <span class="ml-2">Expired Admins</span>
+                </a>
+            </nav>
+
+
+            <!-- User Profile / Logout -->
+            <div class="p-4 border-t border-gray-800 bg-gray-900">
+                <div class="flex items-center gap-3 mb-3">
+                    <div
+                        class="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-sm shadow-md">
+                        SA
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-white truncate" id="sidebar-super-admin-name">Super Admin</p>
+                        <p class="text-xs text-gray-500 truncate" id="sidebar-super-admin-email">superadmin@example.com
+                        </p>
+                    </div>
+                </div>
+                <button id="logoutBtn"
+                    class="w-full flex items-center justify-center px-4 py-2 border border-gray-700 rounded-lg shadow-sm text-sm font-medium text-gray-300 bg-gray-800 hover:bg-gray-700 hover:text-white transition-colors">
+                    <i class="fas fa-sign-out-alt mr-2"></i> Sign out
+                </button>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main id="mainContent" class="flex-1 overflow-y-auto bg-gray-50 relative pb-16 lg:pb-0">
+
+            <!-- Header -->
+            <header class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-30">
+                <div class="px-4 sm:px-6 py-4 flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <button id="openSidebar" class="lg:hidden text-gray-500 hover:text-gray-700 p-1">
+                            <i class="fas fa-bars text-xl"></i>
+                        </button>
+                        <div>
+                            <h2 id="pageTitle" class="text-xl font-bold text-gray-900">Dashboard</h2>
+                            <p id="pageSubtitle" class="text-xs text-gray-500 mt-0.5">System overview & statistics</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div class="text-right hidden sm:block">
+                            <p class="text-xs font-medium text-gray-900" id="currentDate">Loading...</p>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <div class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+
+                <!-- DASHBOARD SECTION -->
+                <section id="sectionDashboard" class="space-y-6">
+
+                    <!-- Stats Grid -->
+                    <div id="stats-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <!-- Content injected by JS -->
+                    </div>
+
+                    <!-- Recent Activity -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover-card flex flex-col">
+                        <h3 class="text-lg font-bold text-gray-900 mb-4">Recent System Activity</h3>
+                        <div id="recent-activity" class="flex-1 overflow-y-auto space-y-4 pr-2 max-h-[400px]">
+                            <!-- Content injected by JS -->
+                        </div>
+                    </div>
+
+                </section>
+
+                <!-- ADMINS SECTION -->
+                <section id="sectionAdmins" class="hidden-section space-y-6">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div
+                            class="p-6 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <h3 class="text-lg font-bold text-gray-900">Administrators</h3>
+                            <button onclick="document.getElementById('createAdminModal').classList.remove('hidden')"
+                                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                                <i class="fas fa-plus"></i> Create Admin
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm mobile-card-table">
+                                <thead class="bg-gray-50 text-gray-500 uppercase tracking-wider font-semibold">
+                                    <tr>
+                                        <th class="px-6 py-4">Admin Name</th>
+                                        <th class="px-6 py-4">Email</th>
+                                        <th class="px-6 py-4">User Limit</th>
+                                        <th class="px-6 py-4">Users Created</th>
+                                        <th class="px-6 py-4">Expiry Date</th>
+                                        <th class="px-6 py-4">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admins-table-body" class="divide-y divide-gray-100 bg-white">
+                                    <!-- Content injected by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- FREE TRIALS SECTION -->
+                <section id="sectionFreeTrials" class="hidden-section space-y-6">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div class="p-6 border-b border-gray-100 flex items-center justify-between">
+                            <h3 class="text-lg font-bold text-gray-900">Free Trial Requests</h3>
+                            <button onclick="window.freeTrialsManager.loadTrials()"
+                                class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                                <i class="fas fa-sync-alt"></i> Refresh
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm mobile-card-table">
+                                <thead class="bg-gray-50 text-gray-500 uppercase tracking-wider font-semibold">
+                                    <tr>
+                                        <th class="px-6 py-4">Name</th>
+                                        <th class="px-6 py-4">Work Email</th>
+                                        <th class="px-6 py-4">Company</th>
+                                        <th class="px-6 py-4">Phone</th>
+                                        <th class="px-6 py-4">Date</th>
+                                        <th class="px-6 py-4">Status</th>
+                                        <th class="px-6 py-4">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="free-trials-table-body" class="divide-y divide-gray-100 bg-white">
+                                    <!-- Content injected by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- EXPIRED ADMINS SECTION -->
+                <section id="sectionExpiredAdmins" class="hidden-section space-y-6">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div class="p-6 border-b border-gray-100 flex items-center justify-between">
+                            <h3 class="text-lg font-bold text-gray-900">Expired Admin Accounts</h3>
+                            <button onclick="window.expiredAdminsManager.loadExpiredAdmins()"
+                                class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                                <i class="fas fa-sync-alt"></i> Refresh
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm mobile-card-table">
+                                <thead class="bg-gray-50 text-gray-500 uppercase tracking-wider font-semibold">
+                                    <tr>
+                                        <th class="px-6 py-4">Admin Name</th>
+                                        <th class="px-6 py-4">Email</th>
+                                        <th class="px-6 py-4">Plan Expiry</th>
+                                        <th class="px-6 py-4">Status</th>
+                                        <th class="px-6 py-4">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="expired-admins-table-body" class="divide-y divide-gray-100 bg-white">
+                                    <!-- Content injected by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- View Users Modal -->
+    <div id="viewUsersModal"
+        class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div <div
+            class="bg-white rounded-xl shadow-2xl max-w-4xl w-full p-6 transform transition-all scale-100 flex flex-col max-h-[90vh] w-full mx-4 sm:mx-0">
+            <div class="flex justify-between items-center mb-6 shrink-0">
+                <div>
+                    <h3 class="text-xl font-bold text-gray-900">Admin Users</h3>
+                    <p class="text-sm text-gray-500" id="viewUsersAdminName">Viewing users for...</p>
+                </div>
+                <button onclick="document.getElementById('viewUsersModal').classList.add('hidden')"
+                    class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+
+            <div class="overflow-y-auto flex-1">
+                <table class="w-full text-left text-sm mobile-card-table">
+                    <thead class="bg-gray-50 text-gray-500 uppercase tracking-wider font-semibold sticky top-0">
+                        <tr>
+                            <th class="px-6 py-3">User Name</th>
+                            <th class="px-6 py-3">Email</th>
+                            <th class="px-6 py-3">Phone</th>
+                            <th class="px-6 py-3">Created</th>
+                            <th class="px-6 py-3">Last Login</th>
+                            <th class="px-6 py-3">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="viewUsersTableBody" class="divide-y divide-gray-100 bg-white">
+                        <!-- Content injected by JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="pt-6 border-t border-gray-100 mt-4 shrink-0 text-right">
+                <button onclick="document.getElementById('viewUsersModal').classList.add('hidden')"
+                    class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-4 py-2 rounded-lg transition-colors">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Admin Modal -->
+    <div id="createAdminModal"
+        class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div
+            class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 transform transition-all scale-100 w-full mx-4 sm:mx-0">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-gray-900">Create New Admin</h3>
+                <button onclick="document.getElementById('createAdminModal').classList.add('hidden')"
+                    class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+
+            <form id="createAdminForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                    <input id="adminName" type="text"
+                        class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                    <input id="adminEmail" type="email"
+                        class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required>
+                </div>
+                <!-- Row 2: User Limit & Expiry -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">User Limit</label>
+                        <input id="userLimit" type="number" value="10"
+                            class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>
+                        <input id="expiryDate" type="date"
+                            class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            required>
+                    </div>
+                </div>
+
+                <!-- Row 3: Password & Retype -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                        <div class="relative">
+                            <input id="adminPassword" type="password"
+                                class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-10"
+                                required>
+                            <button type="button" onclick="togglePassword('adminPassword', 'eyeIcon1')"
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none">
+                                <i id="eyeIcon1" class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Re-type Password</label>
+                        <div class="relative">
+                            <input id="adminConfirmPassword" type="password"
+                                class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-10"
+                                required>
+                            <button type="button" onclick="togglePassword('adminConfirmPassword', 'eyeIcon2')"
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none">
+                                <i id="eyeIcon2" class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-4">
+                    <button type="submit"
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg shadow-md transition-all">
+                        Create Admin Account
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Admin Modal -->
+    <div id="editAdminModal"
+        class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div
+            class="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 transform transition-all scale-100 w-full mx-4 sm:mx-0">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-gray-900">Edit Admin</h3>
+                <button onclick="document.getElementById('editAdminModal').classList.add('hidden')"
+                    class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+
+            <form id="editAdminForm" class="space-y-4">
+                <input type="hidden" id="editAdminId">
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">User Limit</label>
+                    <input id="editUserLimit" type="number"
+                        class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>
+                    <input id="editExpiryDate" type="date"
+                        class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required>
+                </div>
+
+                <div class="pt-4">
+                    <button type="submit"
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg shadow-md transition-all">
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="notificationArea" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/super_admin/js/auth.js"></script>
+    <script src="/super_admin/js/dashboard.js"></script>
+    <script src="/super_admin/js/admins.js"></script>
+    <script src="/super_admin/js/free_trials.js"></script>
+    <script src="/super_admin/js/expired_admins.js"></script>
+
+    <script>
+        // Set current date
+        const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', dateOptions);
+
+        // Initialize Managers
+        window.dashboard = window.dashboard || new DashboardManager();
+        window.adminsManager = window.adminsManager || new AdminsManager();
+        window.activityLogsManager = window.activityLogsManager || new ActivityLogsManager();
+        window.freeTrialsManager = window.freeTrialsManager || new FreeTrialsManager();
+        window.expiredAdminsManager = window.expiredAdminsManager || new ExpiredAdminsManager();
+
+        // DOM Elements
+        const menuItems = {
+            dashboard: document.getElementById('menuDashboard'),
+            admins: document.getElementById('menuAdmins'),
+            freeTrials: document.getElementById('menuFreeTrials'),
+            expiredAdmins: document.getElementById('menuExpiredAdmins'),
+        };
+
+        const sections = {
+            dashboard: document.getElementById('sectionDashboard'),
+            admins: document.getElementById('sectionAdmins'),
+            freeTrials: document.getElementById('sectionFreeTrials'),
+            expiredAdmins: document.getElementById('sectionExpiredAdmins'),
+        };
+
+        const pageTitle = document.getElementById('pageTitle');
+        const pageSubtitle = document.getElementById('pageSubtitle');
+
+        // Helper to hide all sections
+        function hideAll() {
+            Object.values(sections).forEach(el => el?.classList.add('hidden-section'));
+            Object.values(menuItems).forEach(el => {
+                el?.classList.remove('bg-blue-600', 'text-white', 'shadow-md');
+                el?.classList.add('text-gray-300', 'hover:bg-gray-800', 'hover:text-white');
+                const icon = el?.querySelector('i');
+                if (icon) {
+                    icon.classList.remove('text-blue-200');
+                    icon.classList.add('text-gray-400');
+                }
+            });
+        }
+
+        // Helper to activate menu item
+        function activateMenu(key, title, subtitle) {
+            hideAll();
+            sections[key]?.classList.remove('hidden-section');
+
+            const btn = menuItems[key];
+            if (btn) {
+                btn.classList.remove('text-gray-300', 'hover:bg-gray-800', 'hover:text-white');
+                btn.classList.add('bg-blue-600', 'text-white', 'shadow-md');
+                const icon = btn.querySelector('i');
+                if (icon) {
+                    icon.classList.remove('text-gray-400');
+                    icon.classList.add('text-blue-200');
+                }
+            }
+
+            // Activate mobile nav item
+            document.querySelectorAll('.mobile-nav-item').forEach(el => el.classList.remove('active'));
+            const mobileBtn = document.getElementById('mobileNav' + key.charAt(0).toUpperCase() + key.slice(1));
+            if (mobileBtn) {
+                mobileBtn.classList.add('active');
+            }
+
+            if (pageTitle) pageTitle.textContent = title;
+            if (pageSubtitle) pageSubtitle.textContent = subtitle;
+
+            // Close sidebar on mobile
+            if (window.innerWidth < 1024) {
+                document.getElementById('sidebar')?.classList.remove('active');
+                document.getElementById('overlay')?.classList.remove('active');
+            }
+        }
+
+        // Event Listeners
+        menuItems.dashboard.onclick = () => {
+            activateMenu('dashboard', 'Dashboard', 'System overview & statistics');
+            if (dashboard?.loadStats) dashboard.loadStats();
+            // if (activityLogsManager?.loadLogs) activityLogsManager.loadLogs(); // Conflict with dashboard.js rendering
+        };
+
+        menuItems.admins.onclick = () => {
+            activateMenu('admins', 'Manage Admins', 'Create & manage administrator accounts');
+            if (adminsManager?.loadAdmins) adminsManager.loadAdmins();
+        };
+
+        menuItems.freeTrials.onclick = () => {
+            activateMenu('freeTrials', 'Free Trial Requests', 'View and manage free trial submissions');
+            if (window.freeTrialsManager?.loadTrials) window.freeTrialsManager.loadTrials();
+        };
+
+        menuItems.expiredAdmins.onclick = () => {
+            activateMenu('expiredAdmins', 'Expired Admins', 'List of all expired administrator accounts');
+            if (window.expiredAdminsManager?.loadExpiredAdmins) window.expiredAdminsManager.loadExpiredAdmins();
+        };
+
+        // Sidebar Toggles
+        document.getElementById('openSidebar')?.addEventListener('click', () => {
+            document.getElementById('sidebar')?.classList.add('active');
+            document.getElementById('overlay')?.classList.add('active');
+        });
+        document.getElementById('closeSidebar')?.addEventListener('click', () => {
+            document.getElementById('sidebar')?.classList.remove('active');
+            document.getElementById('overlay')?.classList.remove('active');
+        });
+        document.getElementById('overlay')?.addEventListener('click', () => {
+            document.getElementById('sidebar')?.classList.remove('active');
+            document.getElementById('overlay')?.classList.remove('active');
+        });
+
+        // Logout
+        document.getElementById('logoutBtn')?.addEventListener('click', () => auth.logout());
+
+        // Init
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!auth.getToken()) {
+                window.location.href = "/super_admin/login";
+                return;
+            }
+            // Trigger default load
+            menuItems.dashboard.click();
+        });
+
+        // Toggle Password Visibility
+        window.togglePassword = function (inputId, iconId) {
+            const input = document.getElementById(inputId);
+            const icon = document.getElementById(iconId);
+            if (!input || !icon) return;
+
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        };
+
+        // Form Submit (Create Admin)
+        document.getElementById('createAdminForm')?.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (adminsManager?.createAdmin) adminsManager.createAdmin();
+        });
+
+        // Form Submit (Edit Admin)
+        document.getElementById('editAdminForm')?.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (adminsManager?.updateAdmin) adminsManager.updateAdmin();
+        });
+
+    </script>
+
+    <!-- Mobile Bottom Navigation -->
+    <div class="mobile-bottom-nav">
+        <a id="mobileNavDashboard" class="mobile-nav-item active" href="#"
+            onclick="document.getElementById('menuDashboard').click()">
+            <i class="fas fa-chart-pie"></i>
+            <span>Dashboard</span>
+        </a>
+        <a id="mobileNavAdmins" class="mobile-nav-item" href="#"
+            onclick="document.getElementById('menuAdmins').click()">
+            <i class="fas fa-users-cog"></i>
+            <span>Admins</span>
+        </a>
+        <a id="mobileNavTrials" class="mobile-nav-item" href="#"
+            onclick="document.getElementById('menuFreeTrials').click()">
+            <i class="fas fa-list-alt"></i>
+            <span>Trials</span>
+        </a>
+        <a id="mobileNavExpired" class="mobile-nav-item" href="#"
+            onclick="document.getElementById('menuExpiredAdmins').click()">
+            <i class="fas fa-user-times"></i>
+            <span>Expired</span>
+        </a>
+        <a id="mobileNavMore" class="mobile-nav-item" href="#" onclick="document.getElementById('openSidebar').click()">
+            <i class="fas fa-bars"></i>
+            <span>More</span>
+        </a>
+    </div>
+</body>
+
+</html>

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Repair Tool</title>
+    <link rel="shortcut icon" href="../images/favicon.png" type="image/x-icon">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 h-screen flex items-center justify-center">
+
+    <div class="bg-white p-8 rounded-xl shadow-lg max-w-md w-full text-center">
+        <div class="mb-6">
+            <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+            </div>
+            <h1 class="text-2xl font-bold text-gray-900 mb-2">Database Schema Mismatch</h1>
+            <p class="text-gray-600">The application detected missing columns in your database. This tool will attempt
+                to fix the schema automatically.</p>
+        </div>
+
+        <div id="status" class="mb-6 hidden">
+            <div class="p-4 rounded-lg bg-gray-50 text-left text-sm font-mono overflow-auto max-h-40" id="statusText">
+            </div>
+        </div>
+
+        <button id="repairBtn"
+            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-colors flex items-center justify-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            Run Database Repair
+        </button>
+
+        <a href="/super_admin/" id="backBtn"
+            class="hidden mt-4 inline-block text-blue-600 hover:text-blue-800 text-sm font-medium">
+            ← Back to Dashboard
+        </a>
+    </div>
+
+    <script>
+        // Token management
+        function getToken() {
+            return sessionStorage.getItem("super_admin_token") || sessionStorage.getItem("admin_token");
+        }
+
+        document.getElementById('repairBtn').addEventListener('click', async () => {
+            const btn = document.getElementById('repairBtn');
+            const statusDiv = document.getElementById('status');
+            const statusText = document.getElementById('statusText');
+            const backBtn = document.getElementById('backBtn');
+
+            // UI Loading State
+            btn.disabled = true;
+            btn.innerHTML = '<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Repairing...';
+            statusDiv.classList.remove('hidden');
+            statusText.textContent = "Starting repair process...";
+            statusText.className = "p-4 rounded-lg bg-blue-50 text-blue-800 text-left text-sm font-mono";
+
+            try {
+                const token = getToken();
+                if (!token) {
+                    throw new Error("Authentication required. Please log in as Admin/Super Admin first.");
+                }
+
+                const response = await fetch('/api/fix/all', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        super_admin_key: "MANNAN_DB_FIX_2025"
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    statusText.className = "p-4 rounded-lg bg-green-50 text-green-800 text-left text-sm font-mono";
+                    statusText.innerHTML = `<strong>Success!</strong><br>${data.changes.length > 0 ? data.changes.join('<br>') : 'No changes needed, database is up to date.'}`;
+                    btn.classList.add('hidden');
+                    backBtn.classList.remove('hidden');
+                } else {
+                    throw new Error(data.error || "Repair failed");
+                }
+
+            } catch (error) {
+                statusText.className = "p-4 rounded-lg bg-red-50 text-red-800 text-left text-sm font-mono";
+                statusText.textContent = `Error: ${error.message}`;
+                btn.disabled = false;
+                btn.innerHTML = 'Retry Repair';
+            }
+        });
+    </script>
+</body>
+
+</html>

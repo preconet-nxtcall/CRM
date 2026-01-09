@@ -1,0 +1,60 @@
+name: Auto Deploy to Server
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create deployment package
+        run: |
+          tar -czf /tmp/deploy_pkg.tar.gz .
+          mv /tmp/deploy_pkg.tar.gz .
+
+      - name: Create deployment package
+        run: |
+          tar -czf /tmp/deploy_pkg.tar.gz .
+          mv /tmp/deploy_pkg.tar.gz .
+
+      - name: Pre-cleanup on Server
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          password: ${{ secrets.PASSWORD }}
+          script: |
+            rm -rf /var/www/nxtcall/deploy_pkg.tar.gz
+
+      - name: Copy package to server
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          password: ${{ secrets.PASSWORD }}
+          source: "deploy_pkg.tar.gz"
+          target: "/var/www/nxtcall"
+
+      - name: Deploy on Server
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          password: ${{ secrets.PASSWORD }}
+          script: |
+            set -e
+            cd /var/www/nxtcall
+            
+            echo "📦 Extracting package..."
+            tar -xzf deploy_pkg.tar.gz
+            rm -f deploy_pkg.tar.gz
+            
+            echo "🔧 Running build.sh..."
+            chmod +x build.sh
+            ./build.sh
