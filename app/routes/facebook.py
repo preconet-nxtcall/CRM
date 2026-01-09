@@ -65,6 +65,20 @@ def connect_facebook_page():
         if existing and existing.admin_id != admin.id:
             return jsonify({"error": "This page is already connected to another account."}), 400
 
+        # Subscribe App to Page Webhooks (subscribed_apps)
+        try:
+            sub_url = f"https://graph.facebook.com/v18.0/{page_id}/subscribed_apps"
+            sub_resp = requests.post(sub_url, params={
+                "access_token": page_access_token,
+                "subscribed_fields": "leadgen"
+            })
+            if sub_resp.status_code != 200:
+                print(f"Warning: Failed to subscribe app to page: {sub_resp.text}")
+            else:
+                print(f"Successfully subscribed app to page {page_id}")
+        except Exception as e:
+            print(f"Error subscribing app to page: {e}")
+
         # Update or Create
         fb_page = FacebookPage.query.filter_by(admin_id=admin.id).first()
         
@@ -204,6 +218,53 @@ def process_lead(fb_page, leadgen_id, form_id):
     email = parsed_data.get('email')
     phone = parsed_data.get('phone_number')
 
+    # ---------------------------------------------------------
+    # AGENT ASSIGNMENT LOGIC (ROUND ROBIN)
+    # ---------------------------------------------------------
+    assigned_user_id = None
+    try:
+        # 1. Get all active users (users) for this Admin
+        from app.models import User 
+        
+        active_agents = User.query.filter_by(
+            admin_id=fb_page.admin_id, 
+            status='active',
+            is_suspended=False
+        ).order_by(User.id).all()
+
+        if active_agents:
+            # 2. Find the last assigned lead for this admin to determine sequence
+            last_lead = Lead.query.filter_by(admin_id=fb_page.admin_id)\
+                .filter(Lead.assigned_to_id.isnot(None))\
+                .order_by(Lead.created_at.desc())\
+                .first()
+
+            if not last_lead or not last_lead.assigned_to_id:
+                # No previous assignment, assign to first agent
+                assigned_user_id = active_agents[0].id
+            else:
+                # Find index of last agent
+                last_agent_id = last_lead.assigned_to_id
+                
+                # Check if last agent is still in the active list
+                agent_ids = [agent.id for agent in active_agents]
+                
+                if last_agent_id in agent_ids:
+                    current_index = agent_ids.index(last_agent_id)
+                    next_index = (current_index + 1) % len(agent_ids)
+                    assigned_user_id = agent_ids[next_index]
+                else:
+                    # Last agent removed/inactive, start over
+                    assigned_user_id = agent_ids[0]
+            
+            print(f"Assigning Lead to Agent ID: {assigned_user_id}")
+        else:
+            print("No active agents found for assignment.")
+
+    except Exception as e:
+        print(f"Error in assignment logic: {e}")
+        # Continue saving lead even if assignment fails
+
     # Save to DB
     new_lead = Lead(
         admin_id=fb_page.admin_id,
@@ -214,9 +275,10 @@ def process_lead(fb_page, leadgen_id, form_id):
         phone=phone,
         source="facebook",
         status="new",
+        assigned_to_id=assigned_user_id,
         custom_fields=parsed_data
     )
     
     db.session.add(new_lead)
     db.session.commit()
-    print(f"Lead saved successfully: {name} ({phone})")
+    print(f"Lead saved successfully: {name} ({phone}) -> Assigned to: {assigned_user_id}")
