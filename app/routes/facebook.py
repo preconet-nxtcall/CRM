@@ -4,13 +4,13 @@ from app.models import db, FacebookPage, Lead, Admin
 from app.models import now
 import requests
 
-facebook_bp = Blueprint('facebook', __name__)
+bp = Blueprint('facebook', __name__)
 
 # =======================================================
 #  CONNECT FLOW (Admin Context)
 # =======================================================
 
-@facebook_bp.route('/api/facebook/status', methods=['GET'])
+@bp.route('/api/facebook/status', methods=['GET'])
 @jwt_required()
 def get_facebook_status():
     """
@@ -39,7 +39,7 @@ def get_facebook_status():
         return jsonify({"error": str(e)}), 500
 
 
-@facebook_bp.route('/api/facebook/connect', methods=['POST'])
+@bp.route('/api/facebook/connect', methods=['POST'])
 @jwt_required()
 def connect_facebook_page():
     """
@@ -85,7 +85,7 @@ def connect_facebook_page():
         return jsonify({"error": str(e)}), 500
 
 
-@facebook_bp.route('/api/facebook/disconnect', methods=['POST'])
+@bp.route('/api/facebook/disconnect', methods=['POST'])
 @jwt_required()
 def disconnect_facebook_page():
     """
@@ -112,7 +112,7 @@ def disconnect_facebook_page():
 #  WEBHOOK (Server Context)
 # =======================================================
 
-@facebook_bp.route('/api/facebook/webhook', methods=['GET'])
+@bp.route('/api/facebook/webhook', methods=['GET'])
 def verify_webhook():
     """
     Facebook Verification Handshake
@@ -133,7 +133,7 @@ def verify_webhook():
     
     return 'Hello Facebook', 200
 
-@facebook_bp.route('/api/facebook/webhook', methods=['POST'])
+@bp.route('/api/facebook/webhook', methods=['POST'])
 def handle_webhook():
     """
     Handle incoming lead events.
