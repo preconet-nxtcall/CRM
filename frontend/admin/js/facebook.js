@@ -19,7 +19,7 @@ class FacebookManager {
 
         window.fbAsyncInit = function () {
             FB.init({
-                appId: '1134006151478170', // Replace with your actual App ID if different
+                appId: '1612201439775876', // Replace with your actual App ID if different
                 cookie: true,
                 xfbml: true,
                 version: 'v18.0'
@@ -96,7 +96,7 @@ class FacebookManager {
                 }
 
                 await this.connectPageToBackend(selectedPage);
-                
+
             } else {
                 console.error("Error fetching pages", response.error);
                 alert("Failed to fetch pages from Facebook: " + (response.error ? response.error.message : "Unknown error"));
@@ -130,7 +130,7 @@ class FacebookManager {
 
     async disconnect() {
         if (confirm("Are you sure you want to disconnect your Facebook Page? Lead sync will stop.")) {
-             try {
+            try {
                 await auth.fetchWithAuth('/api/facebook/disconnect', {
                     method: 'POST'
                 });
