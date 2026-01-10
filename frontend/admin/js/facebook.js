@@ -73,7 +73,7 @@ class FacebookManager {
             } else {
                 console.log('User cancelled login or did not fully authorize.');
             }
-        }, { scope: 'pages_show_list,pages_manage_metadata,pages_read_engagemen,leads_retrieval' });
+        }, { scope: 'pages_show_list,pages_manage_metadata,pages_read_engagement,leads_retrieval' });
     }
 
     async handleLoginSuccess(authResponse) {
