@@ -19,7 +19,7 @@ class FacebookManager {
 
         window.fbAsyncInit = function () {
             FB.init({
-                appId: '1612201439775876', // Replace with your actual App ID if different
+                appId: '1612201439775876', 
                 cookie: true,
                 xfbml: true,
                 version: 'v18.0'
@@ -73,7 +73,7 @@ class FacebookManager {
             } else {
                 console.log('User cancelled login or did not fully authorize.');
             }
-        }, { scope: 'pages_show_list,pages_manage_metadata,pages_read_engagement' });
+        }, { scope: 'pages_show_list,pages_manage_metadata,pages_read_engagemen,leads_retrieval' });
     }
 
     async handleLoginSuccess(authResponse) {
