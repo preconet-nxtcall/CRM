@@ -19,10 +19,10 @@ class FacebookManager {
 
         window.fbAsyncInit = function () {
             FB.init({
-                appId: '1612201439775876', // Replace with your actual App ID if different
+                appId: '1590436318627463', // New Business App ID
                 cookie: true,
                 xfbml: true,
-                version: 'v18.0'
+                version: 'v24.0'
             });
             console.log("FB SDK Loaded");
         };

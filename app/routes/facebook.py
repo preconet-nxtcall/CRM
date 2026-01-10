@@ -3,12 +3,40 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.models import db, FacebookPage, Lead, Admin
 from app.models import now
 import requests
+import hmac
+import hashlib
 
 bp = Blueprint('facebook', __name__)
 
 # =======================================================
 #  CONNECT FLOW (Admin Context)
 # =======================================================
+
+# =======================================================
+#  HELPER FUNCTIONS
+# =======================================================
+
+def verify_fb_signature(req):
+    """
+    Verify X-Hub-Signature-256 header.
+    """
+    signature = req.headers.get("X-Hub-Signature-256")
+    app_secret = current_app.config.get("FACEBOOK_APP_SECRET")
+    
+    if not signature or not app_secret:
+        # Log warning if secret not configured, but for security, fail if signature missing
+        if not app_secret:
+            current_app.logger.warning("WARNING: FACEBOOK_APP_SECRET not set in config.")
+        return False
+
+    expected = "sha256=" + hmac.new(
+        app_secret.encode(),
+        msg=req.data,
+        digestmod=hashlib.sha256
+    ).hexdigest()
+
+    return hmac.compare_digest(signature, expected)
+
 
 @bp.route('/api/facebook/status', methods=['GET'])
 @jwt_required()
@@ -67,17 +95,17 @@ def connect_facebook_page():
 
         # Subscribe App to Page Webhooks (subscribed_apps)
         try:
-            sub_url = f"https://graph.facebook.com/v18.0/{page_id}/subscribed_apps"
+            sub_url = f"https://graph.facebook.com/v24.0/{page_id}/subscribed_apps"
             sub_resp = requests.post(sub_url, params={
                 "access_token": page_access_token,
                 "subscribed_fields": "leadgen"
-            })
+            }, timeout=10)
             if sub_resp.status_code != 200:
-                print(f"Warning: Failed to subscribe app to page: {sub_resp.text}")
+                current_app.logger.warning(f"Failed to subscribe app to page: {sub_resp.text}")
             else:
-                print(f"Successfully subscribed app to page {page_id}")
+                current_app.logger.info(f"Successfully subscribed app to page {page_id}")
         except Exception as e:
-            print(f"Error subscribing app to page: {e}")
+            current_app.logger.error(f"Error subscribing app to page: {e}")
 
         # Update or Create
         fb_page = FacebookPage.query.filter_by(admin_id=admin.id).first()
@@ -139,10 +167,10 @@ def verify_webhook():
 
     if mode and token:
         if mode == 'subscribe' and token == verify_token:
-            print("WEBHOOK_VERIFIED")
+            current_app.logger.info("WEBHOOK_VERIFIED")
             return challenge, 200
         else:
-            print(f"WEBHOOK_VERIFICATION_FAILED: Mode={mode}, Token={token}, Expected={verify_token}")
+            current_app.logger.warning(f"WEBHOOK_VERIFICATION_FAILED: Mode={mode}, Token={token}, Expected={verify_token}")
             return 'Verification Failed', 403
     
     return 'Hello Facebook', 200
@@ -152,8 +180,12 @@ def handle_webhook():
     """
     Handle incoming lead events.
     """
+    if not verify_fb_signature(request):
+        current_app.logger.warning("WEBHOOK_SIG_CHECK_FAILED")
+        return "Invalid signature", 403
+
     data = request.json
-    print(f"FB_WEBHOOK_RECEIVED: {data}")
+    current_app.logger.info(f"FB_WEBHOOK_RECEIVED: {data}")
 
     if data.get('object') == 'page':
         for entry in data.get('entry', []):
@@ -169,14 +201,18 @@ def handle_webhook():
                 if change.get('field') == 'leadgen':
                     value = change.get('value', {})
                     leadgen_id = value.get('leadgen_id')
+                    if leadgen_id.startswith("444"):
+                        current_app.logger.info(f"Skipping Test Lead {leadgen_id}")
+                        continue
+                    
                     form_id = value.get('form_id')
                     
-                    print(f"Processing Lead: Page={page_id}, LeadGenID={leadgen_id} for Admin={fb_page.admin_id}")
+                    current_app.logger.info(f"Processing Lead: Page={page_id}, LeadGenID={leadgen_id} for Admin={fb_page.admin_id}")
                     
                     try:
                         process_lead(fb_page, leadgen_id, form_id)
                     except Exception as e:
-                        print(f"Error processing lead: {e}")
+                        current_app.logger.error(f"Error processing lead: {e}")
 
         return 'EVENT_RECEIVED', 200
     
@@ -190,23 +226,32 @@ def process_lead(fb_page, leadgen_id, form_id):
     # Check if we already have this lead
     existing_lead = Lead.query.filter_by(facebook_lead_id=leadgen_id).first()
     if existing_lead:
-        print(f"Lead {leadgen_id} already exists. Skipping.")
+        current_app.logger.info(f"Lead {leadgen_id} already exists. Skipping.")
         return
 
     # Fetch from Graph API
     access_token = fb_page.page_access_token
-    url = f"https://graph.facebook.com/v18.0/{leadgen_id}?fields=created_time,id,ad_id,form_id,field_data,campaign_name,platform,retailer_item_id&access_token={access_token}"
+    url = f"https://graph.facebook.com/v24.0/{leadgen_id}?fields=created_time,id,ad_id,form_id,field_data,campaign_name,platform,retailer_item_id&access_token={access_token}"
     
-    resp = requests.get(url)
+    resp = requests.get(url, timeout=10)
     if resp.status_code != 200:
-        print(f"Failed to fetch lead data: {resp.text}")
+        current_app.logger.error(f"Failed to fetch lead data: {resp.text}")
         return
 
     lead_data = resp.json()
     field_data = lead_data.get('field_data', [])
     
+    if not field_data:
+        current_app.logger.warning("Lead data unavailable (likely pending App Review approval or missing permission)")
+        return
+    
     # Parse fields
     parsed_data = {}
+    
+    # Store ad_id if available
+    if lead_data.get('ad_id'):
+        parsed_data['ad_id'] = lead_data.get('ad_id')
+        
     for field in field_data:
         name = field.get('name')
         values = field.get('values', [])
@@ -257,12 +302,12 @@ def process_lead(fb_page, leadgen_id, form_id):
                     # Last agent removed/inactive, start over
                     assigned_user_id = agent_ids[0]
             
-            print(f"Assigning Lead to Agent ID: {assigned_user_id}")
+            current_app.logger.info(f"Assigning Lead to Agent ID: {assigned_user_id}")
         else:
-            print("No active agents found for assignment.")
+            current_app.logger.warning("No active agents found for assignment.")
 
     except Exception as e:
-        print(f"Error in assignment logic: {e}")
+        current_app.logger.error(f"Error in assignment logic: {e}")
         # Continue saving lead even if assignment fails
 
     # Save to DB
@@ -281,4 +326,4 @@ def process_lead(fb_page, leadgen_id, form_id):
     
     db.session.add(new_lead)
     db.session.commit()
-    print(f"Lead saved successfully: {name} ({phone}) -> Assigned to: {assigned_user_id}")
+    current_app.logger.info(f"Lead saved successfully: {name} ({phone}) -> Assigned to: {assigned_user_id}")
