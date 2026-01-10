@@ -68,12 +68,11 @@ class FacebookManager {
 
         FB.login((response) => {
             if (response.authResponse) {
-                console.log('Welcome! Fetching your information.... ');
                 this.handleLoginSuccess(response.authResponse);
-            } else {
-                console.log('User cancelled login or did not fully authorize.');
             }
-        }, { scope: 'pages_show_list,pages_manage_metadata,pages_read_engagement' });
+        }, {
+            scope: 'pages_show_list'
+        });
     }
 
     async handleLoginSuccess(authResponse) {
