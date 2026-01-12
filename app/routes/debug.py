@@ -1,4 +1,5 @@
 from flask import Blueprint, jsonify, current_app
+from sqlalchemy import text
 import os
 
 bp = Blueprint('debug', __name__, url_prefix='/api/debug')
@@ -37,17 +38,18 @@ def list_files():
 @bp.route('/init-db', methods=['GET'])
 def init_db():
     try:
-        from app.models import db, Lead, FacebookPage
+        from app.models import db
         # Import all models to ensure they are registered with SQLAlchemy
-        from app.models import User, Admin, SuperAdmin, CallHistory, Attendance, Followup
+        from app.models import User, Admin, SuperAdmin, FacebookPage, Lead, CallHistory, Attendance, Followup
         
-        # FORCE RESET LEADS TABLE to ensure schema is correct
-        # This fixes "UndefinedColumn: column leads.facebook_lead_id does not exist"
-        Lead.__table__.drop(db.engine, checkfirst=True)
-        # We might also need to update FacebookPage if that changed
-        # FacebookPage.__table__.drop(db.engine, checkfirst=True) 
+        # FORCE RESET LEADS TABLE via Raw SQL (Robuster for Postgres)
+        # This fixes the "UndefinedColumn" schema mismatch
+        with db.engine.connect() as conn:
+            conn.execute(text("DROP TABLE IF EXISTS leads CASCADE;"))
+            conn.commit()
+            print("Dropped leads table.")
         
         db.create_all()
-        return jsonify({"message": "Database tables (Leads) reset and verified successfully."})
+        return jsonify({"message": "Database tables (Leads) DROPPED and RE-CREATED successfully."})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
