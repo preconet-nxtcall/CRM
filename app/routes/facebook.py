@@ -325,16 +325,16 @@ def process_lead(fb_page, leadgen_id, form_id):
         if active_agents:
             # 2. Find the last assigned lead for this admin to determine sequence
             last_lead = Lead.query.filter_by(admin_id=fb_page.admin_id)\
-                .filter(Lead.assigned_to_id.isnot(None))\
+                .filter(Lead.assigned_to.isnot(None))\
                 .order_by(Lead.created_at.desc())\
                 .first()
 
-            if not last_lead or not last_lead.assigned_to_id:
+            if not last_lead or not last_lead.assigned_to:
                 # No previous assignment, assign to first agent
                 assigned_user_id = active_agents[0].id
             else:
                 # Find index of last agent
-                last_agent_id = last_lead.assigned_to_id
+                last_agent_id = last_lead.assigned_to
                 
                 # Check if last agent is still in the active list
                 agent_ids = [agent.id for agent in active_agents]
@@ -365,7 +365,7 @@ def process_lead(fb_page, leadgen_id, form_id):
         phone=phone,
         source="facebook",
         status="new",
-        assigned_to_id=assigned_user_id,
+        assigned_to=assigned_user_id,
         custom_fields=parsed_data
     )
     

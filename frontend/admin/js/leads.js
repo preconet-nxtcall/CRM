@@ -22,11 +22,16 @@ class LeadsManager {
                 this.renderTable(data.leads);
                 this.renderPagination(data.current_page, data.pages);
             } else {
-                this.tableBody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-red-500">Failed to load leads</td></tr>';
+                let errorMsg = "Failed to load leads";
+                try {
+                    const errData = await resp.json();
+                    if (errData.error) errorMsg = errData.error;
+                } catch (e) { }
+                this.tableBody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-red-500">${errorMsg}</td></tr>`;
             }
         } catch (e) {
             console.error("Error loading leads", e);
-            this.tableBody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-red-500">Error loading data</td></tr>';
+            this.tableBody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-red-500">Error: ${e.message}</td></tr>`;
         }
     }
 
