@@ -33,3 +33,14 @@ def list_files():
         })
     except Exception as e:
         return jsonify({"error": str(e)})
+
+@bp.route('/init-db', methods=['GET'])
+def init_db():
+    try:
+        from app.models import db
+        # Import all models to ensure they are registered with SQLAlchemy
+        from app.models import User, Admin, SuperAdmin, FacebookPage, Lead, CallHistory, Attendance, Followup
+        db.create_all()
+        return jsonify({"message": "Database tables created/verified successfully."})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
