@@ -185,7 +185,9 @@ def handle_webhook():
         return "Invalid signature", 403
 
     data = request.json
-    current_app.logger.info(f"FB_WEBHOOK_RECEIVED: {data}")
+    # Force log visibility (INFO sometimes hidden in prod)
+    current_app.logger.warning(f"FB_WEBHOOK_RECEIVED: {data}")
+    print(f"DEBUG_PRINT: FB_WEBHOOK_RECEIVED: {data}", flush=True)
 
     if data.get('object') == 'page':
         for entry in data.get('entry', []):
