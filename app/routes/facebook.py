@@ -180,6 +180,10 @@ def get_leads():
                 l_dict['assigned_agent_name'] = lead.assignee.name
             else:
                 l_dict['assigned_agent_name'] = "Unassigned"
+            
+            # Add custom fields (contains campaign info)
+            l_dict['custom_fields'] = lead.custom_fields
+            
             results.append(l_dict)
 
         return jsonify({
@@ -276,7 +280,7 @@ def process_lead(fb_page, leadgen_id, form_id):
 
     # Fetch from Graph API
     access_token = fb_page.page_access_token
-    url = f"https://graph.facebook.com/v24.0/{leadgen_id}?fields=created_time,id,ad_id,form_id,field_data,campaign_name,platform,retailer_item_id&access_token={access_token}"
+    url = f"https://graph.facebook.com/v24.0/{leadgen_id}?fields=created_time,id,ad_id,ad_name,form_id,field_data,campaign_name,platform,retailer_item_id&access_token={access_token}"
     
     resp = requests.get(url, timeout=10)
     if resp.status_code != 200:
@@ -293,9 +297,15 @@ def process_lead(fb_page, leadgen_id, form_id):
     # Parse fields
     parsed_data = {}
     
-    # Store ad_id if available
+    # Store meta info if available
     if lead_data.get('ad_id'):
         parsed_data['ad_id'] = lead_data.get('ad_id')
+    if lead_data.get('ad_name'):
+        parsed_data['ad_name'] = lead_data.get('ad_name')
+    if lead_data.get('campaign_name'):
+        parsed_data['campaign_name'] = lead_data.get('campaign_name')
+    if lead_data.get('platform'):
+        parsed_data['platform'] = lead_data.get('platform')
         
     for field in field_data:
         name = field.get('name')

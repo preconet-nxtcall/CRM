@@ -13,7 +13,7 @@ class LeadsManager {
     async loadLeads(page = 1) {
         if (!this.tableBody) return;
 
-        this.tableBody.innerHTML = '<tr><td colspan="7" class="text-center py-4">Loading...</td></tr>';
+        this.tableBody.innerHTML = '<tr><td colspan="8" class="text-center py-4">Loading...</td></tr>';
 
         try {
             const resp = await auth.makeAuthenticatedRequest(`/api/facebook/leads?page=${page}&per_page=${this.itemsPerPage}`);
@@ -27,17 +27,17 @@ class LeadsManager {
                     const errData = await resp.json();
                     if (errData.error) errorMsg = errData.error;
                 } catch (e) { }
-                this.tableBody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-red-500">${errorMsg}</td></tr>`;
+                this.tableBody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-red-500">${errorMsg}</td></tr>`;
             }
         } catch (e) {
             console.error("Error loading leads", e);
-            this.tableBody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-red-500">Error: ${e.message}</td></tr>`;
+            this.tableBody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-red-500">Error: ${e.message}</td></tr>`;
         }
     }
 
     renderTable(leads) {
         if (!leads || leads.length === 0) {
-            this.tableBody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-gray-500">No leads found yet.</td></tr>';
+            this.tableBody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-gray-500">No leads found yet.</td></tr>';
             return;
         }
 
@@ -48,6 +48,11 @@ class LeadsManager {
                 <td class="px-4 py-3 text-blue-600">${lead.phone || '-'}</td>
                 <td class="px-4 py-3 text-gray-500">${lead.email || '-'}</td>
                 <td class="px-4 py-3"><span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs uppercase font-bold">${lead.source}</span></td>
+                <td class="px-4 py-3 text-gray-500 text-xs">
+                    ${lead.custom_fields && lead.custom_fields.campaign_name ? `<div class="font-bold">${lead.custom_fields.campaign_name}</div>` : ''}
+                    ${lead.custom_fields && lead.custom_fields.ad_name ? `<div>${lead.custom_fields.ad_name}</div>` : ''}
+                    ${!lead.custom_fields || (!lead.custom_fields.campaign_name && !lead.custom_fields.ad_name) ? '-' : ''}
+                </td>
                 <td class="px-4 py-3 text-gray-700">${lead.assigned_agent_name}</td>
                 <td class="px-4 py-3">
                      <span class="px-2 py-1 ${this.getStatusColor(lead.status)} text-xs rounded-full capitalize">
