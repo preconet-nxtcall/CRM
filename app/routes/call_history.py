@@ -6,7 +6,7 @@ from functools import wraps
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 
-from app.models import db, User, CallHistory, UserRole
+from app.models import db, User, CallHistory, UserRole, Lead
 from app.auth_helpers import get_authorized_user
 from sqlalchemy import func
 
@@ -157,6 +157,23 @@ def sync_call_history():
                 db.session.add(new_record)
                 existing_hashes.add(key) 
                 saved += 1
+                
+                # -----------------------------------------------------
+                # 🤖 AUTO-CONTACTED LOGIC
+                # -----------------------------------------------------
+                # If valid call (duration > 15s), mark matching Lead as "contacted"
+                if duration > 15:
+                    try:
+                        # Find a NEW lead with this phone number
+                        # (We only touch 'new' leads to avoid overwriting 'converted' or custom statuses)
+                        matched_lead = Lead.query.filter_by(phone=phone_number, status="new").first()
+                        if matched_lead:
+                            matched_lead.status = "contacted"
+                            # No need to commit here, it happens at end of sync
+                            db.session.add(matched_lead)
+                            current_app.logger.info(f"⚡ AUTO-UPDATE: Lead {matched_lead.id} marked as 'contacted' (Call Duration: {duration}s > 15s)")
+                    except Exception as lead_err:
+                        current_app.logger.error(f"Auto-contact update failed: {lead_err}")
                 
             except Exception as e:
                 errors.append({"entry": entry, "error": str(e)})

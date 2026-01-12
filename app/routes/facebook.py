@@ -199,6 +199,44 @@ def get_leads():
         return jsonify({"error": str(e)}), 500
 
 
+@bp.route('/api/facebook/leads/<int:lead_id>/status', methods=['PUT'])
+@jwt_required()
+def update_lead_status(lead_id):
+    """
+    Update the status of a specific lead.
+    Expects: { "status": "new" | "contacted" | "converted" | "junk" }
+    """
+    try:
+        current_user_id = int(get_jwt_identity())
+        admin = Admin.query.get(current_user_id)
+        if not admin:
+            return jsonify({"error": "Admin account required"}), 403
+
+        lead = Lead.query.filter_by(id=lead_id, admin_id=admin.id).first()
+        if not lead:
+            return jsonify({"error": "Lead not found"}), 404
+
+        data = request.json
+        new_status = data.get("status")
+        
+        valid_statuses = ["new", "contacted", "qualified", "converted", "junk"]
+        if new_status not in valid_statuses:
+             return jsonify({"error": f"Invalid status. Allowed: {valid_statuses}"}), 400
+
+        lead.status = new_status
+        db.session.commit()
+
+        return jsonify({
+            "message": "Status updated successfully",
+            "lead": lead.to_dict()
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error updating lead status: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 # =======================================================
 #  WEBHOOK (Server Context)
 # =======================================================

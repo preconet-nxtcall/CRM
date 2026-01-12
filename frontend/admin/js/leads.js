@@ -55,21 +55,51 @@ class LeadsManager {
                 </td>
                 <td class="px-4 py-3 text-gray-700">${lead.assigned_agent_name}</td>
                 <td class="px-4 py-3">
-                     <span class="px-2 py-1 ${this.getStatusColor(lead.status)} text-xs rounded-full capitalize">
-                        ${lead.status}
-                     </span>
+                     <select onchange="leadsManager.updateLeadStatus(${lead.id}, this.value)" 
+                             class="px-2 py-1 text-xs rounded-full capitalize cursor-pointer border-0 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-indigo-600 sm:text-sm sm:leading-6 ${this.getStatusColor(lead.status)}">
+                        ${this.renderStatusOptions(lead.status)}
+                     </select>
                 </td>
             </tr>
         `).join('');
     }
 
+    renderStatusOptions(currentStatus) {
+        const statuses = ['new', 'contacted', 'converted', 'junk'];
+        return statuses.map(s => `
+            <option value="${s}" ${s === currentStatus ? 'selected' : ''}>${s.charAt(0).toUpperCase() + s.slice(1)}</option>
+        `).join('');
+    }
+
+    async updateLeadStatus(leadId, newStatus) {
+        try {
+            const resp = await auth.makeAuthenticatedRequest(`/api/facebook/leads/${leadId}/status`, {
+                method: 'PUT',
+                body: JSON.stringify({ status: newStatus })
+            });
+
+            if (resp && resp.ok) {
+                // Optional: Show toast or just reload
+                // For smoother UX, maybe just leave it as is if successful
+                // But reloading ensures consistency
+                this.loadLeads(this.currentPage || 1);
+            } else {
+                alert("Failed to update status");
+                this.loadLeads(this.currentPage || 1); // Revert UI
+            }
+        } catch (e) {
+            console.error("Error updating status", e);
+            alert("Error updating status");
+        }
+    }
+
     getStatusColor(status) {
         switch (status) {
-            case 'new': return 'bg-green-100 text-green-800';
-            case 'contacted': return 'bg-yellow-100 text-yellow-800';
-            case 'converted': return 'bg-blue-100 text-blue-800';
-            case 'junk': return 'bg-red-100 text-red-800';
-            default: return 'bg-gray-100 text-gray-600';
+            case 'new': return 'bg-green-50 text-green-700 ring-green-600/20';
+            case 'contacted': return 'bg-yellow-50 text-yellow-800 ring-yellow-600/20';
+            case 'converted': return 'bg-blue-50 text-blue-700 ring-blue-700/10';
+            case 'junk': return 'bg-red-50 text-red-700 ring-red-600/10';
+            default: return 'bg-gray-50 text-gray-600 ring-gray-500/10';
         }
     }
 
