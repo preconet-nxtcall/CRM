@@ -189,6 +189,9 @@ def get_leads():
             "current_page": page
         }), 200
     except Exception as e:
+        current_app.logger.error(f"Error getting leads: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 
