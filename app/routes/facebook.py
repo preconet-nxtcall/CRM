@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify, current_app
-from flask_jwt_extended import jwt_required, get_jwt_identity
-from app.models import db, FacebookPage, Lead, Admin
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
+from app.models import db, FacebookPage, Lead, Admin, User
 from app.models import now
 import requests
 import hmac
@@ -155,19 +155,33 @@ def disconnect_facebook_page():
 @jwt_required()
 def get_leads():
     """
-    Get all leads for the current Admin.
+    Get all leads for the current Admin or Agent.
     """
     try:
-        current_user_id = int(get_jwt_identity())
-        admin = Admin.query.get(current_user_id)
-        if not admin:
-             return jsonify({"error": "Admin account required"}), 403
+        claims = get_jwt()
+        role = claims.get("role")
+        current_identity = int(get_jwt_identity())
+
+        admin_id = None
+
+        if role == "admin":
+            admin_id = current_identity
+            # Verify admin
+            if not Admin.query.get(admin_id):
+                 return jsonify({"error": "Admin account required"}), 403
+        elif role == "user":
+            user = User.query.get(current_identity)
+            if not user:
+                 return jsonify({"error": "User not found"}), 404
+            admin_id = user.admin_id
+        else:
+             return jsonify({"error": "Unauthorized role"}), 403
 
         # Pagination
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 20, type=int)
 
-        leads_query = Lead.query.filter_by(admin_id=admin.id).order_by(Lead.created_at.desc())
+        leads_query = Lead.query.filter_by(admin_id=admin_id).order_by(Lead.created_at.desc())
         
         pagination = leads_query.paginate(page=page, per_page=per_page, error_out=False)
         leads = pagination.items
@@ -194,8 +208,6 @@ def get_leads():
         }), 200
     except Exception as e:
         current_app.logger.error(f"Error getting leads: {e}")
-        import traceback
-        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 
@@ -420,3 +432,56 @@ def process_lead(fb_page, leadgen_id, form_id):
     db.session.add(new_lead)
     db.session.commit()
     current_app.logger.info(f"Lead saved successfully: {name} ({phone}) -> Assigned to: {assigned_user_id}")
+
+
+# --- Add this new POST route for manual lead creation ---
+@bp.route('/api/facebook/leads', methods=['POST'])
+@jwt_required()
+def create_manual_lead():
+    try:
+        claims = get_jwt()
+        role = claims.get("role")
+        current_identity = int(get_jwt_identity())
+
+        # Strict Restriction: Only Users (Agents) can create manual leads
+        if role != "user":
+             return jsonify({'error': 'Only Agents can create manual leads'}), 403
+
+        user = User.query.get(current_identity)
+        if not user:
+             return jsonify({'error': 'User not found'}), 404
+        
+        admin_id = user.admin_id
+
+        data = request.get_json()
+        
+        # Check if lead exists for this admin
+        existing_lead = Lead.query.filter_by(phone=data.get('phone'), admin_id=admin_id).first()
+        if existing_lead:
+            # Optionally update the existing lead or just return
+            return jsonify({'message': 'Lead already exists', 'id': existing_lead.id}), 200
+
+        # Map custom fields
+        custom_data = data.get('custom_fields', {})
+        
+        # Create new lead
+        new_lead = Lead(
+            admin_id=admin_id,
+            name=data.get('name'),
+            phone=data.get('phone'),
+            status=data.get('status', 'new'),
+            source=data.get('source', 'call_history'),
+            custom_fields=custom_data,
+            created_at=now()
+        )
+        
+        # Auto-assign to the creating agent
+        new_lead.assigned_to = current_identity
+
+        db.session.add(new_lead)
+        db.session.commit()
+        return jsonify({'message': 'Lead created', 'id': new_lead.id}), 201
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error creating manual lead: {e}")
+        return jsonify({'error': str(e)}), 500
