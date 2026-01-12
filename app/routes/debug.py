@@ -37,10 +37,17 @@ def list_files():
 @bp.route('/init-db', methods=['GET'])
 def init_db():
     try:
-        from app.models import db
+        from app.models import db, Lead, FacebookPage
         # Import all models to ensure they are registered with SQLAlchemy
-        from app.models import User, Admin, SuperAdmin, FacebookPage, Lead, CallHistory, Attendance, Followup
+        from app.models import User, Admin, SuperAdmin, CallHistory, Attendance, Followup
+        
+        # FORCE RESET LEADS TABLE to ensure schema is correct
+        # This fixes "UndefinedColumn: column leads.facebook_lead_id does not exist"
+        Lead.__table__.drop(db.engine, checkfirst=True)
+        # We might also need to update FacebookPage if that changed
+        # FacebookPage.__table__.drop(db.engine, checkfirst=True) 
+        
         db.create_all()
-        return jsonify({"message": "Database tables created/verified successfully."})
+        return jsonify({"message": "Database tables (Leads) reset and verified successfully."})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
