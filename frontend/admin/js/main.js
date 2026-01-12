@@ -130,7 +130,7 @@ document.addEventListener("DOMContentLoaded", () => {
         { id: "menuCallHistory", mobileId: "mobileNavCalls", section: "sectionCallHistory", title: "Call Logs", manager: window.callHistoryManager },
         { id: "menuAppPerformance", section: "sectionAppPerformance", title: "App Usage Monitor", manager: window.appPerformanceManager },
         { id: "menuFollowup", section: "sectionFollowup", title: "Follow-ups", manager: window.followupManager },
-        { id: "menuLeads", section: "sectionLeads", title: "Leads Management", manager: window.facebookManager }, // Added
+        { id: "menuLeads", section: "sectionLeads", title: "Leads Management", manager: window.leadsManager },
         { id: "menuIntegrations", mobileId: null, section: "sectionIntegrations", title: "Facebook Integration", manager: window.facebookManager }
     ];
 

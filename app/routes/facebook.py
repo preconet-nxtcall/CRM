@@ -127,6 +127,7 @@ def connect_facebook_page():
         return jsonify({"error": str(e)}), 500
 
 
+
 @bp.route('/api/facebook/disconnect', methods=['POST'])
 @jwt_required()
 def disconnect_facebook_page():
@@ -147,6 +148,47 @@ def disconnect_facebook_page():
         return jsonify({"message": "Disconnected"}), 200
     except Exception as e:
         db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@bp.route('/api/facebook/leads', methods=['GET'])
+@jwt_required()
+def get_leads():
+    """
+    Get all leads for the current Admin.
+    """
+    try:
+        current_user_id = int(get_jwt_identity())
+        admin = Admin.query.get(current_user_id)
+        if not admin:
+             return jsonify({"error": "Admin account required"}), 403
+
+        # Pagination
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 20, type=int)
+
+        leads_query = Lead.query.filter_by(admin_id=admin.id).order_by(Lead.created_at.desc())
+        
+        pagination = leads_query.paginate(page=page, per_page=per_page, error_out=False)
+        leads = pagination.items
+
+        results = []
+        for lead in leads:
+            l_dict = lead.to_dict()
+            # Add assignee name
+            if lead.assignee:
+                l_dict['assigned_agent_name'] = lead.assignee.name
+            else:
+                l_dict['assigned_agent_name'] = "Unassigned"
+            results.append(l_dict)
+
+        return jsonify({
+            "leads": results,
+            "total": pagination.total,
+            "pages": pagination.pages,
+            "current_page": page
+        }), 200
+    except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
