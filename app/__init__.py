@@ -1,7 +1,7 @@
 from dotenv import load_dotenv
 load_dotenv()
 
-from flask import Flask, jsonify, request, send_from_directory, redirect, url_for
+from flask import Flask, jsonify, request, send_from_directory, redirect, url_for, render_template
 from flask_jwt_extended import (
     JWTManager,
     verify_jwt_in_request,
@@ -249,6 +249,19 @@ def create_app(config_class=Config):
     @app.route('/favicon.ico')
     def favicon():
         return send_from_directory(os.path.join(FRONTEND, 'images'), 'favicon.png', mimetype='image/vnd.microsoft.icon')
+
+    # -------- POLICY PAGES --------
+    @app.route("/privacy-policy")
+    def privacy():
+        return render_template("privacy.html")
+
+    @app.route("/terms")
+    def terms():
+        return render_template("terms.html")
+
+    @app.route("/data-deletion-instructions")
+    def delete_data():
+        return render_template("delete.html")
 
     @app.route("/api/health")
     def health():
