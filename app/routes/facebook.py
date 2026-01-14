@@ -5,6 +5,7 @@ from app.models import now
 import requests
 import hmac
 import hashlib
+import sys
 
 bp = Blueprint('facebook', __name__)
 
@@ -279,11 +280,15 @@ def handle_webhook():
     """
     Handle incoming lead events.
     """
+    print("DEBUG: Webhook HIT! Request received at /api/facebook/webhook") # FORCE LOG
+    
     if not verify_fb_signature(request):
         current_app.logger.warning("WEBHOOK_SIG_CHECK_FAILED")
+        print("DEBUG: Signature Verification Failed")
         return "Invalid signature", 403
 
     data = request.json
+    print(f"DEBUG: Webhook Data: {data}") # FORCE LOG
     current_app.logger.info(f"FB_WEBHOOK_RECEIVED: {data}")
 
     if data.get('object') == 'page':
