@@ -101,12 +101,19 @@ def connect_facebook_page():
                 "access_token": page_access_token,
                 "subscribed_fields": "leadgen"
             }, timeout=10)
+            
             if sub_resp.status_code != 200:
-                current_app.logger.warning(f"Failed to subscribe app to page: {sub_resp.text}")
-            else:
-                current_app.logger.info(f"Successfully subscribed app to page {page_id}")
+                current_app.logger.error(f"Failed to subscribe app to page: {sub_resp.text}")
+                return jsonify({
+                    "error": "Failed to subscribe to Page Events. Please check Permissions.",
+                    "details": sub_resp.text
+                }), 400
+                
+            current_app.logger.info(f"Successfully subscribed app to page {page_id}")
+            
         except Exception as e:
             current_app.logger.error(f"Error subscribing app to page: {e}")
+            return jsonify({"error": f"Subscription failed: {str(e)}"}), 500
 
         # Update or Create
         fb_page = FacebookPage.query.filter_by(admin_id=admin.id).first()
@@ -275,12 +282,35 @@ def verify_webhook():
     
     return 'Hello Facebook', 200
 
-@bp.route('/api/facebook/webhook', methods=['POST'])
+@bp.route('/api/facebook/webhook', methods=['GET', 'POST'])
 def handle_webhook():
     """
     Handle incoming lead events.
+    VERIFY TOKEN: nxtcall_fb_webhook_2026
     """
-    print("DEBUG: Webhook HIT! Request received at /api/facebook/webhook") # FORCE LOG
+    sys.stdout.flush() # FORCE LOG FLUSH
+    
+    # 1. Verification Request (GET)
+    if request.method == 'GET':
+        mode = request.args.get('hub.mode')
+        token = request.args.get('hub.verify_token')
+        challenge = request.args.get('hub.challenge')
+
+        print(f"DEBUG: Webhook Verification Hit! Mode: {mode}, Token: {token}")
+        
+        if mode and token:
+            if mode == 'subscribe' and token == current_app.config['FACEBOOK_VERIFY_TOKEN']:
+                print("DEBUG: Webhook Verified Successfully!")
+                return challenge, 200
+            else:
+                print("DEBUG: Webhook Verification Failed - Token Mismatch")
+                return 'Verification token mismatch', 403
+        
+        return "Webhook is Active and Reachable (GET)", 200
+
+    # 2. Event Notification (POST)
+    print("DEBUG: Webhook HIT (POST)! Request received at /api/facebook/webhook") 
+    sys.stdout.flush()
     
     if not verify_fb_signature(request):
         current_app.logger.warning("WEBHOOK_SIG_CHECK_FAILED")
@@ -288,7 +318,8 @@ def handle_webhook():
         return "Invalid signature", 403
 
     data = request.json
-    print(f"DEBUG: Webhook Data: {data}") # FORCE LOG
+    print(f"DEBUG: Webhook Data: {data}") 
+    sys.stdout.flush()
     current_app.logger.info(f"FB_WEBHOOK_RECEIVED: {data}")
 
     if data.get('object') == 'page':
