@@ -12,6 +12,7 @@ class Config:
 
     # Facebook Integration
     FACEBOOK_VERIFY_TOKEN = os.environ.get("FACEBOOK_VERIFY_TOKEN", "nxtcall_fb_webhook_2026")
-    FACEBOOK_APP_SECRET = os.environ.get("FACEBOOK_APP_SECRET", "")
+    FACEBOOK_APP_ID = os.environ.get("FACEBOOK_APP_ID", "1537220340728257")
+    FACEBOOK_APP_SECRET = os.environ.get("FACEBOOK_APP_SECRET", "774f3a44a2590515de08680001d7bbaf")
 
 

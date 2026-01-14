@@ -19,7 +19,7 @@ class FacebookManager {
 
         window.fbAsyncInit = function () {
             FB.init({
-                appId: '1590436318627463', // New Business App ID
+                appId: '1537220340728257', // New Business App ID
                 cookie: true,
                 xfbml: true,
                 version: 'v24.0'
