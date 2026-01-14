@@ -71,7 +71,7 @@ class FacebookManager {
                 this.handleLoginSuccess(response.authResponse);
             }
         }, {
-            scope: 'pages_show_list,leads_retrieval,pages_manage_metadata,pages_read_engagement'
+            scope: 'pages_show_list,leads_retrieval'
         });
     }
 
