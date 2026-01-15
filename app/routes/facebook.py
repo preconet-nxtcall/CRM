@@ -261,26 +261,7 @@ def update_lead_status(lead_id):
 #  WEBHOOK (Server Context)
 # =======================================================
 
-@bp.route('/api/facebook/webhook', methods=['GET'])
-def verify_webhook():
-    """
-    Facebook Verification Handshake
-    """
-    mode = request.args.get('hub.mode')
-    token = request.args.get('hub.verify_token')
-    challenge = request.args.get('hub.challenge')
 
-    verify_token = current_app.config.get('FACEBOOK_VERIFY_TOKEN')
-
-    if mode and token:
-        if mode == 'subscribe' and token == verify_token:
-            current_app.logger.info("WEBHOOK_VERIFIED")
-            return challenge, 200
-        else:
-            current_app.logger.warning(f"WEBHOOK_VERIFICATION_FAILED: Mode={mode}, Token={token}, Expected={verify_token}")
-            return 'Verification Failed', 403
-    
-    return 'Hello Facebook', 200
 
 @bp.route('/api/facebook/webhook', methods=['GET', 'POST'])
 def handle_webhook():
