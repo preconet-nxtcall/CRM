@@ -68,10 +68,15 @@ class FacebookManager {
 
         FB.login((response) => {
             if (response.authResponse) {
+                console.log("Granted Scopes:", response.authResponse.grantedScopes);
                 this.handleLoginSuccess(response.authResponse);
+            } else {
+                console.log("User cancelled login or did not fully authorize.");
             }
         }, {
-            scope: 'pages_show_list,leads_retrieval'
+            scope: 'pages_show_list,leads_retrieval,pages_manage_metadata',
+            auth_type: 'reauthenticate',
+            return_scopes: true
         });
     }
 
