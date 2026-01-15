@@ -83,19 +83,33 @@ class FacebookManager {
     async handleLoginSuccess(authResponse) {
         console.log("FB Login Success", authResponse);
         const userAccessToken = authResponse.accessToken;
+        const grantedScopes = authResponse.grantedScopes || "";
+
+        // DEBUG: Check Permissions
+        if (!grantedScopes.includes('pages_show_list')) {
+            alert("CRITICAL ERROR: 'pages_show_list' permission was NOT granted.\n\nYou cannot connect a page without this permission.\nPlease try again and click 'Edit Access' to ensure all permissions are checked.");
+            return;
+        }
 
         // DEEP DEBUG: Verify Identity First
         FB.api('/me', (userRes) => {
             console.log("Logged in User:", userRes);
-            alert(`DEBUG: Logged in as Facebook User:\nName: ${userRes.name}\nID: ${userRes.id}\n\n(If this is NOT the App Admin, pages will be empty!)`);
 
             // Fetch User's Pages via FB Client SDK
             FB.api('/me/accounts', async (response) => {
                 if (response && !response.error) {
                     const pages = response.data;
+
+                    // Construct detailed debug message
+                    let debugMsg = `DEBUG INFO:\nUser: ${userRes.name} (ID: ${userRes.id})\n`;
+                    debugMsg += `Permissions Granted: ${grantedScopes}\n`;
+                    debugMsg += `Pages Found: ${pages ? pages.length : 0}\n`;
+
                     if (!pages || pages.length === 0) {
                         console.error("Pages response empty:", response);
-                        alert("No Facebook Pages found. Debug:\n" + JSON.stringify(response));
+                        debugMsg += "\nERROR: No Facebook Pages found for this account.\n";
+                        debugMsg += "\nPOSSIBLE CAUSES:\n1. You haven't created a Facebook Page yet.\n2. You are not an Admin of any page.\n3. The App is in 'Development Mode' and you are not an App Admin/Tester.";
+                        alert(debugMsg);
                         return;
                     }
 
