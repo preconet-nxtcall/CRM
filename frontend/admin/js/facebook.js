@@ -91,50 +91,45 @@ class FacebookManager {
             return;
         }
 
-        // DEEP DEBUG: Verify Identity First
-        FB.api('/me', (userRes) => {
-            console.log("Logged in User:", userRes);
+        // Fetch User's Pages via FB Client SDK
+        FB.api('/me/accounts', async (response) => {
+            if (response && !response.error) {
+                const pages = response.data;
 
-            // Fetch User's Pages via FB Client SDK
-            FB.api('/me/accounts', async (response) => {
-                if (response && !response.error) {
-                    const pages = response.data;
+                // Construct detailed debug message
+                let debugMsg = `DEBUG INFO:\nUser: ${userRes.name} (ID: ${userRes.id})\n`;
+                debugMsg += `Permissions Granted: ${grantedScopes}\n`;
+                debugMsg += `Pages Found: ${pages ? pages.length : 0}\n`;
 
-                    // Construct detailed debug message
-                    let debugMsg = `DEBUG INFO:\nUser: ${userRes.name} (ID: ${userRes.id})\n`;
-                    debugMsg += `Permissions Granted: ${grantedScopes}\n`;
-                    debugMsg += `Pages Found: ${pages ? pages.length : 0}\n`;
-
-                    if (!pages || pages.length === 0) {
-                        console.error("Pages response empty:", response);
-                        debugMsg += "\nERROR: No Facebook Pages found for this account.\n";
-                        debugMsg += "\nPOSSIBLE CAUSES:\n1. You haven't created a Facebook Page yet.\n2. You are not an Admin of any page.\n3. The App is in 'Development Mode' and you are not an App Admin/Tester.";
-                        alert(debugMsg);
-                        return;
-                    }
-
-                    // For MVP: Auto-select the first page or let user choose if easy
-                    let selectedPage = pages[0];
-
-                    if (pages.length > 1) {
-                        // Simple select mechanic: Name mapping
-                        let msg = "Found multiple pages:\n";
-                        pages.forEach((p, i) => msg += `${i + 1}. ${p.name}\n`);
-                        msg += "Enter the number of the page to connect:";
-                        const selection = prompt(msg, "1");
-                        const index = parseInt(selection) - 1;
-                        if (index >= 0 && index < pages.length) {
-                            selectedPage = pages[index];
-                        }
-                    }
-
-                    await this.connectPageToBackend(selectedPage);
-
-                } else {
-                    console.error("Error fetching pages", response.error);
-                    alert("Failed to fetch pages from Facebook: " + (response.error ? response.error.message : "Unknown error"));
+                if (!pages || pages.length === 0) {
+                    console.error("Pages response empty:", response);
+                    debugMsg += "\nERROR: No Facebook Pages found for this account.\n";
+                    debugMsg += "\nPOSSIBLE CAUSES:\n1. You haven't created a Facebook Page yet.\n2. You are not an Admin of any page.\n3. The App is in 'Development Mode' and you are not an App Admin/Tester.";
+                    alert(debugMsg);
+                    return;
                 }
-            });
+
+                // For MVP: Auto-select the first page or let user choose if easy
+                let selectedPage = pages[0];
+
+                if (pages.length > 1) {
+                    // Simple select mechanic: Name mapping
+                    let msg = "Found multiple pages:\n";
+                    pages.forEach((p, i) => msg += `${i + 1}. ${p.name}\n`);
+                    msg += "Enter the number of the page to connect:";
+                    const selection = prompt(msg, "1");
+                    const index = parseInt(selection) - 1;
+                    if (index >= 0 && index < pages.length) {
+                        selectedPage = pages[index];
+                    }
+                }
+
+                await this.connectPageToBackend(selectedPage);
+
+            } else {
+                console.error("Error fetching pages", response.error);
+                alert("Failed to fetch pages from Facebook: " + (response.error ? response.error.message : "Unknown error"));
+            }
         });
     }
 
