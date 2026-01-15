@@ -84,37 +84,43 @@ class FacebookManager {
         console.log("FB Login Success", authResponse);
         const userAccessToken = authResponse.accessToken;
 
-        // Fetch User's Pages via FB Client SDK
-        FB.api('/me/accounts', async (response) => {
-            if (response && !response.error) {
-                const pages = response.data;
-                if (!pages || pages.length === 0) {
-                    console.error("Pages response empty:", response);
-                    alert("No Facebook Pages found. Debug:\n" + JSON.stringify(response));
-                    return;
-                }
+        // DEEP DEBUG: Verify Identity First
+        FB.api('/me', (userRes) => {
+            console.log("Logged in User:", userRes);
+            alert(`DEBUG: Logged in as Facebook User:\nName: ${userRes.name}\nID: ${userRes.id}\n\n(If this is NOT the App Admin, pages will be empty!)`);
 
-                // For MVP: Auto-select the first page or let user choose if easy
-                let selectedPage = pages[0];
-
-                if (pages.length > 1) {
-                    // Simple select mechanic: Name mapping
-                    let msg = "Found multiple pages:\n";
-                    pages.forEach((p, i) => msg += `${i + 1}. ${p.name}\n`);
-                    msg += "Enter the number of the page to connect:";
-                    const selection = prompt(msg, "1");
-                    const index = parseInt(selection) - 1;
-                    if (index >= 0 && index < pages.length) {
-                        selectedPage = pages[index];
+            // Fetch User's Pages via FB Client SDK
+            FB.api('/me/accounts', async (response) => {
+                if (response && !response.error) {
+                    const pages = response.data;
+                    if (!pages || pages.length === 0) {
+                        console.error("Pages response empty:", response);
+                        alert("No Facebook Pages found. Debug:\n" + JSON.stringify(response));
+                        return;
                     }
+
+                    // For MVP: Auto-select the first page or let user choose if easy
+                    let selectedPage = pages[0];
+
+                    if (pages.length > 1) {
+                        // Simple select mechanic: Name mapping
+                        let msg = "Found multiple pages:\n";
+                        pages.forEach((p, i) => msg += `${i + 1}. ${p.name}\n`);
+                        msg += "Enter the number of the page to connect:";
+                        const selection = prompt(msg, "1");
+                        const index = parseInt(selection) - 1;
+                        if (index >= 0 && index < pages.length) {
+                            selectedPage = pages[index];
+                        }
+                    }
+
+                    await this.connectPageToBackend(selectedPage);
+
+                } else {
+                    console.error("Error fetching pages", response.error);
+                    alert("Failed to fetch pages from Facebook: " + (response.error ? response.error.message : "Unknown error"));
                 }
-
-                await this.connectPageToBackend(selectedPage);
-
-            } else {
-                console.error("Error fetching pages", response.error);
-                alert("Failed to fetch pages from Facebook: " + (response.error ? response.error.message : "Unknown error"));
-            }
+            });
         });
     }
 
