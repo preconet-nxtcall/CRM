@@ -96,16 +96,9 @@ class FacebookManager {
             if (response && !response.error) {
                 const pages = response.data;
 
-                // Construct detailed debug message
-                let debugMsg = `DEBUG INFO:\nUser: ${userRes.name} (ID: ${userRes.id})\n`;
-                debugMsg += `Permissions Granted: ${grantedScopes}\n`;
-                debugMsg += `Pages Found: ${pages ? pages.length : 0}\n`;
-
                 if (!pages || pages.length === 0) {
                     console.error("Pages response empty:", response);
-                    debugMsg += "\nERROR: No Facebook Pages found for this account.\n";
-                    debugMsg += "\nPOSSIBLE CAUSES:\n1. You haven't created a Facebook Page yet.\n2. You are not an Admin of any page.\n3. The App is in 'Development Mode' and you are not an App Admin/Tester.";
-                    alert(debugMsg);
+                    alert("No Facebook Pages found for this account. Please check you selected the page in the popup.");
                     return;
                 }
 
