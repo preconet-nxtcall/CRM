@@ -22,7 +22,7 @@ class FacebookManager {
                 appId: '1537220340728257', // New Business App ID
                 cookie: true,
                 xfbml: true,
-                version: 'v24.0'
+                version: 'v19.0'
             });
             console.log("FB SDK Loaded");
         };
