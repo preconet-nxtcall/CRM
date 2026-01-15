@@ -88,8 +88,9 @@ class FacebookManager {
         FB.api('/me/accounts', async (response) => {
             if (response && !response.error) {
                 const pages = response.data;
-                if (pages.length === 0) {
-                    alert("No Facebook Pages found for this account.");
+                if (!pages || pages.length === 0) {
+                    console.error("Pages response empty:", response);
+                    alert("No Facebook Pages found. Debug:\n" + JSON.stringify(response));
                     return;
                 }
 
