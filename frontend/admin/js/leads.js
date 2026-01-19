@@ -3,6 +3,7 @@ class LeadsManager {
         this.tableBody = document.getElementById('leadsTableBody');
         this.paginationContainer = document.getElementById('leadsPagination');
         this.itemsPerPage = 20;
+        this.currentFilter = 'all'; // Default filter
     }
 
     async init() {
@@ -10,13 +11,42 @@ class LeadsManager {
         await this.loadLeads();
     }
 
+    filterLeads(source) {
+        this.currentFilter = source;
+        this.updateFilterButtons();
+        this.loadLeads(1); // Reset to page 1
+    }
+
+    updateFilterButtons() {
+        // Reset all buttons
+        const types = ['all', 'facebook', 'indiamart'];
+        types.forEach(type => {
+            const btn = document.getElementById(`btn-filter-${type}`);
+            if (btn) {
+                // Determine classes based on active state
+                if (type === this.currentFilter) {
+                    btn.className = "px-3 py-1.5 text-xs font-medium text-white bg-blue-600 border border-blue-600 hover:bg-blue-700 transition-colors " + (type === 'all' ? 'rounded-l-lg' : (type === 'indiamart' ? 'rounded-r-lg' : ''));
+                } else {
+                    btn.className = "px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border-t border-b border-r border-gray-200 hover:bg-gray-100 transition-colors " + (type === 'all' ? 'rounded-l-lg border-l' : (type === 'indiamart' ? 'rounded-r-lg' : ''));
+                }
+            }
+        });
+    }
+
     async loadLeads(page = 1) {
         if (!this.tableBody) return;
 
+        this.currentPage = page; // Store current page
         this.tableBody.innerHTML = '<tr><td colspan="8" class="text-center py-4">Loading...</td></tr>';
 
         try {
-            const resp = await auth.makeAuthenticatedRequest(`/api/facebook/leads?page=${page}&per_page=${this.itemsPerPage}`);
+            // Include Filter in Request
+            let url = `/api/facebook/leads?page=${page}&per_page=${this.itemsPerPage}`;
+            if (this.currentFilter !== 'all') {
+                url += `&source=${this.currentFilter}`;
+            }
+
+            const resp = await auth.makeAuthenticatedRequest(url);
             if (resp && resp.ok) {
                 const data = await resp.json();
                 this.renderTable(data.leads);

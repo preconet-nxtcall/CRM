@@ -551,11 +551,30 @@
               class="p-4 sm:px-6 sm:py-5 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <h3 class="text-lg font-bold text-gray-900">Incoming Leads</h3>
-                <p class="text-sm text-gray-500">Real-time leads from Facebook Ads</p>
+                <p class="text-sm text-gray-500">Real-time leads from all sources</p>
               </div>
-              <button onclick="leadsManager.loadLeads()" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                <i class="fas fa-sync-alt mr-1"></i> Refresh
-              </button>
+              <div class="flex items-center gap-2">
+                <!-- Filter Buttons -->
+                <div class="inline-flex rounded-md shadow-sm" role="group">
+                  <button type="button" onclick="leadsManager.filterLeads('all')" id="btn-filter-all"
+                    class="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 border border-blue-600 rounded-l-lg hover:bg-blue-700 transition-colors">
+                    All
+                  </button>
+                  <button type="button" onclick="leadsManager.filterLeads('facebook')" id="btn-filter-facebook"
+                    class="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border-t border-b border-r border-gray-200 hover:bg-gray-100 transition-colors">
+                    Facebook
+                  </button>
+                  <button type="button" onclick="leadsManager.filterLeads('indiamart')" id="btn-filter-indiamart"
+                    class="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border-t border-b border-r border-gray-200 rounded-r-lg hover:bg-gray-100 transition-colors">
+                    IndiaMART
+                  </button>
+                </div>
+
+                <button onclick="leadsManager.loadLeads()"
+                  class="ml-2 text-blue-600 hover:text-blue-800 text-sm font-medium p-2 rounded hover:bg-blue-50 transition-colors">
+                  <i class="fas fa-sync-alt"></i>
+                </button>
+              </div>
             </div>
             <div class="overflow-x-auto">
               <table class="w-full text-left text-sm mobile-card-table">

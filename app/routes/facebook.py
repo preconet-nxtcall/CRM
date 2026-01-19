@@ -185,11 +185,17 @@ def get_leads():
         else:
              return jsonify({"error": "Unauthorized role"}), 403
 
-        # Pagination
+        # Pagination & Filtering
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 20, type=int)
+        source_filter = request.args.get('source')
 
-        leads_query = Lead.query.filter_by(admin_id=admin_id).order_by(Lead.created_at.desc())
+        leads_query = Lead.query.filter_by(admin_id=admin_id)
+
+        if source_filter and source_filter.lower() != 'all':
+             leads_query = leads_query.filter(Lead.source == source_filter.lower())
+
+        leads_query = leads_query.order_by(Lead.created_at.desc())
         
         pagination = leads_query.paginate(page=page, per_page=per_page, error_out=False)
         leads = pagination.items
