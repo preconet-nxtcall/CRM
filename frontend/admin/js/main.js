@@ -67,7 +67,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (window.auth) window.auth.init();
     if (window.uiManager) window.uiManager.init();
     if (window.dashboardManager) window.dashboardManager.init();
-    if (window.facebookManager) window.facebookManager.checkLoginStatus();
+    if (window.facebookManager) window.facebookManager.init();
     if (window.indiamartManager) window.indiamartManager.init();
     if (window.magicbricksManager) window.magicbricksManager.init(); // NEW
     if (window.leadsManager) window.leadsManager.loadLeads(); // Load data
