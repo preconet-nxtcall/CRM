@@ -49,6 +49,7 @@ class LeadsManager {
             const resp = await auth.makeAuthenticatedRequest(url);
             if (resp && resp.ok) {
                 const data = await resp.json();
+                this.leads = data.leads; // STORE LEADS LOCALLY
                 this.renderTable(data.leads);
                 this.renderPagination(data.current_page, data.pages);
             } else {
@@ -57,11 +58,11 @@ class LeadsManager {
                     const errData = await resp.json();
                     if (errData.error) errorMsg = errData.error;
                 } catch (e) { }
-                this.tableBody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-red-500">${errorMsg}</td></tr>`;
+                this.tableBody.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-red-500">${errorMsg}</td></tr>`;
             }
         } catch (e) {
             console.error("Error loading leads", e);
-            this.tableBody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-red-500">Error: ${e.message}</td></tr>`;
+            this.tableBody.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-red-500">Error: ${e.message}</td></tr>`;
         }
     }
 
@@ -96,7 +97,13 @@ class LeadsManager {
         }
     }
 
-    openLeadModal(lead) {
+    openLeadModal(leadId) {
+        const lead = this.leads.find(l => l.id === leadId);
+        if (!lead) {
+            console.error("Lead not found for ID:", leadId);
+            return;
+        }
+
         const modal = document.getElementById('lead-details-modal');
         const content = document.getElementById('lead-details-content');
 
@@ -126,9 +133,9 @@ class LeadsManager {
                         <span class="block text-gray-500 text-xs">Subject</span>
                         <span class="font-bold text-gray-900">${custom.subject || '-'}</span>
                     </div>
-                    <div class="col-span-2 bg-gray-50 p-3 rounded">
+                    <div class="col-span-2 bg-gray-50 p-3 rounded max-h-60 overflow-y-auto">
                         <span class="block text-gray-500 text-xs mb-1">Message</span>
-                        <p class="text-gray-700 whitespace-pre-wrap">${custom.message || '-'}</p>
+                        <p class="text-gray-700 whitespace-pre-wrap leading-relaxed">${custom.message || '-'}</p>
                     </div>
                      <div>
                         <span class="block text-gray-500 text-xs">City</span>
@@ -176,9 +183,6 @@ class LeadsManager {
             if (lead.source === 'facebook') sourceBadge = `<span class="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded">FACEBOOK</span>`;
             if (lead.source === 'indiamart') sourceBadge = `<span class="px-2 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-800 rounded">INDIAMART</span>`;
 
-            // Prepare JSON string for onclick safely
-            const leadJson = JSON.stringify(lead).replace(/'/g, "&#39;");
-
             return `
                 <tr class="hover:bg-gray-50 transition-colors">
                     <td class="px-4 py-3 whitespace-nowrap text-gray-500">${date}</td>
@@ -199,7 +203,7 @@ class LeadsManager {
                         </select>
                     </td>
                     <td class="px-4 py-3 text-right">
-                        <button onclick='leadsManager.openLeadModal(${leadJson})' 
+                        <button onclick="leadsManager.openLeadModal(${lead.id})" 
                                 class="text-gray-500 hover:text-blue-600 transition-colors p-2 rounded-full hover:bg-blue-50"
                                 title="View Details">
                             <i class="fas fa-eye"></i>
