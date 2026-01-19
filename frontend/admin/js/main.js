@@ -138,6 +138,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function activateSection(item) {
         // 1. Hide all sections
+        // Explicitly hide IndiaMART section (not in navItems)
+        const imSec = document.getElementById("sectionIntegrationsIndiamart");
+        if (imSec) imSec.classList.add("hidden-section");
+
         navItems.forEach(nav => {
             const sec = document.getElementById(nav.section);
             if (sec) sec.classList.add("hidden-section");
@@ -165,6 +169,21 @@ document.addEventListener("DOMContentLoaded", () => {
         // 2. Show target section
         const targetSec = document.getElementById(item.section);
         if (targetSec) targetSec.classList.remove("hidden-section");
+
+        // SPECIAL CASE: Integrations Menu shows multiple sections
+        if (item.id === "menuIntegrations") {
+            const imSec = document.getElementById("sectionIntegrationsIndiamart");
+            if (imSec) imSec.classList.remove("hidden-section");
+
+            if (window.indiamartManager) window.indiamartManager.init();
+        } else {
+            // For other menus, ensure IndiaMART section is hidden (it was hidden in step 1 loop, but just to be safe if Logic changes)
+            const imSec = document.getElementById("sectionIntegrationsIndiamart");
+            // It's already hidden by the loop if we include it in the hide logic? 
+            // The loop iterates `navItems`. Indiamart section IS NOT in navItems. 
+            // So Step 1 DOES NOT hide it automatically!
+            // We must explicitly hide it in Step 1 or here.
+        }
 
         // 3. Highlight menu item
         const targetMenu = document.getElementById(item.id);

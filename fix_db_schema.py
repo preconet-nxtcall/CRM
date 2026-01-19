@@ -1,44 +1,40 @@
-import sqlite3
-import os
 from app import create_app, db
 from sqlalchemy import text
 
 app = create_app()
 
-def fix_schema():
-    with app.app_context():
-        print("Checking database schema...")
-        engine = db.engine
-        inspector = db.inspect(engine)
-        columns = [c['name'] for c in inspector.get_columns('attendances')]
-        
-        print(f"Current columns in 'attendances': {columns}")
-        
-        # Columns to add
-        new_columns = {
-            'check_out_latitude': 'FLOAT',
-            'check_out_longitude': 'FLOAT',
-            'check_out_address': 'VARCHAR(500)',
-            'check_out_image': 'VARCHAR(1024)'
-        }
-        
-        with engine.connect() as conn:
-            for col_name, col_type in new_columns.items():
-                if col_name not in columns:
-                    print(f"Adding missing column: {col_name} ({col_type})")
-                    try:
-                        # SQLite syntax (assuming SQLite for local dev, but works for most)
-                        # If Postgres, we might need 'COLUMN' keyword, but typically acceptable.
-                        # Using text() for safety.
-                        conn.execute(text(f'ALTER TABLE attendances ADD COLUMN {col_name} {col_type}'))
-                        print(f"✅ Added {col_name}")
-                    except Exception as e:
-                        print(f"❌ Failed to add {col_name}: {e}")
-                else:
-                    print(f"Skipping {col_name} (already exists)")
-            
-            conn.commit()
-            print("Schema update check complete.")
+with app.app_context():
+    print("🔧 Fixing Lead Table for SaaS Multi-Tenancy...")
+    
+    with db.engine.connect() as conn:
+        try:
+            # 1. Drop the old global unique index on facebook_lead_id if it exists
+            print("   - Dropping old unique index on facebook_lead_id...")
+            try:
+                # The default index name usually created by SQLAlchemy for unique=True
+                # postgres naming convention: ix_leads_facebook_lead_id or leads_facebook_lead_id_key
+                # Let's try to drop the constraint directly
+                conn.execute(text("ALTER TABLE leads DROP CONSTRAINT IF EXISTS leads_facebook_lead_id_key;"))
+                # Also drop index if it exists separately
+                conn.execute(text("DROP INDEX IF EXISTS ix_leads_facebook_lead_id;"))
+            except Exception as e:
+                print(f"     (Info) Drop index failed or not needed: {e}")
 
-if __name__ == "__main__":
-    fix_schema()
+        except Exception as e:
+            print(f"❌ Error during modification: {e}")
+            
+        # 2. Add the new composite unique constraint
+        try:
+            print("   - Adding new composite unique constraint (admin_id, facebook_lead_id)...")
+            # This ensures (admin 1, lead 123) and (admin 2, lead 123) can both exist
+            conn.execute(text("ALTER TABLE leads ADD CONSTRAINT _admin_lead_uc UNIQUE (admin_id, facebook_lead_id);"))
+            print("   ✅ Success: Constraints updated.")
+        except Exception as e:
+            if "already exists" in str(e):
+                 print("   ✅ Constraint already exists.")
+            else:
+                 print(f"   ❌ Error adding constraint: {e}")
+
+        conn.commit()
+    
+    print("🎉 Database Schema Updated for SaaS!")

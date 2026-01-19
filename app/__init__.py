@@ -193,6 +193,8 @@ def create_app(config_class=Config):
     app.register_blueprint(app_usage_bp) # NEW
     app.register_blueprint(facebook_bp) # NEW
     
+    from app.routes.indiamart import bp as indiamart_bp
+    app.register_blueprint(indiamart_bp) # NEW
     from app.routes.free_trial import bp as free_trial_bp
     app.register_blueprint(free_trial_bp)
 

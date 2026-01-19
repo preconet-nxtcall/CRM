@@ -340,7 +340,7 @@ def process_lead(fb_page, leadgen_id, form_id):
     Fetch lead details from Graph API and save to DB.
     """
     # Check if we already have this lead
-    existing_lead = Lead.query.filter_by(facebook_lead_id=leadgen_id).first()
+    existing_lead = Lead.query.filter_by(facebook_lead_id=leadgen_id, admin_id=fb_page.admin_id).first()
     if existing_lead:
         current_app.logger.info(f"Lead {leadgen_id} already exists. Skipping.")
         return

@@ -95,7 +95,7 @@ class Admin(db.Model):
     # Keep expiry as DateTime (NOT date)
     expiry_date = db.Column(db.DateTime, nullable=True)
 
-    created_by = db.Column(db.Integer, db.ForeignKey("super_admins.id"), nullable=False)
+    created_by = db.Column(db.Integer, db.ForeignKey("super_admins.id"), nullable=True)
     creator = db.relationship("SuperAdmin")
 
     created_at = db.Column(db.DateTime, default=now)
@@ -480,9 +480,13 @@ class Lead(db.Model):
     # UPDATED: Linked to ADMIN (Company)
     admin_id = db.Column(db.Integer, db.ForeignKey("admins.id"), nullable=False, index=True)
     
-    # Facebook specific
-    facebook_lead_id = db.Column(db.String(100), unique=True, nullable=True, index=True)
+    # Facebook/IndiaMART specific ID (Scoped uniqueness per Admin)
+    facebook_lead_id = db.Column(db.String(100), unique=False, nullable=True, index=True)
     form_id = db.Column(db.String(100), nullable=True)
+    
+    __table_args__ = (
+        db.UniqueConstraint('admin_id', 'facebook_lead_id', name='_admin_lead_uc'),
+    )
     
     # Contact Info
     name = db.Column(db.String(255), nullable=True)
@@ -515,3 +519,46 @@ class Lead(db.Model):
             "assigned_to": self.assigned_to,
             "created_at": self.created_at.isoformat() if self.created_at else None
         }
+
+
+# =========================================================
+# INDIAMART INTEGRATION
+# =========================================================
+class IndiamartSettings(db.Model):
+    __tablename__ = "indiamart_settings"
+
+    id = db.Column(db.Integer, primary_key=True)
+    admin_id = db.Column(db.Integer, db.ForeignKey("admins.id"), nullable=False, unique=True)
+    
+    mobile_number = db.Column(db.String(20), nullable=False)
+    api_key = db.Column(db.String(100), nullable=False)
+    
+    last_sync_time = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=now)
+    updated_at = db.Column(db.DateTime, default=now, onupdate=now)
+
+    def set_api_key(self, key):
+        from app.utils.security import encrypt_value
+        self.api_key = encrypt_value(key)
+
+    def get_api_key(self):
+        from app.utils.security import decrypt_value
+        return decrypt_value(self.api_key)
+
+    def to_dict(self):
+        # Determine strict or masked display? Always mask for UI.
+        # Decrypt first to get last 4 digits
+        real_key = self.get_api_key()
+        masked = None
+        if real_key:
+            masked = "***" + real_key[-4:] if len(real_key) > 4 else "***"
+
+        return {
+            "id": self.id,
+            "admin_id": self.admin_id,
+            "mobile_number": self.mobile_number,
+            "api_key": masked,
+            "last_sync_time": self.last_sync_time.isoformat() if self.last_sync_time else None,
+            "created_at": self.created_at.isoformat()
+        }
+
