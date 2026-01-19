@@ -168,8 +168,8 @@ def sync_magicbricks_leads(admin_id):
         
         email_ids = messages[0].split()
         
-        # Limit to last 20 to prevent timeouts if inbox is huge
-        for eid in email_ids[-20:]: 
+        # Limit to last 50 to prevent timeouts if inbox is huge
+        for eid in email_ids[-50:]: 
             status, msg_data = mail.fetch(eid, "(RFC822)")
             for response_part in msg_data:
                 if isinstance(response_part, tuple):
