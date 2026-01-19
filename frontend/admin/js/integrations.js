@@ -5,6 +5,10 @@
    UI MANAGER (Navigation Helpers)
 --------------------------------- */
 class UIManager {
+    init() {
+        console.log("UIManager initialized");
+    }
+
     openSubSection(sectionId) {
         // Show Target Modal (Overlay)
         const target = document.getElementById(sectionId);
