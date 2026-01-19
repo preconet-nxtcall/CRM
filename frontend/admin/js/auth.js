@@ -9,6 +9,11 @@ class Auth {
         this.emailKey = "admin_email";
     }
 
+    init() {
+        // Placeholder for future init logic
+        console.log("Auth initialized");
+    }
+
     /* ---------------------------------
         SAVE LOGIN (TOKEN + USER DATA)
     --------------------------------- */

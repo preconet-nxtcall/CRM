@@ -686,43 +686,21 @@ def user_analytics(user_id):
 # -------------------------
 # RECENT SYNC ACTIVITY
 # -------------------------
-@bp.route("/recent-sync", methods=["GET"])
-@jwt_required()
-def recent_sync():
-    if not admin_required():
-        return jsonify({"error": "Admin access only"}), 403
-
-    admin_id = int(get_jwt_identity())
-    
-    # Get users with most recent last_sync
-    recent_users = User.query.filter(
-        User.admin_id == admin_id,
-        User.last_sync.isnot(None)
-    ).order_by(User.last_sync.desc()).limit(5).all()
-
-    data = []
-    for u in recent_users:
-        data.append({
-            "id": u.id,
-            "name": u.name,
-            "email": u.email,
-            "last_sync": iso(u.last_sync),
-            "time_ago": "Just now", # simplified, frontend can calc relative time
-            "is_active": is_online(u.last_sync)
-        })
-
-    return jsonify({"recent_sync": data}), 200
+# -------------------------
+# RECENT SYNC ACTIVITY (MOVED TO admin_dashboard.py)
+# -------------------------
+# @bp.route("/recent-sync", methods=["GET"])
+# @jwt_required()
+# def recent_sync():
+#     return jsonify({"error": "Use admin_dashboard_bp"}), 410
 
 # -------------------------
-# USER LOGS (Recent Activity)
+# USER LOGS (Recent Activity) (MOVED TO admin_dashboard.py)
 # -------------------------
-@bp.route("/user-logs", methods=["GET"])
-@jwt_required()
-def user_logs():
-    if not admin_required():
-        return jsonify({"error": "Admin access only"}), 403
-
-    admin_id = int(get_jwt_identity())
+# @bp.route("/user-logs", methods=["GET"])
+# @jwt_required()
+# def user_logs():
+#     return jsonify({"error": "Use admin_dashboard_bp"}), 410
 
     # Define "today" in UTC
     now_utc = datetime.utcnow()
