@@ -29,8 +29,10 @@ class UIManager {
         // Hide Modals
         const fbSec = document.getElementById('sectionIntegrationsFacebook');
         const imSec = document.getElementById('sectionIntegrationsIndiamart');
+        const mbSec = document.getElementById('sectionIntegrationsMagicbricks'); // ADDED
         if (fbSec) fbSec.classList.add('hidden-section');
         if (imSec) imSec.classList.add('hidden-section');
+        if (mbSec) mbSec.classList.add('hidden-section'); // ADDED
 
         // Refresh Badges
         if (window.integrationsManager) window.integrationsManager.init();
