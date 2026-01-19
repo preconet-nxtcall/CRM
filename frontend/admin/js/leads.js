@@ -79,6 +79,9 @@ class LeadsManager {
                 <div class="text-blue-600 font-medium">${company}</div>
                 ${message ? `<div class="text-[10px] text-gray-400 mt-1 truncate max-w-[150px]" title="${message}">${message}</div>` : ''}
             `;
+        } else if (lead.source === 'call_history') {
+            // Call History Format
+            return `<div class="text-gray-500 italic">Manual Entry</div>`;
         } else {
             // Facebook / Default Format
             const campaign = lead.custom_fields.campaign_name;

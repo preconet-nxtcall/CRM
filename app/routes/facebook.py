@@ -475,6 +475,7 @@ def create_manual_lead():
              return jsonify({'error': 'User not found'}), 404
         
         admin_id = user.admin_id
+        assigned_to = current_identity
 
         data = request.get_json()
         
@@ -493,13 +494,13 @@ def create_manual_lead():
             name=data.get('name'),
             phone=data.get('phone'),
             status=data.get('status', 'new'),
-            source=data.get('source', 'call_history'),
+            source=data.get('source', 'call_history'), # Default to call_history
             custom_fields=custom_data,
             created_at=now()
         )
         
-        # Auto-assign to the creating agent
-        new_lead.assigned_to = current_identity
+        if assigned_to:
+            new_lead.assigned_to = assigned_to
 
         db.session.add(new_lead)
         db.session.commit()
