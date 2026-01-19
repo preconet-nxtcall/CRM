@@ -131,6 +131,51 @@ def process_single_email(admin_id, msg_id, email_message):
             requirement=lead_data.get("requirement"),
             custom_fields={"purpose": lead_data.get("purpose")}
         )
+
+        # ---------------------------------------------------------
+        # AGENT ASSIGNMENT LOGIC (ROUND ROBIN)
+        # ---------------------------------------------------------
+        assigned_user_id = None
+        try:
+            # 1. Get all active users (users) for this Admin
+            from app.models import User 
+            
+            active_agents = User.query.filter_by(
+                admin_id=admin_id, 
+                status='active',
+                is_suspended=False
+            ).order_by(User.id).all()
+
+            if active_agents:
+                # 2. Find the last assigned lead for this admin to determine sequence
+                last_lead = Lead.query.filter_by(admin_id=admin_id)\
+                    .filter(Lead.assigned_to.isnot(None))\
+                    .order_by(Lead.created_at.desc())\
+                    .first()
+
+                if not last_lead or not last_lead.assigned_to:
+                    # No previous assignment, assign to first agent
+                    assigned_user_id = active_agents[0].id
+                else:
+                    # Find index of last agent
+                    last_agent_id = last_lead.assigned_to
+                    
+                    # Check if last agent is still in the active list
+                    agent_ids = [agent.id for agent in active_agents]
+                    
+                    if last_agent_id in agent_ids:
+                        current_index = agent_ids.index(last_agent_id)
+                        next_index = (current_index + 1) % len(agent_ids)
+                        assigned_user_id = agent_ids[next_index]
+                    else:
+                        # Last agent removed/inactive, start over
+                        assigned_user_id = agent_ids[0]
+            
+        except Exception as e:
+            logger.error(f"Error in assignment logic for MB lead: {e}")
+        
+        if assigned_user_id:
+            new_lead.assigned_to = assigned_user_id
         
         db.session.add(new_lead)
         
