@@ -96,31 +96,118 @@ class LeadsManager {
         }
     }
 
+    openLeadModal(lead) {
+        const modal = document.getElementById('lead-details-modal');
+        const content = document.getElementById('lead-details-content');
+
+        let detailsHtml = '';
+        const custom = lead.custom_fields || {};
+
+        if (lead.source === 'indiamart') {
+            detailsHtml = `
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <span class="block text-gray-500 text-xs">Sender Name</span>
+                        <span class="font-medium text-gray-900">${lead.name || '-'}</span>
+                    </div>
+                    <div>
+                        <span class="block text-gray-500 text-xs">Mobile</span>
+                        <span class="font-medium text-gray-900">${lead.phone || '-'}</span>
+                    </div>
+                    <div>
+                        <span class="block text-gray-500 text-xs">Email</span>
+                        <span class="font-medium text-gray-900">${lead.email || '-'}</span>
+                    </div>
+                    <div>
+                        <span class="block text-gray-500 text-xs">Company</span>
+                        <span class="font-medium text-blue-600">${custom.company || '-'}</span>
+                    </div>
+                    <div class="col-span-2">
+                        <span class="block text-gray-500 text-xs">Subject</span>
+                        <span class="font-bold text-gray-900">${custom.subject || '-'}</span>
+                    </div>
+                    <div class="col-span-2 bg-gray-50 p-3 rounded">
+                        <span class="block text-gray-500 text-xs mb-1">Message</span>
+                        <p class="text-gray-700 whitespace-pre-wrap">${custom.message || '-'}</p>
+                    </div>
+                     <div>
+                        <span class="block text-gray-500 text-xs">City</span>
+                        <span class="font-medium text-gray-900">${custom.city || '-'}</span>
+                    </div>
+                    <div>
+                        <span class="block text-gray-500 text-xs">State</span>
+                        <span class="font-medium text-gray-900">${custom.state || '-'}</span>
+                    </div>
+                    <div class="col-span-2 border-t pt-2 mt-2">
+                        <span class="block text-gray-500 text-xs">Unique Query ID</span>
+                        <code class="text-xs bg-gray-100 px-2 py-1 rounded">${custom.indiamart_id || '-'}</code>
+                    </div>
+                </div>
+             `;
+        } else {
+            // Generic Fallback
+            detailsHtml = `
+                <div class="text-sm">
+                    <pre class="bg-gray-50 p-3 rounded overflow-x-auto text-xs text-gray-700">${JSON.stringify(lead, null, 2)}</pre>
+                </div>
+             `;
+        }
+
+        content.innerHTML = detailsHtml;
+        modal.classList.remove('hidden');
+    }
+
     renderTable(leads) {
         if (!leads || leads.length === 0) {
-            this.tableBody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-gray-500">No leads found yet.</td></tr>';
+            this.tableBody.innerHTML = `<tr><td colspan="9" class="text-center py-8 text-gray-500">No leads found.</td></tr>`;
             return;
         }
 
-        this.tableBody.innerHTML = leads.map(lead => `
-            <tr class="hover:bg-gray-50 transition-colors">
-                <td class="px-4 py-3 whitespace-nowrap text-gray-600">${new Date(lead.created_at).toLocaleString()}</td>
-                <td class="px-4 py-3 font-medium text-gray-900">${lead.name || '-'}</td>
-                <td class="px-4 py-3 text-blue-600">${lead.phone || '-'}</td>
-                <td class="px-4 py-3 text-gray-500">${lead.email || '-'}</td>
-                <td class="px-4 py-3"><span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs uppercase font-bold">${lead.source}</span></td>
-                <td class="px-4 py-3 text-gray-500 text-xs">
-                    ${this.renderLeadDetails(lead)}
-                </td>
-                <td class="px-4 py-3 text-gray-700">${lead.assigned_agent_name}</td>
-                <td class="px-4 py-3">
-                     <select onchange="leadsManager.updateLeadStatus(${lead.id}, this.value)" 
-                             class="px-2 py-1 text-xs rounded-full capitalize cursor-pointer border-0 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-indigo-600 sm:text-sm sm:leading-6 ${this.getStatusColor(lead.status)}">
-                        ${this.renderStatusOptions(lead.status)}
-                     </select>
-                </td>
-            </tr>
-        `).join('');
+        this.tableBody.innerHTML = leads.map(lead => {
+            const date = new Date(lead.created_at).toLocaleString();
+            let statusColor = "bg-gray-100 text-gray-800";
+            if (lead.status === 'new') statusColor = "bg-green-100 text-green-800";
+            if (lead.status === 'contacted') statusColor = "bg-blue-100 text-blue-800";
+            if (lead.status === 'qualified') statusColor = "bg-purple-100 text-purple-800";
+            if (lead.status === 'converted') statusColor = "bg-yellow-100 text-yellow-800";
+            if (lead.status === 'junk') statusColor = "bg-red-100 text-red-800";
+
+            let sourceBadge = `<span class="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-800 rounded">${lead.source.toUpperCase()}</span>`;
+            if (lead.source === 'facebook') sourceBadge = `<span class="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded">FACEBOOK</span>`;
+            if (lead.source === 'indiamart') sourceBadge = `<span class="px-2 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-800 rounded">INDIAMART</span>`;
+
+            // Prepare JSON string for onclick safely
+            const leadJson = JSON.stringify(lead).replace(/'/g, "&#39;");
+
+            return `
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-4 py-3 whitespace-nowrap text-gray-500">${date}</td>
+                    <td class="px-4 py-3 font-medium text-gray-900">${lead.name || '-'}</td>
+                    <td class="px-4 py-3 text-blue-600">${lead.phone || '-'}</td>
+                    <td class="px-4 py-3 text-gray-500">${lead.email || '-'}</td>
+                    <td class="px-4 py-3">${sourceBadge}</td>
+                    <td class="px-4 py-3 leading-tight">${this.renderLeadDetails(lead)}</td>
+                    <td class="px-4 py-3 text-gray-600">${lead.assigned_agent_name || 'Unassigned'}</td>
+                    <td class="px-4 py-3">
+                         <select onchange="leadsManager.updateLeadStatus(${lead.id}, this.value)" 
+                            class="text-xs rounded border-gray-200 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 ${statusColor}">
+                            <option value="new" ${lead.status === 'new' ? 'selected' : ''}>New</option>
+                            <option value="contacted" ${lead.status === 'contacted' ? 'selected' : ''}>Contacted</option>
+                            <option value="qualified" ${lead.status === 'qualified' ? 'selected' : ''}>Qualified</option>
+                            <option value="converted" ${lead.status === 'converted' ? 'selected' : ''}>Converted</option>
+                            <option value="junk" ${lead.status === 'junk' ? 'selected' : ''}>Junk</option>
+                        </select>
+                    </td>
+                    <td class="px-4 py-3 text-right">
+                        <button onclick='leadsManager.openLeadModal(${leadJson})' 
+                                class="text-gray-500 hover:text-blue-600 transition-colors p-2 rounded-full hover:bg-blue-50"
+                                title="View Details">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
     }
 
     renderStatusOptions(currentStatus) {
