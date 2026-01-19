@@ -76,9 +76,9 @@ class LeadsManager {
             const message = lead.custom_fields.message || '';
 
             return `
-                <div class="font-bold text-gray-900">${subject}</div>
-                <div class="text-blue-600 font-medium">${company}</div>
-                ${message ? `<div class="text-[10px] text-gray-400 mt-1 truncate max-w-[150px]" title="${message}">${message}</div>` : ''}
+                <div class="font-bold text-gray-900 truncate max-w-[200px]" title="${subject}">${subject}</div>
+                <div class="text-blue-600 font-medium truncate max-w-[200px]" title="${company}">${company}</div>
+                ${message ? `<div class="text-[10px] text-gray-400 mt-1 truncate max-w-[200px]" title="${message}">${message}</div>` : ''}
             `;
         } else if (lead.source === 'call_history') {
             // Call History Format
@@ -91,8 +91,8 @@ class LeadsManager {
             if (!campaign && !ad) return '-';
 
             return `
-                ${campaign ? `<div class="font-bold text-gray-900">${campaign}</div>` : ''}
-                ${ad ? `<div class="text-gray-500">${ad}</div>` : ''}
+                ${campaign ? `<div class="font-bold text-gray-900 truncate max-w-[200px]" title="${campaign}">${campaign}</div>` : ''}
+                ${ad ? `<div class="text-gray-500 truncate max-w-[200px]" title="${ad}">${ad}</div>` : ''}
             `;
         }
     }
@@ -171,7 +171,17 @@ class LeadsManager {
         }
 
         this.tableBody.innerHTML = leads.map(lead => {
-            const date = new Date(lead.created_at).toLocaleString();
+            // Enhanced Date Formatting (Local Time, Cleaner)
+            const dateObj = new Date(lead.created_at);
+            const date = dateObj.toLocaleString('en-IN', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+            });
+
             let statusColor = "bg-gray-100 text-gray-800";
             if (lead.status === 'new') statusColor = "bg-green-100 text-green-800";
             if (lead.status === 'contacted') statusColor = "bg-blue-100 text-blue-800";
@@ -185,10 +195,10 @@ class LeadsManager {
 
             return `
                 <tr class="hover:bg-gray-50 transition-colors">
-                    <td class="px-4 py-3 whitespace-nowrap text-gray-500">${date}</td>
-                    <td class="px-4 py-3 font-medium text-gray-900">${lead.name || '-'}</td>
-                    <td class="px-4 py-3 text-blue-600">${lead.phone || '-'}</td>
-                    <td class="px-4 py-3 text-gray-500">${lead.email || '-'}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-gray-500 text-xs">${date}</td>
+                    <td class="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">${lead.name || '-'}</td>
+                    <td class="px-4 py-3 text-blue-600 whitespace-nowrap custom-copy-text cursor-pointer" onclick="navigator.clipboard.writeText('${lead.phone}')" title="Click to copy">${lead.phone || '-'}</td>
+                    <td class="px-4 py-3 text-gray-500 whitespace-nowrap">${lead.email || '-'}</td>
                     <td class="px-4 py-3">${sourceBadge}</td>
                     <td class="px-4 py-3 leading-tight">${this.renderLeadDetails(lead)}</td>
                     <td class="px-4 py-3 text-gray-600">${lead.assigned_agent_name || 'Unassigned'}</td>
