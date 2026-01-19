@@ -67,6 +67,11 @@ def create_app(config_class=Config):
     except Exception as e:
         print(f"Scheduler Error: {e}")
 
+    # Run DB Patch
+    with app.app_context():
+        from app.db_patch import run_schema_patch
+        run_schema_patch()
+
     # =======================================================
     # GLOBAL GUARD (Strict Enforcement)
     # =======================================================
