@@ -16,14 +16,21 @@ def get_status():
     """
     Check if IndiaMART is connected for the current Admin.
     """
-    try:
-        current_user_id = int(get_jwt_identity())
-        user = User.query.get(current_user_id)
-        if not user or user.role != 'admin':
+        claims = get_jwt()
+        role = claims.get('role')
+        current_id = int(get_jwt_identity())
+
+        if role == 'admin':
+            admin = Admin.query.get(current_id)
+        elif role == 'user':
+            # Option: Allow agents to see status? 
+            # For now, if code expects strict admin settings management:
             return jsonify({"error": "Admin privileges required"}), 403
-        
-        # The 'Admin' record represents the Company
-        admin = Admin.query.get(user.admin_id)
+        else:
+            return jsonify({"error": "Unauthorized"}), 403
+
+        if not admin:
+            return jsonify({"error": "Admin account not found"}), 404
 
         settings = IndiamartSettings.query.filter_by(admin_id=admin.id).first()
         
@@ -46,12 +53,16 @@ def connect():
     Expects: { mobile_number, api_key }
     """
     try:
-        current_user_id = int(get_jwt_identity())
-        user = User.query.get(current_user_id)
-        if not user or user.role != 'admin':
-            return jsonify({"error": "Admin privileges required"}), 403
-        
-        admin = Admin.query.get(user.admin_id)
+        claims = get_jwt()
+        role = claims.get('role')
+        current_id = int(get_jwt_identity())
+
+        if role != 'admin':
+             return jsonify({"error": "Only Admins can connect integrations"}), 403
+
+        admin = Admin.query.get(current_id)
+        if not admin:
+             return jsonify({"error": "Admin account not found"}), 404
 
         data = request.json
         mobile = data.get('mobile_number')
@@ -83,12 +94,17 @@ def connect():
 @jwt_required()
 def disconnect():
     try:
-        current_user_id = int(get_jwt_identity())
-        user = User.query.get(current_user_id)
-        if not user or user.role != 'admin':
-             return jsonify({"error": "Admin privileges required"}), 403
+    try:
+        claims = get_jwt()
+        role = claims.get('role')
+        current_id = int(get_jwt_identity())
+
+        if role != 'admin':
+             return jsonify({"error": "Only Admins can disconnect integrations"}), 403
              
-        admin = Admin.query.get(user.admin_id)
+        admin = Admin.query.get(current_id)
+        if not admin:
+             return jsonify({"error": "Admin account not found"}), 404
         
         settings = IndiamartSettings.query.filter_by(admin_id=admin.id).first()
         if settings:
@@ -112,14 +128,20 @@ def sync_leads():
     Fetch leads from IndiaMART API and save to DB.
     """
     try:
-        current_user_id = int(get_jwt_identity())
-        user = User.query.get(current_user_id)
-        
-        # Allow agents to sync? Maybe only admin. Let's restrict to admin for now.
-        if not user or user.role != 'admin':
+    try:
+        claims = get_jwt()
+        role = claims.get('role')
+        current_id = int(get_jwt_identity())
+
+        if role == 'admin':
+            admin = Admin.query.get(current_id)
+        else:
+            # Agents typically shouldn't trigger manual sync, but if needed:
+            # user = User.query.get(current_id); admin = Admin.query.get(user.admin_id)
             return jsonify({"error": "Admin privileges required"}), 403
             
-        admin = Admin.query.get(user.admin_id)
+        if not admin:
+             return jsonify({"error": "Admin account not found"}), 404
 
         settings = IndiamartSettings.query.filter_by(admin_id=admin.id).first()
         if not settings:
