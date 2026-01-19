@@ -165,7 +165,18 @@ class IndiamartManager {
 
         const lastSyncVal = document.getElementById("im-last-sync-val");
         if (lastSyncVal) {
-            lastSyncVal.textContent = settings.last_sync_time ? new Date(settings.last_sync_time).toLocaleString('en-IN') : "Never";
+            if (settings.last_sync_time) {
+                let dateStr = settings.last_sync_time;
+                if (!dateStr.endsWith("Z") && !dateStr.includes("+")) {
+                    dateStr += "Z";
+                }
+                lastSyncVal.textContent = new Date(dateStr).toLocaleString('en-IN', {
+                    day: 'numeric', month: 'short', year: 'numeric',
+                    hour: '2-digit', minute: '2-digit', hour12: true
+                });
+            } else {
+                lastSyncVal.textContent = "Never";
+            }
         }
     }
 
