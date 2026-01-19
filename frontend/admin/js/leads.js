@@ -65,6 +65,34 @@ class LeadsManager {
         }
     }
 
+    renderLeadDetails(lead) {
+        if (!lead.custom_fields) return '-';
+
+        if (lead.source === 'indiamart') {
+            // IndiaMART Format
+            const subject = lead.custom_fields.subject || 'Inquiry';
+            const company = lead.custom_fields.company || '';
+            const message = lead.custom_fields.message || '';
+
+            return `
+                <div class="font-bold text-gray-900">${subject}</div>
+                <div class="text-blue-600 font-medium">${company}</div>
+                ${message ? `<div class="text-[10px] text-gray-400 mt-1 truncate max-w-[150px]" title="${message}">${message}</div>` : ''}
+            `;
+        } else {
+            // Facebook / Default Format
+            const campaign = lead.custom_fields.campaign_name;
+            const ad = lead.custom_fields.ad_name;
+
+            if (!campaign && !ad) return '-';
+
+            return `
+                ${campaign ? `<div class="font-bold text-gray-900">${campaign}</div>` : ''}
+                ${ad ? `<div class="text-gray-500">${ad}</div>` : ''}
+            `;
+        }
+    }
+
     renderTable(leads) {
         if (!leads || leads.length === 0) {
             this.tableBody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-gray-500">No leads found yet.</td></tr>';
@@ -79,9 +107,7 @@ class LeadsManager {
                 <td class="px-4 py-3 text-gray-500">${lead.email || '-'}</td>
                 <td class="px-4 py-3"><span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs uppercase font-bold">${lead.source}</span></td>
                 <td class="px-4 py-3 text-gray-500 text-xs">
-                    ${lead.custom_fields && lead.custom_fields.campaign_name ? `<div class="font-bold">${lead.custom_fields.campaign_name}</div>` : ''}
-                    ${lead.custom_fields && lead.custom_fields.ad_name ? `<div>${lead.custom_fields.ad_name}</div>` : ''}
-                    ${!lead.custom_fields || (!lead.custom_fields.campaign_name && !lead.custom_fields.ad_name) ? '-' : ''}
+                    ${this.renderLeadDetails(lead)}
                 </td>
                 <td class="px-4 py-3 text-gray-700">${lead.assigned_agent_name}</td>
                 <td class="px-4 py-3">
