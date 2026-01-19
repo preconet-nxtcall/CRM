@@ -172,7 +172,12 @@ class LeadsManager {
 
         this.tableBody.innerHTML = leads.map(lead => {
             // Enhanced Date Formatting (Local Time, Cleaner)
-            const dateObj = new Date(lead.created_at);
+            let dateStr = lead.created_at;
+            if (!dateStr.endsWith('Z')) {
+                dateStr += 'Z'; // Treat as UTC
+            }
+            const dateObj = new Date(dateStr);
+
             const date = dateObj.toLocaleString('en-IN', {
                 day: '2-digit',
                 month: 'short',
