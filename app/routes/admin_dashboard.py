@@ -124,11 +124,14 @@ def dashboard_stats():
             "expired_users": 0,
             "user_limit": admin.user_limit,
             "remaining_slots": admin.user_limit - total,
-            "users_with_sync": synced,
+            "synced_users": synced,
             "sync_rate": round((synced / total) * 100, 2) if total else 0,
             "avg_performance": avg_perf,
-            "performance_trend": daily_counts,
-            "day_labels": day_labels,  # Day names based on local timezone
+            "call_trend": {
+                "labels": day_labels,
+                "data": daily_counts
+            },
+            "day_labels": day_labels,  # kept for legacy if needed
             "admin_name": admin.name,
             "admin_email": admin.email
         }
