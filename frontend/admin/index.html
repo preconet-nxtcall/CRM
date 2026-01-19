@@ -619,41 +619,40 @@
             </button>
 
             <!-- Header -->
-            <div class="px-6 py-8 text-center border-b border-gray-50 bg-gradient-to-b from-red-50/50 to-white">
+            <div class="px-6 py-4 text-center border-b border-gray-50 bg-gradient-to-b from-red-50/50 to-white">
               <div
-                class="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center mx-auto mb-4 text-white shadow-lg shadow-red-500/30">
-                <i class="fas fa-home text-3xl"></i>
+                class="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center mx-auto mb-2 text-white shadow-lg shadow-red-500/30">
+                <i class="fas fa-home text-xl"></i>
               </div>
-              <h3 class="text-2xl font-bold text-gray-900 tracking-tight">Connect Magicbricks</h3>
-              <p class="text-gray-500 mt-2 text-sm mx-auto">
+              <h3 class="text-xl font-bold text-gray-900 tracking-tight">Connect Magicbricks</h3>
+              <p class="text-gray-500 mt-1 text-xs mx-auto">
                 Sync buyer leads automatically from your email inbox.
-              </p>
               </p>
             </div>
 
             <!-- Content -->
-            <div class="p-8 text-center">
+            <div class="p-6 text-center">
 
               <!-- CONNECTED STATE -->
-              <div id="mb-status-container" class="hidden mb-8">
+              <div id="mb-status-container" class="hidden mb-4">
                 <div
-                  class="inline-flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-full border border-green-100 text-sm font-medium mb-4">
+                  class="inline-flex items-center gap-2 px-3 py-1 bg-green-50 text-green-700 rounded-full border border-green-100 text-xs font-medium mb-3">
                   <i class="fas fa-check-circle"></i> Connected
                 </div>
                 <div
-                  class="flex flex-col items-center justify-center gap-2 p-4 bg-gray-50 rounded-lg w-full border border-gray-200 mb-4">
-                  <p class="text-sm text-gray-600"><strong>Email:</strong> <span id="mb-email-display"></span></p>
-                  <p class="text-sm text-gray-500 text-center italic">Last Synced: <span
+                  class="flex flex-col items-center justify-center gap-1 p-3 bg-gray-50 rounded-lg w-full border border-gray-200 mb-3">
+                  <p class="text-xs text-gray-600"><strong>Email:</strong> <span id="mb-email-display"></span></p>
+                  <p class="text-xs text-gray-500 text-center italic">Last Synced: <span
                       id="mb-last-sync-val">Never</span></p>
                 </div>
 
-                <div class="flex justify-center gap-4">
+                <div class="flex justify-center gap-3">
                   <button id="btn-mb-sync" onclick="magicbricksManager.sync()"
-                    class="px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition">
+                    class="px-3 py-1.5 bg-blue-600 text-white rounded shadow hover:bg-blue-700 transition text-sm">
                     <i class="fas fa-sync-alt"></i> Sync Now
                   </button>
                   <button onclick="magicbricksManager.disconnect()"
-                    class="px-4 py-2 text-red-500 hover:text-red-700 text-sm font-medium transition-colors border border-red-200 rounded-lg hover:bg-red-50">
+                    class="px-3 py-1.5 text-red-500 hover:text-red-700 text-xs font-medium transition-colors border border-red-200 rounded hover:bg-red-50">
                     Disconnect
                   </button>
                 </div>
@@ -661,25 +660,25 @@
 
               <!-- CONNECT FORM -->
               <div id="mb-connect-form" class="w-full text-left">
-                <div class="space-y-4">
+                <div class="space-y-3">
                   <div>
-                    <label class="block text-sm font-medium text-gray-700">Email Address (Gmail)</label>
+                    <label class="block text-xs font-medium text-gray-700">Email Address (Gmail)</label>
                     <input type="email" id="mb-email" placeholder="leads@example.com"
-                      class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 border p-2">
+                      class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 border p-2 text-sm">
                   </div>
                   <div>
-                    <label class="block text-sm font-medium text-gray-700">App Password</label>
+                    <label class="block text-xs font-medium text-gray-700">App Password</label>
                     <input type="password" id="mb-password" placeholder="xxxx xxxx xxxx xxxx"
-                      class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 border p-2">
-                    <p class="text-xs text-gray-500 mt-1">
+                      class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 border p-2 text-sm">
+                    <p class="text-[10px] text-gray-500 mt-1">
                       Use a <a href="https://myaccount.google.com/apppasswords" target="_blank"
                         class="text-blue-600 hover:text-blue-800 underline">Google App Password</a>, not your main
                       password.
                     </p>
                   </div>
-                  <div class="bg-blue-50 p-3 rounded-lg text-xs text-blue-800 space-y-1 mt-2">
-                    <p class="font-bold mb-1"><i class="fas fa-info-circle"></i> How to generate App Password:</p>
-                    <ol class="list-decimal list-inside space-y-0.5 ml-1">
+                  <div class="bg-blue-50 p-2 rounded-lg text-[10px] text-blue-800 space-y-0.5 mt-1">
+                    <p class="font-bold mb-0.5"><i class="fas fa-info-circle"></i> How to generate App Password:</p>
+                    <ol class="list-decimal list-inside space-y-0 ml-1 leading-tight">
                       <li>Go to <strong>Google Account > Security</strong>.</li>
                       <li>Enable <strong>2-Step Verification</strong>.</li>
                       <li>Search for <strong>"App Passwords"</strong>.</li>
@@ -687,7 +686,7 @@
                     </ol>
                   </div>
                   <button id="btn-mb-connect" onclick="magicbricksManager.connect()"
-                    class="w-full px-6 py-3 bg-[#D32F2F] hover:bg-[#b71c1c] text-white font-bold rounded-lg shadow-lg hover:shadow-red-500/30 transition-all transform active:scale-95 text-lg mt-4">
+                    class="w-full px-6 py-2.5 bg-[#D32F2F] hover:bg-[#b71c1c] text-white font-bold rounded-lg shadow-lg hover:shadow-red-500/30 transition-all transform active:scale-95 text-base mt-2">
                     Connect Magicbricks
                   </button>
                 </div>
