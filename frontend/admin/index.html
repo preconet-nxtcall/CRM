@@ -136,6 +136,14 @@
     .animate-spin-slow {
       animation: spin-slow 3s linear infinite;
     }
+    /* Custom Animations */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in {
+      animation: fadeIn 0.4s ease-out forwards;
+    }
   </style>
 </head>
 
@@ -300,7 +308,90 @@
       <div class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
 
         <!-- INTEGRATIONS SECTION -->
-        <section id="sectionIntegrations" class="hidden-section max-w-4xl mx-auto space-y-6">
+        <!-- LEAD INTEGRATIONS DASHBOARD (New) -->
+        <section id="sectionIntegrations" class="hidden-section max-w-7xl mx-auto space-y-8 animate-fade-in">
+          <!-- Header -->
+          <div>
+            <h2 class="text-2xl font-bold text-gray-900">Lead Integrations</h2>
+            <p class="text-gray-500 mt-1">Connect your lead sources to automatically sync leads into your CRM</p>
+          </div>
+
+          <!-- Integrations Grid -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+            <!-- FACEBOOK CARD -->
+            <div
+              class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col hover:shadow-md transition-shadow group relative overflow-hidden">
+              <div class="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+                <i class="fab fa-facebook-f text-8xl text-blue-600 -mr-4 -mt-4 transform rotate-12"></i>
+              </div>
+
+              <div class="flex items-center justify-between mb-6 relative z-10">
+                <div
+                  class="w-14 h-14 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shadow-inner">
+                  <i class="fab fa-facebook-f text-2xl"></i>
+                </div>
+                <!-- Badge (Updated by JS) -->
+                <span id="badge-fb-status"
+                  class="px-3 py-1 bg-gray-100 text-gray-500 text-xs font-bold uppercase tracking-wider rounded-full">Not
+                  Connected</span>
+              </div>
+
+              <h3 class="text-xl font-bold text-gray-900 relative z-10">Facebook Lead Ads</h3>
+              <p class="text-sm text-gray-500 mt-2 mb-6 relative z-10">
+                Sync lead forms directly from your Facebook & Instagram Business Pages.
+              </p>
+
+              <div class="mt-auto relative z-10">
+                <button onclick="uiManager.openSubSection('sectionIntegrationsFacebook')"
+                  class="w-full py-2.5 px-4 border border-gray-200 hover:border-blue-300 hover:bg-blue-50 text-gray-700 hover:text-blue-700 font-medium rounded-lg transition-colors flex items-center justify-center gap-2">
+                  <span>Manage Integration</span>
+                  <i class="fas fa-arrow-right text-xs"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- INDIAMART CARD -->
+            <div
+              class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col hover:shadow-md transition-shadow group relative overflow-hidden">
+              <div class="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+                <i class="fas fa-bullhorn text-8xl text-[#D93025] -mr-4 -mt-4 transform -rotate-12"></i>
+              </div>
+
+              <div class="flex items-center justify-between mb-6 relative z-10">
+                <div
+                  class="w-14 h-14 bg-red-50 text-[#D93025] rounded-xl flex items-center justify-center shadow-inner">
+                  <i class="fas fa-bullhorn text-2xl"></i>
+                </div>
+                <!-- Badge (Updated by JS) -->
+                <span id="badge-im-status"
+                  class="px-3 py-1 bg-gray-100 text-gray-500 text-xs font-bold uppercase tracking-wider rounded-full">Not
+                  Connected</span>
+              </div>
+
+              <h3 class="text-xl font-bold text-gray-900 relative z-10">IndiaMART Leads</h3>
+              <p class="text-sm text-gray-500 mt-2 mb-6 relative z-10">
+                Pull leads securely from your IndiaMART CRM API in real-time.
+              </p>
+
+              <div class="mt-auto relative z-10">
+                <button onclick="uiManager.openSubSection('sectionIntegrationsIndiamart')"
+                  class="w-full py-2.5 px-4 bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-medium rounded-lg shadow hover:shadow-lg transition-all flex items-center justify-center gap-2">
+                  <span>Connect Now</span>
+                  <i class="fas fa-plug text-xs"></i>
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- FACEBOOK SUB-SECTION (Previously Main) -->
+        <section id="sectionIntegrationsFacebook" class="hidden-section max-w-4xl mx-auto space-y-6">
+          <button onclick="uiManager.showMainIntegrations()"
+            class="mb-4 text-gray-500 hover:text-gray-900 flex items-center gap-2 font-medium transition-colors">
+            <i class="fas fa-arrow-left"></i> Back to Integrations
+          </button>
           <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <!-- Header -->
             <div class="px-6 py-8 text-center border-b border-gray-50 bg-gradient-to-b from-blue-50/50 to-white">
@@ -350,8 +441,12 @@
           </div>
         </section>
 
-        <!-- INDIAMART INTEGRATION SECTION -->
+        <!-- INDIAMART SUB-SECTION -->
         <section id="sectionIntegrationsIndiamart" class="mt-8 hidden-section max-w-4xl mx-auto space-y-6">
+          <button onclick="uiManager.showMainIntegrations()"
+            class="mb-4 text-gray-500 hover:text-gray-900 flex items-center gap-2 font-medium transition-colors">
+            <i class="fas fa-arrow-left"></i> Back to Integrations
+          </button>
           <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <!-- Header -->
             <div class="px-6 py-8 text-center border-b border-gray-50 bg-gradient-to-b from-red-50/50 to-white">
@@ -1487,6 +1582,7 @@
   <script src="js/facebook.js?v=1.0"></script>
   <script src="js/leads.js?v=1.0"></script>
   <script src="js/indiamart.js?v=1.0"></script>
+  <script src="js/integrations.js?v=1.0"></script>
 
   <script src="js/main.js?v=2.9"></script>
   <script src="js/performance.js?v=2.8"></script>

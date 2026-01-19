@@ -131,16 +131,18 @@ document.addEventListener("DOMContentLoaded", () => {
         { id: "menuAppPerformance", section: "sectionAppPerformance", title: "App Usage Monitor", manager: window.appPerformanceManager },
         { id: "menuFollowup", section: "sectionFollowup", title: "Follow-ups", manager: window.followupManager },
         { id: "menuLeads", section: "sectionLeads", title: "Leads Management", manager: window.leadsManager },
-        { id: "menuIntegrations", mobileId: null, section: "sectionIntegrations", title: "Facebook Integration", manager: window.facebookManager }
+        { id: "menuIntegrations", mobileId: null, section: "sectionIntegrations", title: "Lead Integrations", manager: window.integrationsManager }
     ];
 
     const pageTitle = document.getElementById("pageTitle");
 
     function activateSection(item) {
-        // 1. Hide all sections
-        // Explicitly hide IndiaMART section (not in navItems)
+        // Explicitly hide IndiaMART & Facebook sub-sections (not in navItems)
         const imSec = document.getElementById("sectionIntegrationsIndiamart");
         if (imSec) imSec.classList.add("hidden-section");
+
+        const fbSec = document.getElementById("sectionIntegrationsFacebook");
+        if (fbSec) fbSec.classList.add("hidden-section");
 
         navItems.forEach(nav => {
             const sec = document.getElementById(nav.section);
@@ -170,19 +172,9 @@ document.addEventListener("DOMContentLoaded", () => {
         const targetSec = document.getElementById(item.section);
         if (targetSec) targetSec.classList.remove("hidden-section");
 
-        // SPECIAL CASE: Integrations Menu shows multiple sections
-        if (item.id === "menuIntegrations") {
-            const imSec = document.getElementById("sectionIntegrationsIndiamart");
-            if (imSec) imSec.classList.remove("hidden-section");
-
-            if (window.indiamartManager) window.indiamartManager.init();
-        } else {
-            // For other menus, ensure IndiaMART section is hidden (it was hidden in step 1 loop, but just to be safe if Logic changes)
-            const imSec = document.getElementById("sectionIntegrationsIndiamart");
-            // It's already hidden by the loop if we include it in the hide logic? 
-            // The loop iterates `navItems`. Indiamart section IS NOT in navItems. 
-            // So Step 1 DOES NOT hide it automatically!
-            // We must explicitly hide it in Step 1 or here.
+        // Init Integrations Grid Manager if needed
+        if (item.id === "menuIntegrations" && window.integrationsManager) {
+            window.integrationsManager.init();
         }
 
         // 3. Highlight menu item
