@@ -158,7 +158,19 @@ class MagicbricksManager {
 
         const lastSyncDisplay = document.getElementById("mb-last-sync-val");
         if (lastSyncDisplay) {
-            lastSyncDisplay.textContent = settings.last_sync_time ? new Date(settings.last_sync_time).toLocaleString('en-IN') : "Never";
+            if (settings.last_sync_time) {
+                // Ensure UTC interpretation if string lacks TZ info
+                let dateStr = settings.last_sync_time;
+                if (!dateStr.endsWith("Z") && !dateStr.includes("+")) {
+                    dateStr += "Z";
+                }
+                lastSyncDisplay.textContent = new Date(dateStr).toLocaleString('en-IN', {
+                    day: 'numeric', month: 'short', year: 'numeric',
+                    hour: '2-digit', minute: '2-digit', hour12: true
+                });
+            } else {
+                lastSyncDisplay.textContent = "Never";
+            }
         }
     }
 
