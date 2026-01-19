@@ -223,7 +223,7 @@ def create_app(config_class=Config):
     app.register_blueprint(admin_attendance_bp)
     app.register_blueprint(admin_call_analytics_bp)
     app.register_blueprint(admin_performance_bp)
-    # app.register_blueprint(admin_dashboard_bp)
+    app.register_blueprint(admin_dashboard_bp)
     app.register_blueprint(admin_sync_bp)
     app.register_blueprint(admin_user_bp)  # NEW: User Management Actions
 

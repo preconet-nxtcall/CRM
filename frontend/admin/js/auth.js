@@ -181,6 +181,7 @@ class Auth {
 
 // GLOBAL INSTANCE
 const auth = new Auth();
+window.auth = auth;
 
 /* ---------------------------------
    AUTO REDIRECT (FOR ALL ADMIN PAGES)
