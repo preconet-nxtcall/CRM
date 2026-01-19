@@ -136,11 +136,20 @@
     .animate-spin-slow {
       animation: spin-slow 3s linear infinite;
     }
+
     /* Custom Animations */
     @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
+
     .animate-fade-in {
       animation: fadeIn 0.4s ease-out forwards;
     }
@@ -386,13 +395,22 @@
           </div>
         </section>
 
-        <!-- FACEBOOK SUB-SECTION (Previously Main) -->
-        <section id="sectionIntegrationsFacebook" class="hidden-section max-w-4xl mx-auto space-y-6">
-          <button onclick="uiManager.showMainIntegrations()"
-            class="mb-4 text-gray-500 hover:text-gray-900 flex items-center gap-2 font-medium transition-colors">
-            <i class="fas fa-arrow-left"></i> Back to Integrations
-          </button>
-          <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <!-- FACEBOOK MODAL -->
+        <div id="sectionIntegrationsFacebook"
+          class="fixed inset-0 z-50 hidden-section flex items-center justify-center p-4">
+          <!-- Backdrop -->
+          <div class="absolute inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity"
+            onclick="uiManager.showMainIntegrations()"></div>
+
+          <!-- Modal Content -->
+          <div
+            class="relative bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden transform transition-all animate-fade-in">
+            <!-- Close Button -->
+            <button onclick="uiManager.showMainIntegrations()"
+              class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors z-10">
+              <i class="fas fa-times text-xl"></i>
+            </button>
+
             <!-- Header -->
             <div class="px-6 py-8 text-center border-b border-gray-50 bg-gradient-to-b from-blue-50/50 to-white">
               <div
@@ -400,7 +418,7 @@
                 <i class="fab fa-facebook-f text-3xl"></i>
               </div>
               <h3 class="text-2xl font-bold text-gray-900 tracking-tight">Connect Facebook Page</h3>
-              <p class="text-gray-500 mt-2 max-w-lg mx-auto">
+              <p class="text-gray-500 mt-2 text-sm mx-auto">
                 Connect your Facebook Business Page to automatically sync lead forms to your CRM.
               </p>
             </div>
@@ -408,20 +426,20 @@
             <!-- Content -->
             <div class="p-8 text-center">
               <!-- Status State -->
-              <div id="fb-status-container" class="hidden mb-8">
+              <div id="fb-status-container" class="hidden mb-6">
                 <div
                   class="inline-flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-full border border-green-100 text-sm font-medium mb-4">
                   <i class="fas fa-check-circle"></i> Connected
                 </div>
                 <div
-                  class="flex items-center justify-center gap-4 p-4 bg-gray-50 rounded-lg max-w-md mx-auto border border-gray-200">
+                  class="flex items-center justify-center gap-4 p-4 bg-gray-50 rounded-lg transform scale-95 border border-gray-200">
                   <div id="fb-page-img" class="w-12 h-12 bg-gray-200 rounded-full bg-cover bg-center"></div>
-                  <div class="text-left">
-                    <h4 id="fb-page-name" class="font-bold text-gray-900">Page Name</h4>
-                    <p id="fb-page-id" class="text-xs text-gray-500">ID: <span id="fb-page-id-val"></span></p>
+                  <div class="text-left w-full overflow-hidden">
+                    <h4 id="fb-page-name" class="font-bold text-gray-900 truncate">Page Name</h4>
+                    <p id="fb-page-id" class="text-xs text-gray-500 truncate">ID: <span id="fb-page-id-val"></span></p>
                   </div>
                   <button onclick="facebookManager.disconnect()"
-                    class="ml-auto text-red-500 hover:text-red-700 text-sm font-medium transition-colors">
+                    class="ml-auto text-red-500 hover:text-red-700 text-xs font-medium bg-white px-2 py-1 rounded border border-red-100 hover:bg-red-50 transition-colors">
                     Disconnect
                   </button>
                 </div>
@@ -429,25 +447,34 @@
 
               <!-- Connect Button -->
               <button id="btn-fb-connect" onclick="facebookManager.login()"
-                class="inline-flex items-center gap-2 px-6 py-3 bg-[#1877F2] hover:bg-[#166fe5] text-white font-bold rounded-lg shadow-lg hover:shadow-blue-500/30 transition-all transform active:scale-95 text-lg">
+                class="w-full inline-flex justify-center items-center gap-2 px-6 py-3 bg-[#1877F2] hover:bg-[#166fe5] text-white font-bold rounded-lg shadow-lg hover:shadow-blue-500/30 transition-all transform active:scale-95 text-lg">
                 <i class="fab fa-facebook"></i> Connect Page
               </button>
 
-              <p class="text-xs text-gray-400 mt-6">
+              <p class="text-[10px] text-gray-400 mt-4 leading-relaxed">
                 Requires 'pages_show_list' and 'leads_retrieval' permissions. <br>
                 Data storage compliant with Meta Platform Terms.
               </p>
             </div>
           </div>
-        </section>
+        </div>
 
-        <!-- INDIAMART SUB-SECTION -->
-        <section id="sectionIntegrationsIndiamart" class="mt-8 hidden-section max-w-4xl mx-auto space-y-6">
-          <button onclick="uiManager.showMainIntegrations()"
-            class="mb-4 text-gray-500 hover:text-gray-900 flex items-center gap-2 font-medium transition-colors">
-            <i class="fas fa-arrow-left"></i> Back to Integrations
-          </button>
-          <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <!-- INDIAMART MODAL -->
+        <div id="sectionIntegrationsIndiamart"
+          class="fixed inset-0 z-50 hidden-section flex items-center justify-center p-4">
+          <!-- Backdrop -->
+          <div class="absolute inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity"
+            onclick="uiManager.showMainIntegrations()"></div>
+
+          <!-- Modal Content -->
+          <div
+            class="relative bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden transform transition-all animate-fade-in">
+            <!-- Close Button -->
+            <button onclick="uiManager.showMainIntegrations()"
+              class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors z-10">
+              <i class="fas fa-times text-xl"></i>
+            </button>
+
             <!-- Header -->
             <div class="px-6 py-8 text-center border-b border-gray-50 bg-gradient-to-b from-red-50/50 to-white">
               <div
@@ -455,7 +482,7 @@
                 <i class="fas fa-bullhorn text-3xl"></i>
               </div>
               <h3 class="text-2xl font-bold text-gray-900 tracking-tight">Connect IndiaMART</h3>
-              <p class="text-gray-500 mt-2 max-w-lg mx-auto">
+              <p class="text-gray-500 mt-2 text-sm mx-auto">
                 Sync leads directly from your IndiaMART Seller Account.
               </p>
             </div>
@@ -470,7 +497,7 @@
                   <i class="fas fa-check-circle"></i> Connected
                 </div>
                 <div
-                  class="flex flex-col items-center justify-center gap-2 p-4 bg-gray-50 rounded-lg max-w-md mx-auto border border-gray-200 mb-4">
+                  class="flex flex-col items-center justify-center gap-2 p-4 bg-gray-50 rounded-lg w-full border border-gray-200 mb-4">
                   <p class="text-sm text-gray-600"><strong>Mobile:</strong> <span id="im-mobile-display"></span></p>
                   <p class="text-sm text-gray-600"><strong>API Key:</strong> <span id="im-apikey-display"></span></p>
                 </div>
@@ -488,11 +515,11 @@
               </div>
 
               <!-- CONNECT FORM -->
-              <div id="im-connect-form" class="max-w-md mx-auto text-left">
+              <div id="im-connect-form" class="w-full text-left">
                 <div class="space-y-4">
                   <div>
                     <label class="block text-sm font-medium text-gray-700">Registered Mobile Number</label>
-                    <input type="text" id="im-mobile" placeholder="+919429692691"
+                    <input type="text" id="im-mobile" placeholder="+919804381038"
                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 border p-2">
                   </div>
                   <div>
@@ -515,7 +542,7 @@
 
             </div>
           </div>
-        </section>
+        </div>
 
         <!-- LEADS SECTION -->
         <section id="sectionLeads" class="hidden-section space-y-6">

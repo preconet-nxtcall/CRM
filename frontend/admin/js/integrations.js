@@ -6,11 +6,7 @@
 --------------------------------- */
 class UIManager {
     openSubSection(sectionId) {
-        // Hide Main Grid
-        const grid = document.getElementById('sectionIntegrations');
-        if (grid) grid.classList.add('hidden-section');
-
-        // Show Target Sub-section
+        // Show Target Modal (Overlay)
         const target = document.getElementById(sectionId);
         if (target) {
             target.classList.remove('hidden-section');
@@ -26,15 +22,11 @@ class UIManager {
     }
 
     showMainIntegrations() {
-        // Hide Sub-sections
+        // Hide Modals
         const fbSec = document.getElementById('sectionIntegrationsFacebook');
         const imSec = document.getElementById('sectionIntegrationsIndiamart');
         if (fbSec) fbSec.classList.add('hidden-section');
         if (imSec) imSec.classList.add('hidden-section');
-
-        // Show Main Grid
-        const grid = document.getElementById('sectionIntegrations');
-        if (grid) grid.classList.remove('hidden-section');
 
         // Refresh Badges
         if (window.integrationsManager) window.integrationsManager.init();
