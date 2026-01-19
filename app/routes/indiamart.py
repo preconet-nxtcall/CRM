@@ -16,6 +16,7 @@ def get_status():
     """
     Check if IndiaMART is connected for the current Admin.
     """
+    try:
         claims = get_jwt()
         role = claims.get('role')
         current_id = int(get_jwt_identity())
@@ -94,7 +95,6 @@ def connect():
 @jwt_required()
 def disconnect():
     try:
-    try:
         claims = get_jwt()
         role = claims.get('role')
         current_id = int(get_jwt_identity())
@@ -127,7 +127,6 @@ def sync_leads():
     """
     Fetch leads from IndiaMART API and save to DB.
     """
-    try:
     try:
         claims = get_jwt()
         role = claims.get('role')
