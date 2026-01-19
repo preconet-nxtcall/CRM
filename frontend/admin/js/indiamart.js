@@ -126,10 +126,76 @@ class IndiamartManager {
 
         if (this.mobileDisplay) this.mobileDisplay.textContent = settings.mobile_number;
         if (this.apiKeyDisplay) this.apiKeyDisplay.textContent = settings.api_key; // Shows masked
+
+        // Inject Auto Sync Toggle if not present
+        let toggleContainer = document.getElementById("im-auto-sync-container");
+        if (!toggleContainer && this.statusContainer) {
+            const div = document.createElement("div");
+            div.id = "im-auto-sync-container";
+            div.className = "mt-4 pt-4 border-t border-gray-100 flex items-center justify-between";
+            div.innerHTML = `
+                <div>
+                    <h4 class="text-sm font-medium text-gray-900">Automatic Sync</h4>
+                    <p class="text-xs text-gray-500">Fetch leads automatically every 15 mins</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="im-auto-sync-checkbox" class="sr-only peer" onchange="indiamartManager.toggleAutoSync(this)">
+                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+             `;
+            // Append after the grid
+            this.statusContainer.appendChild(div);
+        }
+
+        // Inject Last Sync Display if not present
+        let lastSyncContainer = document.getElementById("im-last-sync-display");
+        if (!lastSyncContainer && this.statusContainer) {
+            const p = document.createElement("p");
+            p.className = "text-sm text-gray-500 mt-2 text-center italic";
+            p.innerHTML = 'Last Synced: <span id="im-last-sync-val">Never</span>';
+            // Insert before the buttons
+            const btns = this.statusContainer.querySelector(".flex.justify-center.gap-4");
+            if (btns) this.statusContainer.insertBefore(p, btns);
+            else this.statusContainer.appendChild(p);
+        }
+
+        // Update Values
+        const checkbox = document.getElementById("im-auto-sync-checkbox");
+        if (checkbox) checkbox.checked = settings.auto_sync_enabled;
+
+        const lastSyncVal = document.getElementById("im-last-sync-val");
+        if (lastSyncVal) {
+            lastSyncVal.textContent = settings.last_sync_time ? new Date(settings.last_sync_time).toLocaleString('en-IN') : "Never";
+        }
+    }
+
+    async toggleAutoSync(checkbox) {
+        const enabled = checkbox.checked;
+        try {
+            const resp = await auth.makeAuthenticatedRequest('/api/indiamart/update_settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ auto_sync: enabled })
+            });
+
+            if (resp && resp.ok) {
+                auth.showNotification(`Auto Sync ${enabled ? 'Enabled' : 'Disabled'}`, "success");
+            } else {
+                checkbox.checked = !enabled; // Revert
+                auth.showNotification("Failed to update settings", "error");
+            }
+        } catch (e) {
+            checkbox.checked = !enabled; // Revert
+            console.error("Error toggling auto sync", e);
+            auth.showNotification("Error updating settings", "error");
+        }
     }
 
     showDisconnected() {
-        if (this.statusContainer) this.statusContainer.classList.add("hidden");
+        if (this.statusContainer) {
+            this.statusContainer.classList.add("hidden");
+            // Clean up toggle if exists logic not strictly needed as container is hidden
+        }
         if (this.connectForm) this.connectForm.classList.remove("hidden");
     }
 }

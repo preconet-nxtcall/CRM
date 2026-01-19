@@ -158,6 +158,18 @@ def run_schema_patch():
                         except Exception as e2:
                              print(f"❌ Failed to drop leads: {e2}")
 
+            # INDIAMART SETTINGS - auto_sync_enabled
+            if 'indiamart_settings' in inspector.get_table_names():
+                im_cols = [c['name'] for c in inspector.get_columns('indiamart_settings')]
+                if 'auto_sync_enabled' not in im_cols:
+                    print("Adding auto_sync_enabled to indiamart_settings table...")
+                    try:
+                         # Default TRUE
+                         conn.execute(text("ALTER TABLE indiamart_settings ADD COLUMN auto_sync_enabled BOOLEAN DEFAULT TRUE"))
+                         print("✅ Added auto_sync_enabled to indiamart_settings")
+                    except Exception as e:
+                         print(f"❌ Failed to add auto_sync_enabled: {e}")
+
             conn.commit()
             print("Schema patch complete.")
             

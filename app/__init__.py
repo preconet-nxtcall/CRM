@@ -16,10 +16,11 @@ import os
 
 from app.models import db, bcrypt, Admin, User, SuperAdmin
 from config import Config
+from flask_apscheduler import APScheduler
 
 jwt = JWTManager()
 migrate = Migrate()
-
+scheduler = APScheduler()
 
 def create_app(config_class=Config):
     app = Flask(__name__, static_folder=None)
@@ -31,6 +32,27 @@ def create_app(config_class=Config):
     jwt.init_app(app)
     migrate.init_app(app, db)
     CORS(app)
+    
+    # Scheduler
+    scheduler.init_app(app)
+    scheduler.start()
+    
+    # Register Jobs
+    try:
+        from app.services.indiamart_service import scheduled_sync_job
+        # Remove existing if any (to avoid duplicates on reload)
+        if scheduler.get_job('indiamart_sync'):
+             scheduler.remove_job('indiamart_sync')
+             
+        scheduler.add_job(
+            id='indiamart_sync', 
+            func=scheduled_sync_job, 
+            args=[app], 
+            trigger='interval', 
+            minutes=15
+        )
+    except Exception as e:
+        print(f"Scheduler Error: {e}")
 
     # =======================================================
     # GLOBAL GUARD (Strict Enforcement)

@@ -534,6 +534,7 @@ class IndiamartSettings(db.Model):
     api_key = db.Column(db.String(100), nullable=False)
     
     last_sync_time = db.Column(db.DateTime, nullable=True)
+    auto_sync_enabled = db.Column(db.Boolean, default=True) # NEW: Auto Sync Toggle
     created_at = db.Column(db.DateTime, default=now)
     updated_at = db.Column(db.DateTime, default=now, onupdate=now)
 
@@ -559,6 +560,7 @@ class IndiamartSettings(db.Model):
             "mobile_number": self.mobile_number,
             "api_key": masked,
             "last_sync_time": self.last_sync_time.isoformat() if self.last_sync_time else None,
+            "auto_sync_enabled": self.auto_sync_enabled,
             "created_at": self.created_at.isoformat()
         }
 
