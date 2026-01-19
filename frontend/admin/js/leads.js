@@ -19,15 +19,21 @@ class LeadsManager {
 
     updateFilterButtons() {
         // Reset all buttons
-        const types = ['all', 'facebook', 'indiamart'];
+        const types = ['all', 'facebook', 'indiamart', 'magicbricks'];
         types.forEach(type => {
             const btn = document.getElementById(`btn-filter-${type}`);
             if (btn) {
-                // Determine classes based on active state
+                let baseClass = "px-3 py-1.5 text-xs font-medium transition-colors ";
+
+                // Determine rounded corners based on position
+                if (type === 'all') baseClass += "rounded-l-lg ";
+                else if (type === 'magicbricks') baseClass += "rounded-r-lg ";
+                else baseClass += ""; // Middle buttons
+
                 if (type === this.currentFilter) {
-                    btn.className = "px-3 py-1.5 text-xs font-medium text-white bg-blue-600 border border-blue-600 hover:bg-blue-700 transition-colors " + (type === 'all' ? 'rounded-l-lg' : (type === 'indiamart' ? 'rounded-r-lg' : ''));
+                    btn.className = baseClass + "text-white bg-blue-600 border border-blue-600 hover:bg-blue-700";
                 } else {
-                    btn.className = "px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border-t border-b border-r border-gray-200 hover:bg-gray-100 transition-colors " + (type === 'all' ? 'rounded-l-lg border-l' : (type === 'indiamart' ? 'rounded-r-lg' : ''));
+                    btn.className = baseClass + "text-gray-700 bg-white border-t border-b border-r border-gray-200 hover:bg-gray-100" + (type === 'all' ? " border-l" : "");
                 }
             }
         });
@@ -83,6 +89,12 @@ class LeadsManager {
         } else if (lead.source === 'call_history') {
             // Call History Format
             return `<div class="text-gray-500 italic">Manual Entry</div>`;
+        } else if (lead.source === 'magicbricks') {
+            // Magicbricks Format
+            return `
+                <div class="font-bold text-gray-900 truncate max-w-[200px]" title="${lead.property_type}">${lead.property_type || '-'}</div>
+                <div class="text-gray-500 truncate max-w-[200px]" title="${lead.budget} | ${lead.location}">${lead.budget || '-'}</div>
+            `;
         } else {
             // Facebook / Default Format
             const campaign = lead.custom_fields.campaign_name;
@@ -151,6 +163,40 @@ class LeadsManager {
                     </div>
                 </div>
              `;
+        } else if (lead.source === 'magicbricks') {
+            // Magicbricks Format
+            detailsHtml = `
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <span class="block text-gray-500 text-xs">Sender Name</span>
+                        <span class="font-medium text-gray-900">${lead.name || '-'}</span>
+                    </div>
+                    <div>
+                        <span class="block text-gray-500 text-xs">Mobile</span>
+                        <span class="font-medium text-gray-900">${lead.phone || '-'}</span>
+                    </div>
+                    <div>
+                        <span class="block text-gray-500 text-xs">Email</span>
+                        <span class="font-medium text-gray-900">${lead.email || '-'}</span>
+                    </div>
+                     <div>
+                        <span class="block text-gray-500 text-xs">Property Type</span>
+                        <span class="font-medium text-red-600">${lead.property_type || '-'}</span>
+                    </div>
+                     <div>
+                        <span class="block text-gray-500 text-xs">Location</span>
+                        <span class="font-medium text-gray-900">${lead.location || '-'}</span>
+                    </div>
+                     <div>
+                        <span class="block text-gray-500 text-xs">Budget</span>
+                        <span class="font-medium text-gray-900">${lead.budget || '-'}</span>
+                    </div>
+                    <div class="col-span-2 bg-gray-50 p-3 rounded max-h-60 overflow-y-auto">
+                        <span class="block text-gray-500 text-xs mb-1">Requirement</span>
+                        <p class="text-gray-700 whitespace-pre-wrap leading-relaxed">${lead.requirement || '-'}</p>
+                    </div>
+                </div>
+            `;
         } else {
             // Generic Fallback
             detailsHtml = `
@@ -197,6 +243,7 @@ class LeadsManager {
             let sourceBadge = `<span class="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-800 rounded">${lead.source.toUpperCase()}</span>`;
             if (lead.source === 'facebook') sourceBadge = `<span class="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded">FACEBOOK</span>`;
             if (lead.source === 'indiamart') sourceBadge = `<span class="px-2 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-800 rounded">INDIAMART</span>`;
+            if (lead.source === 'magicbricks') sourceBadge = `<span class="px-2 py-0.5 text-xs font-medium bg-red-100 text-red-800 rounded">MAGICBRICKS</span>`;
 
             return `
                 <tr class="hover:bg-gray-50 transition-colors">

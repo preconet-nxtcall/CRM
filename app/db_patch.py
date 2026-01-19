@@ -158,6 +158,27 @@ def run_schema_patch():
                         except Exception as e2:
                              print(f"❌ Failed to drop leads: {e2}")
 
+            # -------------------------------------------------------------
+            # LEADS TABLE - Real Estate Fields
+            # -------------------------------------------------------------
+            if 'leads' in inspector.get_table_names():
+                lead_cols = [c['name'] for c in inspector.get_columns('leads')]
+                new_lead_cols = {
+                    'property_type': 'VARCHAR(100)',
+                    'location': 'VARCHAR(255)',
+                    'budget': 'VARCHAR(100)',
+                    'requirement': 'TEXT'
+                }
+                for col, dtype in new_lead_cols.items():
+                    if col not in lead_cols:
+                        print(f"Adding {col} to leads table...")
+                        try:
+                            # Use text() for safety
+                            conn.execute(text(f'ALTER TABLE leads ADD COLUMN {col} {dtype}'))
+                            print(f"✅ Added {col} to leads")
+                        except Exception as e:
+                            print(f"❌ Failed to add {col}: {e}")
+
             # INDIAMART SETTINGS - auto_sync_enabled
             if 'indiamart_settings' in inspector.get_table_names():
                 im_cols = [c['name'] for c in inspector.get_columns('indiamart_settings')]
@@ -169,6 +190,48 @@ def run_schema_patch():
                          print("✅ Added auto_sync_enabled to indiamart_settings")
                     except Exception as e:
                          print(f"❌ Failed to add auto_sync_enabled: {e}")
+
+            # -------------------------------------------------------------
+            # MAGICBRICKS TABLES
+            # -------------------------------------------------------------
+            if 'magicbricks_settings' not in inspector.get_table_names():
+                print("Creating magicbricks_settings table...")
+                try:
+                    conn.execute(text('''
+                        CREATE TABLE magicbricks_settings (
+                            id SERIAL PRIMARY KEY,
+                            admin_id INTEGER NOT NULL UNIQUE,
+                            imap_host VARCHAR(100) DEFAULT 'imap.gmail.com',
+                            email_id VARCHAR(100) NOT NULL,
+                            app_password VARCHAR(255) NOT NULL,
+                            last_sync_time TIMESTAMP,
+                            is_active BOOLEAN DEFAULT TRUE,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (admin_id) REFERENCES admins (id)
+                        )
+                    '''))
+                    print("✅ Created magicbricks_settings table")
+                except Exception as e:
+                    print(f"❌ Failed to create magicbricks_settings: {e}")
+
+            if 'processed_emails' not in inspector.get_table_names():
+                print("Creating processed_emails table...")
+                try:
+                    conn.execute(text('''
+                        CREATE TABLE processed_emails (
+                            id SERIAL PRIMARY KEY,
+                            admin_id INTEGER NOT NULL,
+                            message_id VARCHAR(255) NOT NULL,
+                            lead_source VARCHAR(50) DEFAULT 'MAGICBRICKS',
+                            processed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (admin_id) REFERENCES admins (id),
+                            CONSTRAINT uq_admin_message_id UNIQUE (admin_id, message_id)
+                        )
+                    '''))
+                    print("✅ Created processed_emails table")
+                except Exception as e:
+                    print(f"❌ Failed to create processed_emails: {e}")
 
             conn.commit()
             print("Schema patch complete.")

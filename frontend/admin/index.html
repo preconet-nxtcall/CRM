@@ -390,9 +390,39 @@
                   <i class="fas fa-plug text-xs"></i>
                 </button>
               </div>
-            </div>
+              <!-- MAGICBRICKS CARD -->
+              <div
+                class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col hover:shadow-md transition-shadow group relative overflow-hidden">
+                <div class="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+                  <i class="fas fa-home text-8xl text-red-600 -mr-4 -mt-4 transform rotate-12"></i>
+                </div>
 
-          </div>
+                <div class="flex items-center justify-between mb-6 relative z-10">
+                  <div
+                    class="w-14 h-14 bg-red-50 text-red-600 rounded-xl flex items-center justify-center shadow-inner">
+                    <i class="fas fa-home text-2xl"></i>
+                  </div>
+                  <!-- Badge -->
+                  <span id="badge-mb-status"
+                    class="px-3 py-1 bg-gray-100 text-gray-500 text-xs font-bold uppercase tracking-wider rounded-full">Not
+                    Connected</span>
+                </div>
+
+                <h3 class="text-xl font-bold text-gray-900 relative z-10">Magicbricks Leads</h3>
+                <p class="text-sm text-gray-500 mt-2 mb-6 relative z-10">
+                  Sync buyer leads from your Magicbricks email account.
+                </p>
+
+                <div class="mt-auto relative z-10">
+                  <button onclick="uiManager.openSubSection('sectionIntegrationsMagicbricks')"
+                    class="w-full py-2.5 px-4 bg-[#D32F2F] hover:bg-[#b71c1c] text-white font-medium rounded-lg shadow hover:shadow-lg transition-all flex items-center justify-center gap-2">
+                    <span>Connect Now</span>
+                    <i class="fas fa-plug text-xs"></i>
+                  </button>
+                </div>
+              </div>
+
+            </div>
         </section>
 
         <!-- FACEBOOK MODAL -->
@@ -514,6 +544,100 @@
                 </div>
               </div>
 
+              <!-- MAGICBRICKS MODAL -->
+              <div id="sectionIntegrationsMagicbricks"
+                class="fixed inset-0 z-50 hidden-section flex items-center justify-center p-4">
+                <!-- Backdrop -->
+                <div class="absolute inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity"
+                  onclick="uiManager.showMainIntegrations()"></div>
+
+                <!-- Modal Content -->
+                <div
+                  class="relative bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden transform transition-all animate-fade-in">
+                  <!-- Close Button -->
+                  <button onclick="uiManager.showMainIntegrations()"
+                    class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors z-10">
+                    <i class="fas fa-times text-xl"></i>
+                  </button>
+
+                  <!-- Header -->
+                  <div class="px-6 py-8 text-center border-b border-gray-50 bg-gradient-to-b from-red-50/50 to-white">
+                    <div
+                      class="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center mx-auto mb-4 text-white shadow-lg shadow-red-500/30">
+                      <i class="fas fa-home text-3xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-900 tracking-tight">Connect Magicbricks</h3>
+                    <p class="text-gray-500 mt-2 text-sm mx-auto">
+                      Sync buyer leads automatically from your email inbox.
+                    </p>
+                  </div>
+
+                  <!-- Content -->
+                  <div class="p-8 text-center">
+
+                    <!-- CONNECTED STATE -->
+                    <div id="mb-status-container" class="hidden mb-8">
+                      <div
+                        class="inline-flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-full border border-green-100 text-sm font-medium mb-4">
+                        <i class="fas fa-check-circle"></i> Connected
+                      </div>
+                      <div
+                        class="flex flex-col items-center justify-center gap-2 p-4 bg-gray-50 rounded-lg w-full border border-gray-200 mb-4">
+                        <p class="text-sm text-gray-600"><strong>Email:</strong> <span id="mb-email-display"></span></p>
+                        <p class="text-sm text-gray-500 text-center italic">Last Synced: <span
+                            id="mb-last-sync-val">Never</span></p>
+                      </div>
+
+                      <div class="flex justify-center gap-4">
+                        <button id="btn-mb-sync" onclick="magicbricksManager.sync()"
+                          class="px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition">
+                          <i class="fas fa-sync-alt"></i> Sync Now
+                        </button>
+                        <button onclick="magicbricksManager.disconnect()"
+                          class="px-4 py-2 text-red-500 hover:text-red-700 text-sm font-medium transition-colors border border-red-200 rounded-lg hover:bg-red-50">
+                          Disconnect
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- CONNECT FORM -->
+                    <div id="mb-connect-form" class="w-full text-left">
+                      <div class="space-y-4">
+                        <div>
+                          <label class="block text-sm font-medium text-gray-700">Email Address (Gmail)</label>
+                          <input type="email" id="mb-email" placeholder="leads@example.com"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 border p-2">
+                        </div>
+                        <div>
+                          <label class="block text-sm font-medium text-gray-700">App Password</label>
+                          <input type="password" id="mb-password" placeholder="xxxx xxxx xxxx xxxx"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 border p-2">
+                          <p class="text-xs text-gray-500 mt-1">
+                            Use a <a href="https://myaccount.google.com/apppasswords" target="_blank"
+                              class="text-blue-600 hover:text-blue-800 underline">Google App Password</a>, not your main
+                            password.
+                          </p>
+                        </div>
+                        <div class="bg-blue-50 p-3 rounded-lg text-xs text-blue-800 space-y-1 mt-2">
+                          <p class="font-bold mb-1"><i class="fas fa-info-circle"></i> How to generate App Password:</p>
+                          <ol class="list-decimal list-inside space-y-0.5 ml-1">
+                            <li>Go to <strong>Google Account > Security</strong>.</li>
+                            <li>Enable <strong>2-Step Verification</strong>.</li>
+                            <li>Search for <strong>"App Passwords"</strong>.</li>
+                            <li>Create one named "Magicbricks" & copy it here.</li>
+                          </ol>
+                        </div>
+                        <button id="btn-mb-connect" onclick="magicbricksManager.connect()"
+                          class="w-full px-6 py-3 bg-[#D32F2F] hover:bg-[#b71c1c] text-white font-bold rounded-lg shadow-lg hover:shadow-red-500/30 transition-all transform active:scale-95 text-lg mt-4">
+                          Connect Magicbricks
+                        </button>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+              </div>
+
               <!-- CONNECT FORM -->
               <div id="im-connect-form" class="w-full text-left">
                 <div class="space-y-4">
@@ -565,8 +689,12 @@
                     Facebook
                   </button>
                   <button type="button" onclick="leadsManager.filterLeads('indiamart')" id="btn-filter-indiamart"
-                    class="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border-t border-b border-r border-gray-200 rounded-r-lg hover:bg-gray-100 transition-colors">
+                    class="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border-t border-b border-r border-gray-200 hover:bg-gray-100 transition-colors">
                     IndiaMART
+                  </button>
+                  <button type="button" onclick="leadsManager.filterLeads('magicbricks')" id="btn-filter-magicbricks"
+                    class="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border-t border-b border-r border-gray-200 rounded-r-lg hover:bg-gray-100 transition-colors">
+                    Magicbricks
                   </button>
                 </div>
 
@@ -1629,6 +1757,7 @@
   <script src="js/facebook.js?v=1.0"></script>
   <script src="js/leads.js?v=1.0"></script>
   <script src="js/indiamart.js?v=1.0"></script>
+  <script src="js/magicbricks.js?v=1.0"></script>
   <script src="js/integrations.js?v=1.0"></script>
 
   <script src="js/main.js?v=2.9"></script>

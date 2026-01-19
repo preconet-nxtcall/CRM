@@ -62,6 +62,17 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     // ---------------------------------
+    // 7. INITIALIZE MANAGERS
+    // ---------------------------------
+    if (window.auth) window.auth.init();
+    if (window.uiManager) window.uiManager.init();
+    if (window.dashboardManager) window.dashboardManager.init();
+    if (window.facebookManager) window.facebookManager.checkLoginStatus();
+    if (window.indiamartManager) window.indiamartManager.init();
+    if (window.magicbricksManager) window.magicbricksManager.init(); // NEW
+    if (window.leadsManager) window.leadsManager.loadLeads(); // Load data
+
+    // ---------------------------------
     // 0. INITIALIZATION (Moved top for Nav)
     // ---------------------------------
     window.dashboard = new DashboardManager();

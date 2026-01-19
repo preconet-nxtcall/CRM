@@ -499,6 +499,12 @@ class Lead(db.Model):
     
     assigned_to = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
     
+    # Real Estate Fields
+    property_type = db.Column(db.String(100), nullable=True)
+    location = db.Column(db.String(255), nullable=True)
+    budget = db.Column(db.String(100), nullable=True)
+    requirement = db.Column(db.Text, nullable=True) # Full description
+
     custom_fields = db.Column(JSONAuto()) # Store extra fields from FB form
     
     created_at = db.Column(db.DateTime, default=now)
@@ -517,6 +523,12 @@ class Lead(db.Model):
             "source": self.source,
             "status": self.status,
             "assigned_to": self.assigned_to,
+            "assigned_agent_name": self.assignee.name if self.assignee else None,
+            "property_type": self.property_type,
+            "location": self.location,
+            "budget": self.budget,
+            "requirement": self.requirement,
+            "custom_fields": self.custom_fields,
             "created_at": self.created_at.isoformat() if self.created_at else None
         }
 
@@ -563,4 +575,56 @@ class IndiamartSettings(db.Model):
             "auto_sync_enabled": self.auto_sync_enabled,
             "created_at": self.created_at.isoformat()
         }
+
+
+# =========================================================
+# MAGICBRICKS INTEGRATION
+# =========================================================
+class MagicbricksSettings(db.Model):
+    __tablename__ = "magicbricks_settings"
+
+    id = db.Column(db.Integer, primary_key=True)
+    admin_id = db.Column(db.Integer, db.ForeignKey("admins.id"), nullable=False, unique=True)
+    
+    imap_host = db.Column(db.String(100), default="imap.gmail.com")
+    email_id = db.Column(db.String(100), nullable=False)
+    app_password = db.Column(db.String(255), nullable=False) # Encrypted
+    
+    last_sync_time = db.Column(db.DateTime, nullable=True)
+    is_active = db.Column(db.Boolean, default=True)
+    
+    created_at = db.Column(db.DateTime, default=now)
+    updated_at = db.Column(db.DateTime, default=now, onupdate=now)
+
+    def set_app_password(self, pwd):
+        from app.utils.security import encrypt_value
+        self.app_password = encrypt_value(pwd)
+
+    def get_app_password(self):
+        from app.utils.security import decrypt_value
+        return decrypt_value(self.app_password)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "admin_id": self.admin_id,
+            "email_id": self.email_id,
+            "imap_host": self.imap_host,
+            "last_sync_time": self.last_sync_time.isoformat() if self.last_sync_time else None,
+            "is_active": self.is_active,
+            "is_connected": bool(self.app_password)
+        }
+
+class ProcessedEmail(db.Model):
+    __tablename__ = "processed_emails"
+
+    id = db.Column(db.Integer, primary_key=True)
+    admin_id = db.Column(db.Integer, db.ForeignKey("admins.id"), nullable=False)
+    message_id = db.Column(db.String(255), nullable=False) # Email Header Message-ID
+    lead_source = db.Column(db.String(50), default="MAGICBRICKS")
+    processed_at = db.Column(db.DateTime, default=now)
+
+    __table_args__ = (
+        db.UniqueConstraint('admin_id', 'message_id', name='uq_admin_message_id'),
+    )
 

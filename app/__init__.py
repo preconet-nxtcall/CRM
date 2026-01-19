@@ -51,6 +51,19 @@ def create_app(config_class=Config):
             trigger='interval', 
             minutes=15
         )
+        
+        # Magicbricks Job (Every 10 mins)
+        from app.services.magicbricks_service import scheduled_magicbricks_job
+        if scheduler.get_job('magicbricks_sync'):
+             scheduler.remove_job('magicbricks_sync')
+             
+        scheduler.add_job(
+            id='magicbricks_sync', 
+            func=scheduled_magicbricks_job, 
+            args=[app], 
+            trigger='interval', 
+            minutes=10
+        )
     except Exception as e:
         print(f"Scheduler Error: {e}")
 
@@ -217,6 +230,10 @@ def create_app(config_class=Config):
     
     from app.routes.indiamart import bp as indiamart_bp
     app.register_blueprint(indiamart_bp) # NEW
+    
+    from app.routes.magicbricks import bp as magicbricks_bp
+    app.register_blueprint(magicbricks_bp) # NEW
+    
     from app.routes.free_trial import bp as free_trial_bp
     app.register_blueprint(free_trial_bp)
 
