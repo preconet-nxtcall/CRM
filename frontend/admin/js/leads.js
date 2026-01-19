@@ -224,14 +224,15 @@ class LeadsManager {
             }
             const dateObj = new Date(dateStr);
 
-            const date = dateObj.toLocaleString('en-IN', {
-                day: '2-digit',
-                month: 'short',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: true
+            // Split Date and Time for 2-line display
+            const datePart = dateObj.toLocaleDateString('en-IN', {
+                day: '2-digit', month: 'short', year: 'numeric'
             });
+            const timePart = dateObj.toLocaleTimeString('en-IN', {
+                hour: '2-digit', minute: '2-digit', hour12: true
+            });
+
+            const dateHtml = `<div class="font-medium text-gray-900">${datePart}</div><div class="text-gray-500 text-[10px]">${timePart}</div>`;
 
             let statusColor = "bg-gray-100 text-gray-800";
             if (lead.status === 'new') statusColor = "bg-green-100 text-green-800";
@@ -247,7 +248,7 @@ class LeadsManager {
 
             return `
                 <tr class="hover:bg-gray-50 transition-colors">
-                    <td class="px-4 py-3 whitespace-nowrap text-gray-500 text-xs">${date}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-xs">${dateHtml}</td>
                     <td class="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">${lead.name || '-'}</td>
                     <td class="px-4 py-3 text-blue-600 whitespace-nowrap custom-copy-text cursor-pointer" onclick="navigator.clipboard.writeText('${lead.phone}')" title="Click to copy">${lead.phone || '-'}</td>
                     <td class="px-4 py-3 text-gray-500 whitespace-nowrap">${lead.email || '-'}</td>
