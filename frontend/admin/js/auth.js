@@ -111,8 +111,23 @@ class Auth {
         }
 
         if (resp.status === 403) {
-            this.showNotification("Access denied: Subscription Expired or Inactive", "error");
-            setTimeout(() => this.logout(), 2000); // Delay slightly to show message
+            let msg = "Access denied: Subscription Expired or Inactive";
+            try {
+                const errData = await resp.clone().json(); // Clone because body might be read again
+                if (errData && errData.error) {
+                    msg = errData.error;
+                }
+            } catch (e) {
+                console.warn("Could not parse 403 error body", e);
+            }
+
+            this.showNotification(msg, "error");
+            // Only logout if it's truly a session/subscription issue? 
+            // For now, keep logout behavior but maybe delay it or conditionalize it.
+            // Actually, if it's just "Unauthorized role", we shouldn't logout.
+            if (msg.toLowerCase().includes("expired") || msg.toLowerCase().includes("inactive") || msg.toLowerCase().includes("blocked")) {
+                setTimeout(() => this.logout(), 2000);
+            }
             return null;
         }
 
