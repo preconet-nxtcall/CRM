@@ -13,8 +13,9 @@ def connect_housing():
         current_user_id = int(get_jwt_identity())
         data = request.json
         
-        email_id = data.get('email')
-        password = data.get('password')
+
+        email_id = data.get('email', '').strip().lower()
+        password = data.get('password', '').strip().replace(" ", "")
         
         if not email_id or not password:
             return jsonify({"error": "Email and App Password are required"}), 400
@@ -34,8 +35,22 @@ def connect_housing():
             mail = get_imap_connection(settings)
             mail.logout()
 
+
         except Exception as e:
-             return jsonify({"error": f"Connection Failed: {str(e)}"}), 400
+             error_msg = str(e)
+             # Cleanup bytes representation from imaplib errors
+             if "b'" in error_msg or 'b"' in error_msg:
+                 try:
+                     # Extract content inside b'...'
+                     import re
+                     match = re.search(r"b['\"](.*?)['\"]", error_msg)
+                     if match:
+                         error_msg = match.group(1)
+                         # Try to fix escaped chars if any
+                         error_msg = error_msg.replace('\\r\\n', ' ').strip()
+                 except:
+                     pass
+             return jsonify({"error": f"Connection Failed: {error_msg}"}), 400
 
         db.session.add(settings)
         db.session.commit()
