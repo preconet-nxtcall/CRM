@@ -215,6 +215,7 @@ def run_schema_patch():
                 except Exception as e:
                     print(f"❌ Failed to create magicbricks_settings: {e}")
 
+
             if 'processed_emails' not in inspector.get_table_names():
                 print("Creating processed_emails table...")
                 try:
@@ -232,6 +233,30 @@ def run_schema_patch():
                     print("✅ Created processed_emails table")
                 except Exception as e:
                     print(f"❌ Failed to create processed_emails: {e}")
+
+            # -------------------------------------------------------------
+            # 99ACRES TABLES
+            # -------------------------------------------------------------
+            if 'ninety_nine_acres_settings' not in inspector.get_table_names():
+                print("Creating ninety_nine_acres_settings table...")
+                try:
+                    conn.execute(text('''
+                        CREATE TABLE ninety_nine_acres_settings (
+                            id SERIAL PRIMARY KEY,
+                            admin_id INTEGER NOT NULL UNIQUE,
+                            imap_host VARCHAR(100) DEFAULT 'imap.gmail.com',
+                            email_id VARCHAR(100) NOT NULL,
+                            app_password VARCHAR(255) NOT NULL,
+                            last_sync_time TIMESTAMP,
+                            is_active BOOLEAN DEFAULT TRUE,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (admin_id) REFERENCES admins (id)
+                        )
+                    '''))
+                    print("✅ Created ninety_nine_acres_settings table")
+                except Exception as e:
+                    print(f"❌ Failed to create ninety_nine_acres_settings: {e}")
 
             conn.commit()
             print("Schema patch complete.")

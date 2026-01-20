@@ -423,6 +423,38 @@
               </div>
             </div>
 
+            <!-- 99ACRES CARD -->
+            <div
+              class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col hover:shadow-md transition-shadow group relative overflow-hidden h-full">
+              <div class="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+                <i class="fas fa-building text-8xl text-blue-800 -mr-4 -mt-4 transform -rotate-12"></i>
+              </div>
+
+              <div class="flex items-center justify-between mb-6 relative z-10">
+                <div
+                  class="w-14 h-14 bg-blue-50 text-blue-800 rounded-xl flex items-center justify-center shadow-inner">
+                  <i class="fas fa-building text-2xl"></i>
+                </div>
+                <!-- Badge -->
+                <span id="badge-nna-status"
+                  class="px-3 py-1 bg-gray-100 text-gray-500 text-xs font-bold uppercase tracking-wider rounded-full">Not
+                  Connected</span>
+              </div>
+
+              <h3 class="text-xl font-bold text-gray-900 relative z-10">99acres Leads</h3>
+              <p class="text-sm text-gray-500 mt-2 mb-6 relative z-10">
+                Sync buyer leads automatically from your 99acres email account.
+              </p>
+
+              <div class="mt-auto relative z-10">
+                <button onclick="uiManager.openSubSection('sectionIntegrations99acres')"
+                  class="w-full py-2.5 px-4 bg-[#005CA8] hover:bg-[#004a87] text-white font-medium rounded-lg shadow hover:shadow-lg transition-all flex items-center justify-center gap-2">
+                  <span>Connect Now</span>
+                  <i class="fas fa-plug text-xs"></i>
+                </button>
+              </div>
+            </div>
+
             <!-- COMING SOON CARD (4th Card) -->
             <div
               class="bg-gray-50 p-6 rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-center h-full hover:border-gray-300 transition-colors">
@@ -696,6 +728,100 @@
           </div>
         </div>
 
+        <!-- 99ACRES MODAL -->
+        <div id="sectionIntegrations99acres"
+          class="fixed inset-0 z-50 hidden-section flex items-center justify-center p-4">
+          <!-- Backdrop -->
+          <div class="absolute inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity"
+            onclick="uiManager.showMainIntegrations()"></div>
+
+          <!-- Modal Content -->
+          <div
+            class="relative bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden transform transition-all animate-fade-in">
+            <!-- Close Button -->
+            <button onclick="uiManager.showMainIntegrations()"
+              class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors z-10">
+              <i class="fas fa-times text-xl"></i>
+            </button>
+
+            <!-- Header -->
+            <div class="px-6 py-4 text-center border-b border-gray-50 bg-gradient-to-b from-blue-50/50 to-white">
+              <div
+                class="w-12 h-12 bg-blue-800 rounded-full flex items-center justify-center mx-auto mb-2 text-white shadow-lg shadow-blue-500/30">
+                <i class="fas fa-building text-xl"></i>
+              </div>
+              <h3 class="text-xl font-bold text-gray-900 tracking-tight">Connect 99acres</h3>
+              <p class="text-gray-500 mt-1 text-xs mx-auto">
+                Sync buyer leads automatically from your email inbox.
+              </p>
+            </div>
+
+            <!-- Content -->
+            <div class="p-6 text-center">
+
+              <!-- CONNECTED STATE -->
+              <div id="nna-status-container" class="hidden mb-4">
+                <div
+                  class="inline-flex items-center gap-2 px-3 py-1 bg-green-50 text-green-700 rounded-full border border-green-100 text-xs font-medium mb-3">
+                  <i class="fas fa-check-circle"></i> Connected
+                </div>
+                <div
+                  class="flex flex-col items-center justify-center gap-1 p-3 bg-gray-50 rounded-lg w-full border border-gray-200 mb-3">
+                  <p class="text-xs text-gray-600"><strong>Email:</strong> <span id="nna-email-display"></span></p>
+                  <p class="text-xs text-gray-500 text-center italic">Last Synced: <span
+                      id="nna-last-sync-val">Never</span></p>
+                </div>
+
+                <div class="flex justify-center gap-3">
+                  <button id="btn-nna-sync" onclick="ninetyNineAcresManager.sync()"
+                    class="px-3 py-1.5 bg-blue-600 text-white rounded shadow hover:bg-blue-700 transition text-sm">
+                    <i class="fas fa-sync-alt"></i> Sync Now
+                  </button>
+                  <button onclick="ninetyNineAcresManager.disconnect()"
+                    class="px-3 py-1.5 text-red-500 hover:text-red-700 text-xs font-medium transition-colors border border-red-200 rounded hover:bg-red-50">
+                    Disconnect
+                  </button>
+                </div>
+              </div>
+
+              <!-- CONNECT FORM -->
+              <div id="nna-connect-form" class="w-full text-left">
+                <div class="space-y-3">
+                  <div>
+                    <label class="block text-xs font-medium text-gray-700">Email Address (Gmail)</label>
+                    <input type="email" id="nna-email" placeholder="leads@example.com"
+                      class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 border p-2 text-sm">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-gray-700">App Password</label>
+                    <input type="password" id="nna-password" placeholder="xxxx xxxx xxxx xxxx"
+                      class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 border p-2 text-sm">
+                    <p class="text-[10px] text-gray-500 mt-1">
+                      Use a <a href="https://myaccount.google.com/apppasswords" target="_blank"
+                        class="text-blue-600 hover:text-blue-800 underline">Google App Password</a>, not your main
+                      password.
+                    </p>
+                  </div>
+                  <div class="bg-blue-50 p-2 rounded-lg text-[10px] text-blue-800 space-y-0.5 mt-1">
+                    <p class="font-bold mb-0.5"><i class="fas fa-info-circle"></i> How to generate App Password:</p>
+                    <ol class="list-decimal list-inside space-y-0 ml-1 leading-tight">
+                      <li>Go to <strong>Google Account > Security</strong>.</li>
+                      <li>Enable <strong>2-Step Verification</strong>.</li>
+                      <li>Search for <strong>"App Passwords"</strong>.</li>
+                      <li>Create one named "99acres" & copy it here.</li>
+                    </ol>
+                  </div>
+                  <button id="btn-nna-connect" onclick="ninetyNineAcresManager.connect()"
+                    class="w-full px-6 py-2.5 bg-[#005CA8] hover:bg-[#004a87] text-white font-bold rounded-lg shadow-lg hover:shadow-blue-500/30 transition-all transform active:scale-95 text-base mt-2">
+                    Connect 99acres
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
 
 
 
@@ -725,8 +851,12 @@
                     IndiaMART
                   </button>
                   <button type="button" onclick="leadsManager.filterLeads('magicbricks')" id="btn-filter-magicbricks"
-                    class="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border-t border-b border-r border-gray-200 rounded-r-lg hover:bg-gray-100 transition-colors">
+                    class="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border-t border-b border-r border-gray-200 hover:bg-gray-100 transition-colors">
                     Magicbricks
+                  </button>
+                  <button type="button" onclick="leadsManager.filterLeads('99acres')" id="btn-filter-99acres"
+                    class="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border-t border-b border-r border-gray-200 rounded-r-lg hover:bg-gray-100 transition-colors">
+                    99acres
                   </button>
                 </div>
 
@@ -1825,6 +1955,7 @@
   <script src="js/leads.js?v=1.0"></script>
   <script src="js/indiamart.js?v=1.0"></script>
   <script src="js/magicbricks.js?v=1.0"></script>
+  <script src="js/99acres.js?v=1.0"></script>
   <script src="js/integrations.js?v=1.0"></script>
 
   <script src="js/main.js?v=2.9"></script>

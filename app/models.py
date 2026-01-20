@@ -628,3 +628,41 @@ class ProcessedEmail(db.Model):
         db.UniqueConstraint('admin_id', 'message_id', name='uq_admin_message_id'),
     )
 
+
+# =========================================================
+# 99ACRES INTEGRATION
+# =========================================================
+class NinetyNineAcresSettings(db.Model):
+    __tablename__ = "ninety_nine_acres_settings"
+
+    id = db.Column(db.Integer, primary_key=True)
+    admin_id = db.Column(db.Integer, db.ForeignKey("admins.id"), nullable=False, unique=True)
+    
+    imap_host = db.Column(db.String(100), default="imap.gmail.com")
+    email_id = db.Column(db.String(100), nullable=False)
+    app_password = db.Column(db.String(255), nullable=False) # Encrypted
+    
+    last_sync_time = db.Column(db.DateTime, nullable=True)
+    is_active = db.Column(db.Boolean, default=True)
+    
+    created_at = db.Column(db.DateTime, default=now)
+    updated_at = db.Column(db.DateTime, default=now, onupdate=now)
+
+    def set_app_password(self, pwd):
+        from app.utils.security import encrypt_value
+        self.app_password = encrypt_value(pwd)
+
+    def get_app_password(self):
+        from app.utils.security import decrypt_value
+        return decrypt_value(self.app_password)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "admin_id": self.admin_id,
+            "email_id": self.email_id,
+            "imap_host": self.imap_host,
+            "last_sync_time": self.last_sync_time.isoformat() if self.last_sync_time else None,
+            "is_active": self.is_active,
+            "is_connected": bool(self.app_password)
+        }

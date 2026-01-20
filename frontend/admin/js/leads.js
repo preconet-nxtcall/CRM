@@ -17,9 +17,10 @@ class LeadsManager {
         this.loadLeads(1); // Reset to page 1
     }
 
+
     updateFilterButtons() {
         // Reset all buttons
-        const types = ['all', 'facebook', 'indiamart', 'magicbricks'];
+        const types = ['all', 'facebook', 'indiamart', 'magicbricks', '99acres'];
         types.forEach(type => {
             const btn = document.getElementById(`btn-filter-${type}`);
             if (btn) {
@@ -27,7 +28,7 @@ class LeadsManager {
 
                 // Determine rounded corners based on position
                 if (type === 'all') baseClass += "rounded-l-lg ";
-                else if (type === 'magicbricks') baseClass += "rounded-r-lg ";
+                else if (type === '99acres') baseClass += "rounded-r-lg ";
                 else baseClass += ""; // Middle buttons
 
                 if (type === this.currentFilter) {
@@ -89,11 +90,18 @@ class LeadsManager {
         } else if (lead.source === 'call_history') {
             // Call History Format
             return `<div class="text-gray-500 italic">Manual Entry</div>`;
+
         } else if (lead.source === 'magicbricks') {
             // Magicbricks Format
             return `
                 <div class="font-bold text-gray-900 truncate max-w-[200px]" title="${lead.property_type}">${lead.property_type || '-'}</div>
                 <div class="text-gray-500 truncate max-w-[200px]" title="${lead.budget} | ${lead.location}">${lead.budget || '-'}</div>
+            `;
+        } else if (lead.source === '99acres') {
+            // 99acres Format
+            return `
+                <div class="font-bold text-gray-900 truncate max-w-[200px]" title="${lead.property_type}">${lead.property_type || '-'}</div>
+                <div class="text-gray-500 truncate max-w-[200px]" title="${lead.location}">${lead.location || '-'}</div>
             `;
         } else {
             // Facebook / Default Format
@@ -196,6 +204,37 @@ class LeadsManager {
                         <p class="text-gray-700 whitespace-pre-wrap leading-relaxed">${lead.requirement || '-'}</p>
                     </div>
                 </div>
+
+            `;
+        } else if (lead.source === '99acres') {
+            // 99acres Format
+            detailsHtml = `
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <span class="block text-gray-500 text-xs">Sender Name</span>
+                        <span class="font-medium text-gray-900">${lead.name || '-'}</span>
+                    </div>
+                    <div>
+                        <span class="block text-gray-500 text-xs">Mobile</span>
+                        <span class="font-medium text-gray-900">${lead.phone || '-'}</span>
+                    </div>
+                    <div>
+                        <span class="block text-gray-500 text-xs">Email</span>
+                        <span class="font-medium text-gray-900">${lead.email || '-'}</span>
+                    </div>
+                     <div>
+                        <span class="block text-gray-500 text-xs">Property Type</span>
+                        <span class="font-medium text-blue-600">${lead.property_type || '-'}</span>
+                    </div>
+                     <div>
+                        <span class="block text-gray-500 text-xs">Location</span>
+                        <span class="font-medium text-gray-900">${lead.location || '-'}</span>
+                    </div>
+                     <div>
+                        <span class="block text-gray-500 text-xs">Project</span>
+                        <span class="font-medium text-gray-900">${lead.custom_fields?.project || '-'}</span>
+                    </div>
+                </div>
             `;
         } else {
             // Generic Fallback
@@ -243,8 +282,10 @@ class LeadsManager {
 
             let sourceBadge = `<span class="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-800 rounded">${lead.source.toUpperCase()}</span>`;
             if (lead.source === 'facebook') sourceBadge = `<span class="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded">FACEBOOK</span>`;
+
             if (lead.source === 'indiamart') sourceBadge = `<span class="px-2 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-800 rounded">INDIAMART</span>`;
             if (lead.source === 'magicbricks') sourceBadge = `<span class="px-2 py-0.5 text-xs font-medium bg-red-100 text-red-800 rounded">MAGICBRICKS</span>`;
+            if (lead.source === '99acres') sourceBadge = `<span class="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded">99ACRES</span>`;
 
             return `
                 <tr class="hover:bg-gray-50 transition-colors">

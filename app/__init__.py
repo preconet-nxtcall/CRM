@@ -62,6 +62,20 @@ def create_app(config_class=Config):
             func=scheduled_magicbricks_job, 
             args=[app], 
             trigger='interval', 
+
+            minutes=10
+        )
+
+        # 99acres Job (Every 10 mins)
+        from app.services.ninety_nine_acres_service import scheduled_99acres_job
+        if scheduler.get_job('99acres_sync'):
+             scheduler.remove_job('99acres_sync')
+             
+        scheduler.add_job(
+            id='99acres_sync', 
+            func=scheduled_99acres_job, 
+            args=[app], 
+            trigger='interval', 
             minutes=10
         )
     except Exception as e:
@@ -236,8 +250,12 @@ def create_app(config_class=Config):
     from app.routes.indiamart import bp as indiamart_bp
     app.register_blueprint(indiamart_bp) # NEW
     
+
     from app.routes.magicbricks import bp as magicbricks_bp
     app.register_blueprint(magicbricks_bp) # NEW
+    
+    from app.routes.ninety_nine_acres import bp as ninety_nine_acres_bp
+    app.register_blueprint(ninety_nine_acres_bp) # NEW
     
     from app.routes.free_trial import bp as free_trial_bp
     app.register_blueprint(free_trial_bp)
