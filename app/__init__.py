@@ -85,9 +85,23 @@ def create_app(config_class=Config):
         if scheduler.get_job('justdial_sync'):
              scheduler.remove_job('justdial_sync')
              
+
         scheduler.add_job(
             id='justdial_sync', 
             func=scheduled_justdial_job, 
+            args=[app], 
+            trigger='interval', 
+            minutes=10
+        )
+
+        # Housing Job
+        from app.services.housing_service import scheduled_housing_job
+        if scheduler.get_job('housing_sync'):
+             scheduler.remove_job('housing_sync')
+             
+        scheduler.add_job(
+            id='housing_sync', 
+            func=scheduled_housing_job, 
             args=[app], 
             trigger='interval', 
             minutes=10
@@ -272,8 +286,12 @@ def create_app(config_class=Config):
     from app.routes.ninety_nine_acres import bp as ninety_nine_acres_bp
     app.register_blueprint(ninety_nine_acres_bp) # NEW
     
+
     from app.routes.justdial import bp as justdial_bp
-    app.register_blueprint(justdial_bp) # NEW
+    app.register_blueprint(justdial_bp)
+
+    from app.routes.housing import bp as housing_bp
+    app.register_blueprint(housing_bp) # NEW
     
     from app.routes.free_trial import bp as free_trial_bp
     app.register_blueprint(free_trial_bp)

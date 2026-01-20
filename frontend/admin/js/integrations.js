@@ -34,6 +34,9 @@ class UIManager {
         if (sectionId === 'sectionIntegrationsJustDial' && window.justDialManager) {
             if (typeof window.justDialManager.init === 'function') window.justDialManager.init();
         }
+        if (sectionId === 'sectionIntegrationsHousing' && window.housingManager) {
+            if (typeof window.housingManager.init === 'function') window.housingManager.init();
+        }
     }
 
     showMainIntegrations() {
@@ -51,6 +54,9 @@ class UIManager {
 
         const jdSec = document.getElementById('sectionIntegrationsJustDial');
         if (jdSec) jdSec.classList.add('hidden-section');
+
+        const housingSec = document.getElementById('sectionIntegrationsHousing');
+        if (housingSec) housingSec.classList.add('hidden-section');
 
         // Refresh Badges
         if (window.integrationsManager) window.integrationsManager.init();
@@ -72,6 +78,7 @@ class IntegrationsManager {
         this.updateMagicbricksBadge();
         this.updateNinetyNineAcresBadge();
         this.updateJustDialBadge();
+        this.updateHousingBadge();
     }
 
     async updateFacebookBadge() {
@@ -190,6 +197,26 @@ class IntegrationsManager {
                 }
             } else { badge.textContent = "Error"; }
         } catch (e) { console.error("JustDial Status Check Failed", e); badge.textContent = "Error"; }
+    }
+
+    async updateHousingBadge() {
+        const badge = document.getElementById('badge-housing-status');
+        if (!badge) return;
+        badge.className = "px-3 py-1 bg-gray-100 text-gray-400 text-xs font-bold uppercase tracking-wider rounded-full animate-pulse";
+        badge.textContent = "Checking...";
+        try {
+            const resp = await auth.makeAuthenticatedRequest('/api/housing/status');
+            if (resp && resp.ok) {
+                const data = await resp.json();
+                if (data.is_connected) {
+                    badge.textContent = "Connected";
+                    badge.className = "px-3 py-1 bg-green-100 text-green-700 text-xs font-bold uppercase tracking-wider rounded-full";
+                } else {
+                    badge.textContent = "Not Connected";
+                    badge.className = "px-3 py-1 bg-gray-100 text-gray-500 text-xs font-bold uppercase tracking-wider rounded-full";
+                }
+            } else { badge.textContent = "Error"; }
+        } catch (e) { console.error("Housing Status Check Failed", e); badge.textContent = "Error"; }
     }
 }
 window.integrationsManager = new IntegrationsManager();

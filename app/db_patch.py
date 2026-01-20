@@ -265,6 +265,7 @@ def run_schema_patch():
             # -------------------------------------------------------------
             # JUSTDIAL TABLES
             # -------------------------------------------------------------
+
             if 'justdial_settings' not in inspector.get_table_names():
                 print("Creating justdial_settings table...")
                 try:
@@ -285,6 +286,30 @@ def run_schema_patch():
                     print("✅ Created justdial_settings table")
                 except Exception as e:
                     print(f"❌ Failed to create justdial_settings: {e}")
+
+            # -------------------------------------------------------------
+            # HOUSING TABLES
+            # -------------------------------------------------------------
+            if 'housing_settings' not in inspector.get_table_names():
+                print("Creating housing_settings table...")
+                try:
+                    conn.execute(text('''
+                        CREATE TABLE housing_settings (
+                            id SERIAL PRIMARY KEY,
+                            admin_id INTEGER NOT NULL UNIQUE,
+                            imap_host VARCHAR(100) DEFAULT 'imap.gmail.com',
+                            email_id VARCHAR(100) NOT NULL,
+                            app_password VARCHAR(255) NOT NULL,
+                            last_sync_time TIMESTAMP,
+                            is_active BOOLEAN DEFAULT TRUE,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (admin_id) REFERENCES admins (id)
+                        )
+                    '''))
+                    print("✅ Created housing_settings table")
+                except Exception as e:
+                    print(f"❌ Failed to create housing_settings: {e}")
 
             conn.commit()
             print("Schema patch complete.")

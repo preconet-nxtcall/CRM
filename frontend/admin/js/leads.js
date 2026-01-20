@@ -21,7 +21,7 @@ class LeadsManager {
     updateFilterButtons() {
         // Reset all buttons
 
-        const types = ['all', 'facebook', 'indiamart', 'magicbricks', '99acres', 'justdial'];
+        const types = ['all', 'facebook', 'indiamart', 'magicbricks', '99acres', 'justdial', 'housing'];
         types.forEach(type => {
             const btn = document.getElementById(`btn-filter-${type}`);
             if (btn) {
@@ -29,7 +29,7 @@ class LeadsManager {
 
                 // Determine rounded corners based on position
                 if (type === 'all') baseClass += "rounded-l-lg ";
-                else if (type === 'justdial') baseClass += "rounded-r-lg "; // changed last element
+                else if (type === 'housing') baseClass += "rounded-r-lg "; // changed last element
                 else baseClass += ""; // Middle buttons
 
                 if (type === this.currentFilter) {
@@ -110,6 +110,12 @@ class LeadsManager {
             return `
                 <div class="font-bold text-gray-900 truncate max-w-[200px]" title="${lead.requirement}">${lead.requirement || 'Business Enquiry'}</div>
                 <div class="text-gray-500 truncate max-w-[200px]" title="${lead.location}">${lead.location || '-'}</div>
+            `;
+        } else if (lead.source === 'housing') {
+            // Housing Format
+            return `
+                <div class="font-bold text-gray-900 truncate max-w-[200px]" title="${lead.requirement}">${lead.requirement || 'Residential Property'}</div>
+                <div class="text-gray-500 truncate max-w-[200px]" title="${lead.budget || '-'}">${lead.budget || '-'}</div>
             `;
         } else {
             // Facebook / Default Format
@@ -274,6 +280,37 @@ class LeadsManager {
                          <span class="text-xs text-gray-500">${lead.custom_fields?.raw_subject || '-'}</span>
                     </div>
                 </div>
+
+            `;
+        } else if (lead.source === 'housing') {
+            // Housing Format
+            detailsHtml = `
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <span class="block text-gray-500 text-xs">Sender Name</span>
+                        <span class="font-medium text-gray-900">${lead.name || '-'}</span>
+                    </div>
+                    <div>
+                        <span class="block text-gray-500 text-xs">Mobile</span>
+                        <span class="font-medium text-gray-900">${lead.phone || '-'}</span>
+                    </div>
+                    <div>
+                        <span class="block text-gray-500 text-xs">Email</span>
+                        <span class="font-medium text-gray-900">${lead.email || '-'}</span>
+                    </div>
+                     <div>
+                        <span class="block text-gray-500 text-xs">Project/Requirement</span>
+                        <span class="font-medium text-purple-600">${lead.requirement || '-'}</span>
+                    </div>
+                     <div>
+                        <span class="block text-gray-500 text-xs">Location</span>
+                        <span class="font-medium text-gray-900">${lead.location || '-'}</span>
+                    </div>
+                     <div>
+                        <span class="block text-gray-500 text-xs">Budget</span>
+                        <span class="font-medium text-gray-900">${lead.budget || '-'}</span>
+                    </div>
+                </div>
             `;
         } else {
             // Generic Fallback
@@ -325,6 +362,8 @@ class LeadsManager {
             if (lead.source === 'indiamart') sourceBadge = `<span class="px-2 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-800 rounded">INDIAMART</span>`;
             if (lead.source === 'magicbricks') sourceBadge = `<span class="px-2 py-0.5 text-xs font-medium bg-red-100 text-red-800 rounded">MAGICBRICKS</span>`;
             if (lead.source === '99acres') sourceBadge = `<span class="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded">99ACRES</span>`;
+            if (lead.source === 'justdial') sourceBadge = `<span class="px-2 py-0.5 text-xs font-medium bg-orange-100 text-orange-800 rounded">JUSTDIAL</span>`;
+            if (lead.source === 'housing') sourceBadge = `<span class="px-2 py-0.5 text-xs font-medium bg-purple-100 text-purple-800 rounded">HOUSING</span>`;
 
             return `
                 <tr class="hover:bg-gray-50 transition-colors">
