@@ -33,8 +33,9 @@ def connect_housing():
         try:
             mail = get_imap_connection(settings)
             mail.logout()
+
         except Exception as e:
-             return jsonify({"error": "Connection Failed. Check credentials."}), 400
+             return jsonify({"error": f"Connection Failed: {str(e)}"}), 400
 
         db.session.add(settings)
         db.session.commit()
