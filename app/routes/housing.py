@@ -50,7 +50,7 @@ def connect_housing():
                          error_msg = error_msg.replace('\\r\\n', ' ').strip()
                  except:
                      pass
-             return jsonify({"error": f"Connection Failed: {error_msg}"}), 400
+             return jsonify({"error": error_msg}), 400
 
         db.session.add(settings)
         db.session.commit()
