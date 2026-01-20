@@ -27,8 +27,12 @@ class UIManager {
         if (sectionId === 'sectionIntegrationsMagicbricks' && window.magicbricksManager) {
             if (typeof window.magicbricksManager.init === 'function') window.magicbricksManager.init();
         }
+
         if (sectionId === 'sectionIntegrations99acres' && window.ninetyNineAcresManager) {
             if (typeof window.ninetyNineAcresManager.init === 'function') window.ninetyNineAcresManager.init();
+        }
+        if (sectionId === 'sectionIntegrationsJustDial' && window.justDialManager) {
+            if (typeof window.justDialManager.init === 'function') window.justDialManager.init();
         }
     }
 
@@ -41,8 +45,12 @@ class UIManager {
         const nnaSec = document.getElementById('sectionIntegrations99acres'); // ADDED
         if (fbSec) fbSec.classList.add('hidden-section');
         if (imSec) imSec.classList.add('hidden-section');
+
         if (mbSec) mbSec.classList.add('hidden-section'); // ADDED
         if (nnaSec) nnaSec.classList.add('hidden-section'); // ADDED
+
+        const jdSec = document.getElementById('sectionIntegrationsJustDial');
+        if (jdSec) jdSec.classList.add('hidden-section');
 
         // Refresh Badges
         if (window.integrationsManager) window.integrationsManager.init();
@@ -60,8 +68,10 @@ class IntegrationsManager {
         console.log("Integrations Dashboard Loaded");
         this.updateFacebookBadge();
         this.updateIndiaMartBadge();
+
         this.updateMagicbricksBadge();
         this.updateNinetyNineAcresBadge();
+        this.updateJustDialBadge();
     }
 
     async updateFacebookBadge() {
@@ -141,6 +151,7 @@ class IntegrationsManager {
         } catch (e) { console.error("MB Status Check Failed", e); badge.textContent = "Error"; }
     }
 
+
     async updateNinetyNineAcresBadge() {
         const badge = document.getElementById('badge-nna-status');
         if (!badge) return;
@@ -159,6 +170,26 @@ class IntegrationsManager {
                 }
             } else { badge.textContent = "Error"; }
         } catch (e) { console.error("99acres Status Check Failed", e); badge.textContent = "Error"; }
+    }
+
+    async updateJustDialBadge() {
+        const badge = document.getElementById('badge-jd-status');
+        if (!badge) return;
+        badge.className = "px-3 py-1 bg-gray-100 text-gray-400 text-xs font-bold uppercase tracking-wider rounded-full animate-pulse";
+        badge.textContent = "Checking...";
+        try {
+            const resp = await auth.makeAuthenticatedRequest('/api/justdial/status');
+            if (resp && resp.ok) {
+                const data = await resp.json();
+                if (data.is_connected) {
+                    badge.textContent = "Connected";
+                    badge.className = "px-3 py-1 bg-green-100 text-green-700 text-xs font-bold uppercase tracking-wider rounded-full";
+                } else {
+                    badge.textContent = "Not Connected";
+                    badge.className = "px-3 py-1 bg-gray-100 text-gray-500 text-xs font-bold uppercase tracking-wider rounded-full";
+                }
+            } else { badge.textContent = "Error"; }
+        } catch (e) { console.error("JustDial Status Check Failed", e); badge.textContent = "Error"; }
     }
 }
 window.integrationsManager = new IntegrationsManager();

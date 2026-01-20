@@ -20,7 +20,8 @@ class LeadsManager {
 
     updateFilterButtons() {
         // Reset all buttons
-        const types = ['all', 'facebook', 'indiamart', 'magicbricks', '99acres'];
+
+        const types = ['all', 'facebook', 'indiamart', 'magicbricks', '99acres', 'justdial'];
         types.forEach(type => {
             const btn = document.getElementById(`btn-filter-${type}`);
             if (btn) {
@@ -28,7 +29,7 @@ class LeadsManager {
 
                 // Determine rounded corners based on position
                 if (type === 'all') baseClass += "rounded-l-lg ";
-                else if (type === '99acres') baseClass += "rounded-r-lg ";
+                else if (type === 'justdial') baseClass += "rounded-r-lg "; // changed last element
                 else baseClass += ""; // Middle buttons
 
                 if (type === this.currentFilter) {
@@ -99,8 +100,15 @@ class LeadsManager {
             `;
         } else if (lead.source === '99acres') {
             // 99acres Format
+
             return `
                 <div class="font-bold text-gray-900 truncate max-w-[200px]" title="${lead.property_type}">${lead.property_type || '-'}</div>
+                <div class="text-gray-500 truncate max-w-[200px]" title="${lead.location}">${lead.location || '-'}</div>
+            `;
+        } else if (lead.source === 'justdial') {
+            // JustDial Format
+            return `
+                <div class="font-bold text-gray-900 truncate max-w-[200px]" title="${lead.requirement}">${lead.requirement || 'Business Enquiry'}</div>
                 <div class="text-gray-500 truncate max-w-[200px]" title="${lead.location}">${lead.location || '-'}</div>
             `;
         } else {
@@ -233,6 +241,37 @@ class LeadsManager {
                      <div>
                         <span class="block text-gray-500 text-xs">Project</span>
                         <span class="font-medium text-gray-900">${lead.custom_fields?.project || '-'}</span>
+                    </div>
+
+                </div>
+            `;
+        } else if (lead.source === 'justdial') {
+            // JustDial Format
+            detailsHtml = `
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <span class="block text-gray-500 text-xs">Sender Name</span>
+                        <span class="font-medium text-gray-900">${lead.name || '-'}</span>
+                    </div>
+                    <div>
+                        <span class="block text-gray-500 text-xs">Mobile</span>
+                        <span class="font-medium text-gray-900">${lead.phone || '-'}</span>
+                    </div>
+                    <div>
+                        <span class="block text-gray-500 text-xs">Email</span>
+                        <span class="font-medium text-gray-900">${lead.email || '-'}</span>
+                    </div>
+                     <div>
+                        <span class="block text-gray-500 text-xs">Category</span>
+                        <span class="font-medium text-blue-600">${lead.requirement || '-'}</span>
+                    </div>
+                     <div>
+                        <span class="block text-gray-500 text-xs">Location</span>
+                        <span class="font-medium text-gray-900">${lead.location || '-'}</span>
+                    </div>
+                    <div class="col-span-2 border-t pt-2 mt-2">
+                        <span class="block text-gray-500 text-xs">Raw Subject</span>
+                         <span class="text-xs text-gray-500">${lead.custom_fields?.raw_subject || '-'}</span>
                     </div>
                 </div>
             `;
