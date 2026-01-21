@@ -26,7 +26,7 @@ def get_imap_connection(settings):
         mail.login(settings.email_id, password)
         return mail
     except Exception as e:
-        logger.error(f"IMAP Connection Failed for {settings.email_id}: {e}")
+        logger.error(f"IMAP Connection Failed for {settings.email_id} at {settings.imap_host}: {e}")
         raise e
 
 def parse_housing_email_body(body):

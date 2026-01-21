@@ -14,8 +14,8 @@ def connect_housing():
         data = request.json
         
 
-        email_id = data.get('email')
-        password = data.get('password')
+        email_id = data.get('email', '').strip()
+        password = data.get('password', '').replace(" ", "").strip()
         
         if not email_id or not password:
             return jsonify({"error": "Email and App Password are required"}), 400
