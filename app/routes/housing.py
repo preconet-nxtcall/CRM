@@ -12,6 +12,8 @@ def connect_housing():
     try:
         current_user_id = int(get_jwt_identity())
         data = request.json
+        if not data:
+            return jsonify({"error": "Invalid or missing JSON body"}), 400
         
 
         email_id = data.get('email', '').strip()

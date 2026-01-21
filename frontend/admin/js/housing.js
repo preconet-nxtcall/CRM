@@ -55,7 +55,15 @@ const HousingManager = class {
             if (this.lastSyncDisplay) {
                 if (data.last_sync_time) {
                     const date = new Date(data.last_sync_time + 'Z');
-                    this.lastSyncDisplay.textContent = date.toLocaleString();
+                    this.lastSyncDisplay.textContent = date.toLocaleString('en-IN', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: true
+                    });
                 } else {
                     this.lastSyncDisplay.textContent = "Never";
                 }
@@ -92,8 +100,20 @@ const HousingManager = class {
                 auth.showNotification("Connected successfully!", "success");
                 await this.checkStatus();
             } else {
-                const err = await resp.json();
-                auth.showNotification("Connection Failed: " + (err.error || "Unknown Error"), "error");
+                let err = {};
+                try {
+                    err = await resp.json();
+                } catch (jsonErr) {
+                    console.warn("Non-JSON error response:", jsonErr);
+                    const text = await resp.text();
+                    // If text is HTML, strip tags or just show generic
+                    if (text.trim().startsWith("<")) {
+                        err = { error: `Server Error (${resp.status}). Please check logs.` };
+                    } else {
+                        err = { error: text || resp.statusText };
+                    }
+                }
+                auth.showNotification("Connection Failed: " + (err.error || err.message || "Unknown Error"), "error");
             }
         } catch (e) {
             auth.showNotification("Error: " + e.message, "error");
