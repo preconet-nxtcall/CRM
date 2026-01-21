@@ -369,7 +369,11 @@ class LeadsManager {
                 <tr class="hover:bg-gray-50 transition-colors">
                     <td class="px-4 py-3 whitespace-nowrap text-xs">${dateHtml}</td>
                     <td class="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">${lead.name || '-'}</td>
-                    <td class="px-4 py-3 text-blue-600 whitespace-nowrap custom-copy-text cursor-pointer" onclick="navigator.clipboard.writeText('${lead.phone}')" title="Click to copy">${lead.phone || '-'}</td>
+                    <td class="px-4 py-3 text-blue-600 whitespace-nowrap custom-copy-text cursor-pointer hover:underline" 
+                        onclick="leadsManager.showCallHistory('${lead.phone}')" 
+                        title="Click to view call history">
+                        ${lead.phone || '-'}
+                    </td>
                     <td class="px-4 py-3 text-gray-500 whitespace-nowrap">${lead.email || '-'}</td>
                     <td class="px-4 py-3">${sourceBadge}</td>
                     <td class="px-4 py-3 leading-tight">${this.renderLeadDetails(lead)}</td>
@@ -453,6 +457,85 @@ class LeadsManager {
         }
 
         this.paginationContainer.innerHTML = `<div class="flex justify-center items-center">${buttons}</div>`;
+    }
+
+    /* ------------------------------
+       SHOW CALL HISTORY MODAL
+    ------------------------------ */
+    async showCallHistory(phone) {
+        if (!phone || phone === '-') return;
+
+        const modal = document.getElementById('modal-call-history');
+        const phoneLabel = document.getElementById('call-history-phone');
+        const tbody = document.getElementById('call-history-table-body');
+
+        if (!modal || !tbody) return;
+
+        // Open Modal & Lock Body Scroll
+        modal.classList.remove('hidden-section');
+        document.body.style.overflow = 'hidden';
+
+        if (phoneLabel) phoneLabel.textContent = phone;
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-400"><i class="fas fa-circle-notch fa-spin mr-2"></i>Loading logs...</td></tr>';
+
+        try {
+            const url = `/api/admin/all-call-history?search=${encodeURIComponent(phone)}&page=1&per_page=50`;
+            const resp = await auth.makeAuthenticatedRequest(url);
+
+            if (resp && resp.ok) {
+                const data = await resp.json();
+                const calls = data.call_history || [];
+
+                if (calls.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-400">No call history found for this number.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = calls.map(call => {
+                    const dateObj = new Date(call.timestamp);
+                    const dateStr = dateObj.toLocaleDateString() + ' ' + dateObj.toLocaleTimeString();
+
+                    // Format Duration
+                    const dur = call.duration ? `${Math.floor(call.duration / 60)}m ${call.duration % 60}s` : '0s';
+
+                    // Call Type Badge
+                    let typeBadge = `<span class="px-2 py-0.5 text-xs rounded bg-gray-100 text-gray-600">${call.call_type}</span>`;
+                    const cType = (call.call_type || '').toLowerCase();
+
+                    if (cType === 'incoming') typeBadge = `<span class="px-2 py-0.5 text-xs rounded bg-green-100 text-green-700"><i class="fas fa-arrow-down mr-1"></i>Incoming</span>`;
+                    else if (cType === 'outgoing') typeBadge = `<span class="px-2 py-0.5 text-xs rounded bg-blue-100 text-blue-700"><i class="fas fa-arrow-up mr-1"></i>Outgoing</span>`;
+                    else if (cType === 'missed') typeBadge = `<span class="px-2 py-0.5 text-xs rounded bg-red-100 text-red-700"><i class="fas fa-times mr-1"></i>Missed</span>`;
+                    else if (cType === 'rejected') typeBadge = `<span class="px-2 py-0.5 text-xs rounded bg-red-100 text-red-700"><i class="fas fa-ban mr-1"></i>Rejected</span>`;
+
+                    // Audio Player
+                    let audioPlayer = '-';
+                    if (call.recording_path) {
+                        // DB stores 'uploads/recordings/...', frontend route is '/uploads/...' -> so '/'+recording_path works.
+                        audioPlayer = `
+                            <audio controls class="h-8 w-40" preload="none" onerror="this.style.display='none'; this.insertAdjacentHTML('afterend', '<span class=\\'text-xs text-red-400\\'>Error loading</span>')">
+                                <source src="/${call.recording_path}" type="audio/mpeg">
+                                <source src="/${call.recording_path}" type="audio/wav"> <!-- Fallback -->
+                            </audio>
+                         `;
+                    }
+
+                    return `
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-700">${dateStr}</td>
+                            <td class="px-6 py-3 whitespace-nowrap">${typeBadge}</td>
+                            <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-700">${dur}</td>
+                            <td class="px-6 py-3 whitespace-nowrap">${audioPlayer}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+            } else {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-red-500">Failed to load history</td></tr>';
+            }
+        } catch (e) {
+            console.error(e);
+            tbody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-red-500">Error: ${e.message}</td></tr>`;
+        }
     }
 }
 
