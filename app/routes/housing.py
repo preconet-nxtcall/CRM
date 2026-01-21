@@ -16,6 +16,7 @@ def connect_housing():
 
         email_id = data.get('email', '').strip()
         password = data.get('password', '').replace(" ", "").strip()
+        imap_host = data.get('imap_host', 'imap.gmail.com')
         
         if not email_id or not password:
             return jsonify({"error": "Email and App Password are required"}), 400
@@ -27,7 +28,7 @@ def connect_housing():
             
         settings.email_id = email_id
         settings.set_app_password(password)
-        settings.imap_host = "imap.gmail.com" # Default
+        settings.imap_host = imap_host
         settings.is_active = True
         
         # Test Connection
