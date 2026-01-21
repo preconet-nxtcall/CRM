@@ -73,7 +73,7 @@ const HousingManager = class {
         const btn = document.getElementById('btn-housing-connect');
 
         if (!email || !password) {
-            alert("Please enter both Email and App Password.");
+            auth.showNotification("Please enter both Email and App Password.", "warning");
             return;
         }
 
@@ -89,14 +89,14 @@ const HousingManager = class {
             });
 
             if (resp && resp.ok) {
-                alert("Connected successfully!");
+                auth.showNotification("Connected successfully!", "success");
                 await this.checkStatus();
             } else {
                 const err = await resp.json();
-                alert("Connection Failed: " + (err.error || "Unknown Error"));
+                auth.showNotification("Connection Failed: " + (err.error || "Unknown Error"), "error");
             }
         } catch (e) {
-            alert("Error: " + e.message);
+            auth.showNotification("Error: " + e.message, "error");
         } finally {
             if (btn) {
                 btn.disabled = false;
@@ -119,7 +119,7 @@ const HousingManager = class {
 
             if (resp && resp.ok) {
                 const data = await resp.json();
-                alert(`Sync Complete! Added ${data.added} new leads.`);
+                auth.showNotification(`Sync Complete! Added ${data.added} new leads.`, "success");
                 await this.checkStatus();
                 // Reload Leads Table if on that page
                 if (window.leadsManager && typeof window.leadsManager.loadLeads === 'function') {
@@ -127,10 +127,10 @@ const HousingManager = class {
                 }
             } else {
                 const err = await resp.json();
-                alert("Sync Failed: " + (err.message || err.error));
+                auth.showNotification("Sync Failed: " + (err.message || err.error), "error");
             }
         } catch (e) {
-            alert("Error: " + e.message);
+            auth.showNotification("Error: " + e.message, "error");
         } finally {
             if (btn) {
                 btn.disabled = false;
@@ -150,10 +150,10 @@ const HousingManager = class {
             if (resp && resp.ok) {
                 this.isConnected = false;
                 await this.checkStatus();
-                alert("Disconnected.");
+                auth.showNotification("Disconnected.", "success");
             }
         } catch (e) {
-            alert("Error: " + e.message);
+            auth.showNotification("Error: " + e.message, "error");
         }
     }
 }
