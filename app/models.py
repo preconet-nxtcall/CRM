@@ -455,8 +455,8 @@ class FacebookConnection(db.Model):
     page_id = db.Column(db.String(100), nullable=True) # Connected Page ID
     page_name = db.Column(db.String(255), nullable=True)
     
-    business_manager_id = db.Column(db.String(100), nullable=False)
-    system_user_id = db.Column(db.String(100), nullable=False)
+    business_manager_id = db.Column(db.String(100), nullable=True)  # Optional for Page Token flow
+    system_user_id = db.Column(db.String(100), nullable=True)  # Optional for Page Token flow
     encrypted_system_token = db.Column(db.Text, nullable=False) # STRICT NAME MATCH
     
     install_id = db.Column(db.String(100), nullable=True)

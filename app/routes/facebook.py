@@ -106,7 +106,7 @@ def list_pages():
 def connect_page():
     """
     Step 3: Admin selects a page to connect.
-    Contract: Input = { page_id, page_name } ONLY.
+    Contract: Input = { page_id, page_name, page_access_token } ONLY.
     """
     try:
         current_identity = int(get_jwt_identity())
@@ -114,64 +114,47 @@ def connect_page():
         if not admin:
             return jsonify({"error": "Admin required"}), 403
 
-        # 1. Get Token from Session
-        user_token = session.get('fb_user_token')
-        if not user_token:
-            return jsonify({"error": "Session expired or not authenticated. Please login to Facebook again."}), 401
-
-        # 2. Strict Input
+        # 1. Strict Input
         data = request.json
         page_id = data.get('page_id')
         page_name = data.get('page_name')
+        page_access_token = data.get('page_access_token')
         
-        if not page_id or not page_name:
-            return jsonify({"error": "Missing page_id or page_name"}), 400
+        if not page_id or not page_name or not page_access_token:
+            return jsonify({"error": "Missing page_id, page_name, or page_access_token"}), 400
 
         app_id = current_app.config.get('FACEBOOK_APP_ID')
+        app_secret = current_app.config.get('FACEBOOK_APP_SECRET')
 
-        # 3. Identify Business Manager (Auto-Discovery)
-        # We need to find which BM owns this page to create the System User there.
-        # This requires fetching user's pages/businesses to match.
-        businesses = FacebookService.get_user_businesses(user_token)
+        # 2. Exchange for Long-Lived Token (60 days)
+        current_app.logger.info(f"Exchanging token for page: {page_id}")
+        long_lived_token = FacebookService.exchange_for_long_lived_token(
+            page_access_token, 
+            app_id, 
+            app_secret
+        )
         
-        target_bm_id = None
-        # Naive matching: In a real app, we might ask user to select BM if they have multiple.
-        # For simplicity/automation, we look for the BM that owns the page.
-        # Actually, simpler: Use the first verified BM or just ask user before this step?
-        # IMPORTANT: The prompt implies a simple flow. 
-        # SaaS Best Practice: Loop through BMs, find the one that owns the page (via page_id -> business).
-        
-        # Let's try to get business id from the page details if possible, or default to first BM.
-        # Since we don't have a separate "Select BM" step in the strict contract, we must infer it or pick one.
-        if businesses:
-             target_bm_id = businesses[0]['id'] # Default to first BM
-        else:
-             return jsonify({"error": "No Business Manager found on your Facebook account. A Business Manager is required."}), 400
-
-        # 4. Provision System User (Runo.ai Logic)
-        current_app.logger.info(f"Provisioning System User in BM: {target_bm_id}")
-        system_user_id = FacebookService.create_system_user(target_bm_id, user_token, app_id)
-        
-        # 5. Assign Page & Get Token
-        FacebookService.assign_page_to_system_user(target_bm_id, system_user_id, page_id, user_token)
-        perm_token = FacebookService.generate_system_user_token(target_bm_id, system_user_id, app_id, user_token)
-        
-        # 6. Subscribe Webhook
+        # 3. Subscribe Webhook
         sub_url = f"https://graph.facebook.com/v24.0/{page_id}/subscribed_apps"
-        requests.post(sub_url, params={"access_token": perm_token, "subscribed_fields": "leadgen"})
+        sub_resp = requests.post(sub_url, params={
+            "access_token": long_lived_token, 
+            "subscribed_fields": "leadgen"
+        })
+        
+        if sub_resp.status_code != 200:
+            current_app.logger.warning(f"Webhook subscription warning: {sub_resp.text}")
 
-        # 7. Save to DB (Strict Schema)
+        # 4. Save to DB (Simplified Schema)
         conn = FacebookConnection.query.filter_by(admin_id=admin.id).first()
         if not conn:
             conn = FacebookConnection(admin_id=admin.id)
             
         conn.page_id = page_id
         conn.page_name = page_name
-        conn.business_manager_id = target_bm_id
-        conn.system_user_id = system_user_id
-        conn.set_token(perm_token) # Encrypts automatically
+        conn.set_token(long_lived_token)  # Encrypts automatically
         conn.status = 'active'
         conn.updated_at = now()
+        # Note: system_user_id and business_manager_id will be NULL for this flow
         
         db.session.add(conn)
         db.session.commit()
@@ -185,6 +168,7 @@ def connect_page():
         db.session.rollback()
         current_app.logger.error(f"Connect Failed: {e}")
         return jsonify({"error": str(e)}), 500
+
 
 
 @bp.route('/api/facebook/status', methods=['GET'])

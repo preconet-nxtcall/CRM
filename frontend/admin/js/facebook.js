@@ -121,11 +121,12 @@ class FacebookManager {
     }
 
     async connectPage(page) {
-        // Step 3: Connect (ID ONLY - Strict Contract)
+        // Step 3: Connect (Send page token for exchange)
         try {
             const payload = {
                 page_id: page.id,
-                page_name: page.name
+                page_name: page.name,
+                page_access_token: page.access_token  // Include the page token
             };
 
             const res = await auth.makeAuthenticatedRequest('/api/facebook/connect', {
