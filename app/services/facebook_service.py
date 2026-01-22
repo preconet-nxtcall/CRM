@@ -166,8 +166,8 @@ class FacebookService:
         """
         Generate the Facebook Login URL for Server-Side flow.
         """
-        # Scopes required for System User flow
-        scope = "email,public_profile,business_management,pages_read_engagement,leads_retrieval,pages_show_list,ads_management"
+        # Scopes required for System User flow (email removed - not needed for Lead Ads)
+        scope = "public_profile,business_management,pages_read_engagement,leads_retrieval,pages_show_list,ads_management"
         
         base = "https://www.facebook.com/v24.0/dialog/oauth"
         url = f"{base}?client_id={app_id}&redirect_uri={redirect_uri}&scope={scope}"
