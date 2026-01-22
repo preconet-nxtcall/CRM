@@ -311,6 +311,43 @@ def run_schema_patch():
                 except Exception as e:
                     print(f"❌ Failed to create housing_settings: {e}")
 
+            # -------------------------------------------------------------
+            # FACEBOOK CONNECTIONS (Strict SaaS)
+            # -------------------------------------------------------------
+            if 'facebook_connections' not in inspector.get_table_names():
+                print("Creating facebook_connections table...")
+                try:
+                    conn.execute(text('''
+                        CREATE TABLE facebook_connections (
+                            id SERIAL PRIMARY KEY,
+                            admin_id INTEGER NOT NULL UNIQUE,
+                            page_id VARCHAR(100),
+                            page_name VARCHAR(255),
+                            business_manager_id VARCHAR(100) NOT NULL,
+                            system_user_id VARCHAR(100) NOT NULL,
+                            encrypted_system_token TEXT NOT NULL,
+                            install_id VARCHAR(100),
+                            status VARCHAR(50) DEFAULT 'active',
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (admin_id) REFERENCES admins (id)
+                        )
+                    '''))
+                    print("✅ Created facebook_connections table")
+                except Exception as e:
+                    print(f"❌ Failed to create facebook_connections: {e}")
+
+            # Update facebook_pages with connection_id (renaming or adding)
+            if 'facebook_pages' in inspector.get_table_names():
+                fb_cols = [c['name'] for c in inspector.get_columns('facebook_pages')]
+                if 'connection_id' not in fb_cols:
+                    print("Adding connection_id to facebook_pages table...")
+                    try:
+                         conn.execute(text('ALTER TABLE facebook_pages ADD COLUMN connection_id INTEGER REFERENCES facebook_connections(id)'))
+                         print("✅ Added connection_id to facebook_pages")
+                    except Exception as e:
+                         print(f"❌ Failed to add connection_id: {e}")
+
             conn.commit()
             print("Schema patch complete.")
             

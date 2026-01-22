@@ -444,14 +444,52 @@ class FreeTrial(db.Model):
 
 
 # =========================================================
-# FACEBOOK PAGE INTEGRATION
+# FACEBOOK CONNECTION (Strict SaaS Infrastructure)
+# =========================================================
+class FacebookConnection(db.Model):
+    __tablename__ = "facebook_connections"
+
+    id = db.Column(db.Integer, primary_key=True)
+    admin_id = db.Column(db.Integer, db.ForeignKey("admins.id"), nullable=False, unique=True, index=True)
+    
+    page_id = db.Column(db.String(100), nullable=True) # Connected Page ID
+    page_name = db.Column(db.String(255), nullable=True)
+    
+    business_manager_id = db.Column(db.String(100), nullable=False)
+    system_user_id = db.Column(db.String(100), nullable=False)
+    encrypted_system_token = db.Column(db.Text, nullable=False) # STRICT NAME MATCH
+    
+    install_id = db.Column(db.String(100), nullable=True)
+    status = db.Column(db.String(50), default="active") # active, disconnected
+    
+    created_at = db.Column(db.DateTime, default=now)
+    updated_at = db.Column(db.DateTime, default=now, onupdate=now)
+
+    # Relationship to Company (Admin)
+    admin = db.relationship("Admin", backref=db.backref("facebook_connection", uselist=False))
+
+    def set_token(self, token):
+        from app.utils.security import encrypt_value
+        self.encrypted_system_token = encrypt_value(token)
+
+    def get_token(self):
+        from app.utils.security import decrypt_value
+        return decrypt_value(self.encrypted_system_token)
+
+
+# =========================================================
+# FACEBOOK PAGE INTEGRATION (Legacy/Reference)
 # =========================================================
 class FacebookPage(db.Model):
     __tablename__ = "facebook_pages"
 
     id = db.Column(db.Integer, primary_key=True)
-    # UPDATED: Linked to ADMIN (Company) instead of User (Agent)
+    
+    # Linked to Company (Admin)
     admin_id = db.Column(db.Integer, db.ForeignKey("admins.id"), nullable=False, index=True)
+    
+    # Optional: Link to Connection
+    connection_id = db.Column(db.Integer, db.ForeignKey("facebook_connections.id"), nullable=True)
     
     page_id = db.Column(db.String(100), unique=True, nullable=False, index=True)
     page_name = db.Column(db.String(255), nullable=False)
