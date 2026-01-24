@@ -52,7 +52,6 @@ class PipelineManager {
             { key: 'Connected', color: 'indigo' },
             { key: 'Interested', color: 'purple' },
             { key: 'Follow-Up', color: 'pink' },
-            { key: 'Closed', color: 'gray' },
             { key: 'Won', color: 'green' },
             { key: 'Not Interested', color: 'orange' },
             { key: 'Lost', color: 'red' }

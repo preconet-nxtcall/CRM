@@ -117,29 +117,37 @@ def pipeline_stats():
         # Map disparate statuses to our 8 core buckets
         if s_norm in pipeline_data:
             pipeline_data[s_norm] += count
-        elif s_norm == "Follow Up":
+            
+        # 1. Attempted (Explicitly map common call statuses)
+        elif s_norm in ["Attempted", "Ringing", "Busy", "Not Reachable", "Switch Off", "Call Later", "Callback", "No Answer"]:
+            pipeline_data["Attempted"] += count
+            
+        # 2. Connected
+        elif s_norm in ["Connected", "Contacted", "In Conversation"]:
+            pipeline_data["Connected"] += count
+            
+        # 3. Interested
+        elif s_norm in ["Interested", "Meeting Scheduled", "Demo Scheduled"]:
+            pipeline_data["Interested"] += count
+            
+        # 4. Follow-Up
+        elif s_norm in ["Follow-Up", "Follow Up"]:
             pipeline_data["Follow-Up"] += count
-        elif s_norm == "Contacted":
-            pipeline_data["Connected"] += count # Treat Contacted as Connected for pipeline view? Or Attempted?
-            # Let's map Contacted -> Attempted if Connected exists separately, but Contacted usually implies connection.
-            # Neodove uses "Connected". Let's stick Contacted -> Connected.
-            # Actually Neodove flow: New -> Attempted -> Connected -> Interested.
-        # 6. Won
-        elif s_norm in ["Won", "Converted"]:
+            
+        # 5. Won
+        elif s_norm in ["Won", "Converted", "Closed"]: # Map Closed to Won if present
             pipeline_data["Won"] += count
-
-        # 7. Not Interested (New Specific Bucket)
-        elif s_norm in ["Not Interested", "Not Intersted"]: # Handle common typo
+            
+        # 6. Not Interested
+        elif s_norm in ["Not Interested", "Not Intersted"]:
             pipeline_data["Not Interested"] += count
             
-        # 8. Lost (Remaining negative statuses)
-        elif s_norm in ["Lost", "Junk", "Wrong Number", "Invalid"]:
+        # 7. Lost
+        elif s_norm in ["Lost", "Junk", "Wrong Number", "Invalid", "Not Interested"]: # Remove Not Interested from here if separate
             pipeline_data["Lost"] += count
             
         else:
-            # Catch-all (including "Closed" if not mapped elsewhere)
-            pipeline_data["Attempted"] += count
-            # Let's add them to Attempted to avoid data loss in UI
+            # Fallback
             pipeline_data["Attempted"] += count
 
     return jsonify({
