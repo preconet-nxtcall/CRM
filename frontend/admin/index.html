@@ -1927,6 +1927,154 @@
         </div>
       </section>
 
+      <!-- 13. Pipeline Section (SPA) -->
+      <section id="sectionPipeline" class="hidden-section space-y-6">
+        <div class="mb-4">
+          <h2 class="text-2xl font-bold text-gray-800">Lead Pipeline</h2>
+          <p class="text-xs text-gray-500">Real-time sales funnel overview</p>
+        </div>
+
+        <!-- 1. Top KPI Section -->
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+          <!-- Total Leads -->
+          <div class="kpi-card bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
+            <div class="w-12 h-12 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 text-xl">
+              <i class="fas fa-database"></i>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500 font-medium uppercase">Total Leads</p>
+              <h3 class="text-2xl font-bold text-gray-900" id="kpi-total-leads">-</h3>
+            </div>
+          </div>
+
+          <!-- New Leads Today -->
+          <div class="kpi-card bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
+            <div class="w-12 h-12 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 text-xl">
+              <i class="fas fa-plus-circle"></i>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500 font-medium uppercase">New Today</p>
+              <h3 class="text-2xl font-bold text-gray-900" id="kpi-new-today">-</h3>
+            </div>
+          </div>
+
+          <!-- Calls Made -->
+          <div class="kpi-card bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
+            <div class="w-12 h-12 rounded-lg bg-green-50 flex items-center justify-center text-green-600 text-xl">
+              <i class="fas fa-phone"></i>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500 font-medium uppercase">Calls Today</p>
+              <h3 class="text-2xl font-bold text-gray-900" id="kpi-calls-today">-</h3>
+            </div>
+          </div>
+
+          <!-- Connected -->
+          <div class="kpi-card bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
+            <div class="w-12 h-12 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600 text-xl">
+              <i class="fas fa-link"></i>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500 font-medium uppercase">Connected</p>
+              <h3 class="text-2xl font-bold text-gray-900" id="kpi-connected">-</h3>
+            </div>
+          </div>
+
+          <!-- Conversion Rate -->
+          <div class="kpi-card bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
+            <div class="w-12 h-12 rounded-lg bg-purple-50 flex items-center justify-center text-purple-600 text-xl">
+              <i class="fas fa-percentage"></i>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500 font-medium uppercase">Conversion</p>
+              <h3 class="text-2xl font-bold text-gray-900" id="kpi-conversion">-</h3>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Core Pipeline Section -->
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm mb-6 p-1 overflow-x-auto">
+          <div class="flex min-w-max" id="pipeline-container">
+            <!-- Injected via JS -->
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- 3. Lead List Table (Span 2) -->
+          <div class="lg:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col">
+            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+              <h3 class="font-bold text-gray-900 text-lg">Lead Details</h3>
+              <div class="flex items-center gap-2">
+                <span class="text-xs text-gray-500" id="current-filter-label">All Leads</span>
+                <button onclick="pipelineManager.loadLeads()"
+                  class="p-1.5 text-gray-400 hover:text-blue-600 rounded bg-gray-50"><i
+                    class="fas fa-sync-alt"></i></button>
+              </div>
+            </div>
+
+            <div class="flex-1 overflow-x-auto">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="bg-gray-50 border-b border-gray-100 text-xs text-gray-500 uppercase tracking-wider">
+                    <th class="px-6 py-3 font-semibold">Lead Name</th>
+                    <th class="px-6 py-3 font-semibold">Source</th>
+                    <th class="px-6 py-3 font-semibold">Assigned To</th>
+                    <th class="px-6 py-3 font-semibold">Status</th>
+                    <th class="px-6 py-3 font-semibold">Last Activity</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-50 text-sm text-gray-700" id="pipeline-leads-table-body">
+                  <tr>
+                    <td colspan="5" class="px-6 py-8 text-center text-gray-400">Loading data...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Simplified Pagination -->
+            <div class="px-6 py-3 border-t border-gray-100 bg-gray-50 flex items-center justify-between">
+              <button id="pl-prev-page-btn"
+                class="px-3 py-1 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded hover:bg-gray-50 disabled:opacity-50">Previous</button>
+              <span class="text-xs text-gray-500" id="pl-page-info">Page 1</span>
+              <button id="pl-next-page-btn"
+                class="px-3 py-1 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded hover:bg-gray-50 disabled:opacity-50">Next</button>
+            </div>
+          </div>
+
+          <!-- 4. Agent Performance & Activity (Span 1) -->
+          <div class="flex flex-col gap-6">
+            <!-- Agent Table -->
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col">
+              <div class="px-6 py-4 border-b border-gray-100">
+                <h3 class="font-bold text-gray-900 text-lg">Agent Performance</h3>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                  <thead class="bg-gray-50 text-xs text-gray-500 uppercase">
+                    <tr>
+                      <th class="px-4 py-2">Agent</th>
+                      <th class="px-4 py-2 text-right">Calls</th>
+                      <th class="px-4 py-2 text-right">Closed</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-50 text-sm" id="pipeline-agent-table-body">
+                    <!-- JS Injected -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Mini Charts -->
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+              <h4 class="text-sm font-semibold text-gray-700 mb-4">Pipeline Distribution</h4>
+              <div class="h-48 relative">
+                <canvas id="pipelineChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
   </div>
   </main>
   </div>
