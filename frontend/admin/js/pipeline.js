@@ -54,6 +54,7 @@ class PipelineManager {
             { key: 'Follow-Up', color: 'pink' },
             { key: 'Closed', color: 'gray' },
             { key: 'Won', color: 'green' },
+            { key: 'Not Interested', color: 'orange' },
             { key: 'Lost', color: 'red' }
         ];
 
@@ -215,18 +216,20 @@ class PipelineManager {
         const dataValues = [
             pipeline['New'] || 0,
             pipeline['Attempted'] || 0,
-            pipeline['Connected'] || 0,
             pipeline['Interested'] || 0,
-            pipeline['Won'] || 0
+            pipeline['Follow-Up'] || 0,
+            pipeline['Won'] || 0,
+            pipeline['Not Interested'] || 0,
+            pipeline['Lost'] || 0
         ];
 
         new Chart(ctx, {
             type: 'doughnut',
             data: {
-                labels: ['New', 'Attempted', 'Connected', 'Interested', 'Won'],
+                labels: ['New', 'Attempted', 'Connected', 'Interested', 'Follow-Up', 'Won', 'Not Interested', 'Lost'],
                 datasets: [{
                     data: dataValues,
-                    backgroundColor: ['#3b82f6', '#fbbf24', '#6366f1', '#a855f7', '#22c55e'],
+                    backgroundColor: ['#3b82f6', '#fbbf24', '#6366f1', '#a855f7', '#ec4899', '#22c55e', '#f97316', '#ef4444'],
                     borderWidth: 0,
                     hoverOffset: 4
                 }]

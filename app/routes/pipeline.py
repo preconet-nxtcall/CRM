@@ -105,9 +105,9 @@ def pipeline_stats():
         "Connected": 0,
         "Interested": 0,
         "Follow-Up": 0, # Covers "Follow-Up" and "Follow Up"
-        "Closed": 0,
-        "Lost": 0,
-        "Won": 0
+        "Won": 0,
+        "Not Interested": 0,
+        "Lost": 0
     }
 
     for status, count in status_counts:
@@ -124,12 +124,21 @@ def pipeline_stats():
             # Let's map Contacted -> Attempted if Connected exists separately, but Contacted usually implies connection.
             # Neodove uses "Connected". Let's stick Contacted -> Connected.
             # Actually Neodove flow: New -> Attempted -> Connected -> Interested.
-        elif s_norm == "Converted":
+        # 6. Won
+        elif s_norm in ["Won", "Converted"]:
             pipeline_data["Won"] += count
-        elif s_norm == "Junk":
+
+        # 7. Not Interested (New Specific Bucket)
+        elif s_norm in ["Not Interested", "Not Intersted"]: # Handle common typo
+            pipeline_data["Not Interested"] += count
+            
+        # 8. Lost (Remaining negative statuses)
+        elif s_norm in ["Lost", "Junk", "Wrong Number", "Invalid"]:
             pipeline_data["Lost"] += count
+            
         else:
-            # Fallback for unknown statuses -> stick them in Attempted? Or ignore?
+            # Catch-all (including "Closed" if not mapped elsewhere)
+            pipeline_data["Attempted"] += count
             # Let's add them to Attempted to avoid data loss in UI
             pipeline_data["Attempted"] += count
 
