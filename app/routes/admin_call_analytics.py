@@ -57,32 +57,47 @@ def admin_analytics_all_users():
         # --- DATE FILTER LOGIC ---
         period = request.args.get("period", "all") # default all to match previous behavior if not specified
         
+        # Date Filter Logic (Dynamic Timezone)
         now_utc = datetime.utcnow()
-        # IST Offset
-        ist_offset = timedelta(hours=5, minutes=30)
-        now_ist = now_utc + ist_offset
-        today_start_ist = datetime(now_ist.year, now_ist.month, now_ist.day)
+        try:
+             offset_min = int(request.args.get("timezone_offset", 0))
+             # If 0, maybe default to IST? Let's respect 0 (UTC) if sent, but default to IST if not?
+             # Actually, if frontend sends 0, it means UTC. 
+             # Let's fallback to IST only if NOT in args? 
+             # The previous code hardcoded IST.
+             # If we want to be safe: use offset if valid, else IST.
+        except:
+             offset_min = -330 # Default to IST (-330 mins offset from UTC)
+
+        # JS getTimezoneOffset() returns +ve if West, -ve if East (opposite of UTC offset usually)
+        # IST is UTC+5:30. JS returns -330.
+        # So Local = UTC - (-330) = UTC + 330 mins = UTC + 5.5h.
         
+        local_delta = timedelta(minutes=-offset_min) 
+        # Safety: if offset is 0, local_delta is 0 (UTC).
+        # If offset is -330 (IST), local_delta is +330 mins.
+        
+        now_local = now_utc + local_delta
+        today_start_local = datetime(now_local.year, now_local.month, now_local.day)
+        
+        # Convert back to UTC for DB
+        # UTC = Local - delta
         start_date = None
         end_date = None
 
         if period == "today":
-            # Today in IST means 00:00 IST to 00:00 IST next day
-            # Convert back to UTC for DB query
-            start_date = today_start_ist - ist_offset
+            start_date = today_start_local - local_delta
             end_date = start_date + timedelta(days=1)
         elif period == "month":
-            # Start of current month in IST
-            month_start_ist = datetime(now_ist.year, now_ist.month, 1)
-            start_date = month_start_ist - ist_offset
+            month_start_local = datetime(now_local.year, now_local.month, 1)
+            start_date = month_start_local - local_delta
             
-            # Start of next month
-            if now_ist.month == 12:
-                next_month_ist = datetime(now_ist.year + 1, 1, 1)
+            if now_local.month == 12:
+                next_month_local = datetime(now_local.year + 1, 1, 1)
             else:
-                next_month_ist = datetime(now_ist.year, now_ist.month + 1, 1)
+                next_month_local = datetime(now_local.year, now_local.month + 1, 1)
             
-            end_date = next_month_ist - ist_offset
+            end_date = next_month_local - local_delta
         
         # If period is 'all' or unknown, we don't apply date filters to the MAIN counts if that was the original intent,
         # BUT the task says "show only today data" etc.

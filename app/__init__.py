@@ -278,7 +278,9 @@ def create_app(config_class=Config):
     from app.routes.indiamart import bp as indiamart_bp
     app.register_blueprint(indiamart_bp) # NEW
     
-
+    from app.routes.pipeline import pipeline_bp
+    app.register_blueprint(pipeline_bp) # NEW Neodove Pipeline
+    
     from app.routes.magicbricks import bp as magicbricks_bp
     app.register_blueprint(magicbricks_bp) # NEW
     
