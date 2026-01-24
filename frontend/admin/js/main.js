@@ -142,6 +142,7 @@ document.addEventListener("DOMContentLoaded", () => {
         { id: "menuAppPerformance", section: "sectionAppPerformance", title: "App Usage Monitor", manager: window.appPerformanceManager },
         { id: "menuFollowup", section: "sectionFollowup", title: "Follow-ups", manager: window.followupManager },
         { id: "menuLeads", section: "sectionLeads", title: "Leads Management", manager: window.leadsManager },
+        { id: "menuPipeline", section: "sectionPipeline", title: "Lead Pipeline", manager: window.pipelineManager },
         { id: "menuIntegrations", mobileId: null, section: "sectionIntegrations", title: "Lead Integrations", manager: window.integrationsManager }
     ];
 

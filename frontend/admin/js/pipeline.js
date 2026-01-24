@@ -89,10 +89,13 @@ class PipelineManager {
     /* ------------------------------------------------
        2. Leads Table
     ------------------------------------------------ */
+    // Updated for SPA: IDs must be unique
     async loadLeads(page = 1) {
         try {
             this.currentPage = page;
-            const tbody = document.getElementById('leads-table-body');
+            const tbody = document.getElementById('pipeline-leads-table-body'); // Updated ID
+            if (!tbody) return;
+
             tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-8 text-center text-gray-400"><i class="fas fa-spinner fa-spin mr-2"></i>Loading...</td></tr>';
 
             let url = `/api/pipeline/leads?page=${page}&per_page=15`;
@@ -112,7 +115,9 @@ class PipelineManager {
     }
 
     renderLeadsTable(leads) {
-        const tbody = document.getElementById('leads-table-body');
+        const tbody = document.getElementById('pipeline-leads-table-body'); // Updated ID
+        if (!tbody) return;
+
         if (!leads || leads.length === 0) {
             tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-8 text-center text-gray-400">No leads found.</td></tr>';
             return;
@@ -154,9 +159,9 @@ class PipelineManager {
     }
 
     updatePagination(pageData) {
-        const prevBtn = document.getElementById('prev-page-btn');
-        const nextBtn = document.getElementById('next-page-btn');
-        const label = document.getElementById('page-info');
+        const prevBtn = document.getElementById('pl-prev-page-btn'); // Updated ID
+        const nextBtn = document.getElementById('pl-next-page-btn'); // Updated ID
+        const label = document.getElementById('pl-page-info'); // Updated ID
 
         if (prevBtn) {
             prevBtn.disabled = pageData.current <= 1;
@@ -179,7 +184,7 @@ class PipelineManager {
             const resp = await auth.makeAuthenticatedRequest('/api/pipeline/agents');
             if (resp && resp.ok) {
                 const data = await resp.json();
-                const tbody = document.getElementById('agent-table-body');
+                const tbody = document.getElementById('pipeline-agent-table-body'); // Updated ID
                 if (!tbody) return;
 
                 tbody.innerHTML = (data.agents || []).slice(0, 5).map(a => `
@@ -202,7 +207,10 @@ class PipelineManager {
         const ctx = document.getElementById('pipelineChart');
         if (!ctx) return;
 
-        // Destroy old if exists? (Assuming single init for now)
+        // Note: Chart.js might fail if canvas is reused or not destroyed. 
+        // For simple switching, we might want to check if a chart instance exists on the canvas and destroy it.
+        const existingChart = Chart.getChart(ctx);
+        if (existingChart) existingChart.destroy();
 
         const dataValues = [
             pipeline['New'] || 0,
@@ -236,3 +244,5 @@ class PipelineManager {
 }
 
 window.pipelineManager = new PipelineManager();
+// Remove auto-init
+// window.pipelineManager.init();

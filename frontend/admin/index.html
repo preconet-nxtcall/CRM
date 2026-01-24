@@ -40,23 +40,46 @@
       font-family: 'Inter', sans-serif;
     }
 
-    /* Custom Scrollbar */
+    /* Neodove Custom Scrollbar */
     ::-webkit-scrollbar {
       width: 6px;
       height: 6px;
     }
 
     ::-webkit-scrollbar-track {
-      background: #f1f1f1;
+      background: #f1f5f9;
     }
 
     ::-webkit-scrollbar-thumb {
-      background: #c1c1c1;
-      border-radius: 10px;
+      background: #cbd5e1;
+      border-radius: 4px;
     }
 
     ::-webkit-scrollbar-thumb:hover {
-      background: #a8a8a8;
+      background: #94a3b8;
+    }
+
+    .pipeline-segment {
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .pipeline-segment:hover {
+      transform: translateY(-2px);
+    }
+
+    .pipeline-segment.active {
+      box-shadow: 0 0 0 2px #2563eb;
+    }
+
+
+    .kpi-card {
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .kpi-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     }
 
     /* Sidebar Transition */
@@ -263,7 +286,7 @@
         </a>
 
         <!-- Item 11: Pipeline -->
-        <a id="menuPipeline" href="pipeline.html"
+        <a id="menuPipeline" href="#"
           class="menu-item group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-all cursor-pointer">
           <i class="fas fa-funnel-dollar w-6 text-center text-gray-400 group-hover:text-white transition-colors"></i>
           <span class="ml-2">Lead Pipeline</span>
