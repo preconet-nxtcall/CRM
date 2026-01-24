@@ -73,29 +73,64 @@ def sync_admin_leads(admin_id):
             
             im_id = f"IM_{query_id}"
             
+            existing = Lead.query.filter_by(facebook_lead_id=im_id, admin_id=admin_id).first()
+            if existing:
+                continue
+                
             # ---------------------------------------------------------
-            # INGEST via CENTRAL SERVICE
+            # ASSIGNMENT LOGIC
             # ---------------------------------------------------------
-            lead_data = {
-                "facebook_lead_id": im_id,
-                "name": sender_name,
-                "email": sender_email,
-                "phone": sender_mobile,
-                "custom_fields": {
+            assigned_user_id = None
+            try:
+                active_agents = User.query.filter_by(
+                    admin_id=admin_id, 
+                    status='active',
+                    is_suspended=False
+                ).order_by(User.id).all()
+
+                if active_agents:
+                    last_lead = Lead.query.filter_by(admin_id=admin_id)\
+                        .filter(Lead.assigned_to.isnot(None))\
+                        .order_by(Lead.created_at.desc())\
+                        .first()
+
+                    if not last_lead or not last_lead.assigned_to:
+                        assigned_user_id = active_agents[0].id
+                    else:
+                        last_agent_id = last_lead.assigned_to
+                        agent_ids = [agent.id for agent in active_agents]
+                        if last_agent_id in agent_ids:
+                            current_index = agent_ids.index(last_agent_id)
+                            next_index = (current_index + 1) % len(agent_ids)
+                            assigned_user_id = agent_ids[next_index]
+                        else:
+                            assigned_user_id = active_agents[0].id
+            except Exception:
+                pass # Assignment failed, leave unassigned
+
+            # Create Lead
+            new_lead = Lead(
+                admin_id=admin_id,
+                facebook_lead_id=im_id, 
+                name=sender_name,
+                email=sender_email,
+                phone=sender_mobile,
+                source="indiamart",
+                status="new",
+                assigned_to=assigned_user_id,
+                custom_fields={
                     "subject": subject,
                     "message": message,
                     "company": sender_company,
                     "city": sender_city,
                     "state": sender_state,
                     "indiamart_id": query_id
-                }
-            }
+                },
+                created_at=now()
+            )
             
-            from app.services.lead_service import LeadService
-            new_lead = LeadService.ingest_lead(admin_id, "indiamart", lead_data, campaign_id=settings.campaign_id)
-            
-            if new_lead:
-                added_count += 1
+            db.session.add(new_lead)
+            added_count += 1
             
         settings.last_sync_time = now()
         db.session.commit()

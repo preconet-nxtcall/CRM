@@ -73,9 +73,9 @@ def parse_email_body(body):
 
     return data
 
-def process_single_email(admin_id, msg_id, email_message, campaign_id=None):
+def process_single_email(admin_id, msg_id, email_message):
     """
-    Parses and saves a single email using Central LeadService
+    Parses and saves a single email
     """
     try:
         # Check Deduplication by Message-ID
@@ -100,43 +100,91 @@ def process_single_email(admin_id, msg_id, email_message, campaign_id=None):
         if not lead_data:
             return {"status": "ignored", "reason": "parsing_failed_or_not_lead"}
 
-        # Prepare Data for LeadService
-        # Combine Project + Location for Location field
-        # (Parser logic is specific to MB, so we keep that)
-        
-        data = {
-            "name": lead_data.get("name") or "Unknown Buyer",
-            "email": lead_data.get("email"),
-            "phone": lead_data.get("phone"),
-            "source": "magicbricks",
-            "property_type": lead_data.get("property_type"),
-            "location": lead_data.get("location"),
-            "budget": lead_data.get("budget"),
-            "requirement": lead_data.get("requirement"),
-            "custom_fields": {
-                "purpose": lead_data.get("purpose"),
-                "raw_subject": email_message.get("Subject")
-            }
-        }
+        # Business Logic Deduplication (Phone + Property + Today)
+        # Prevents same user spamming same requirement
+        today_start = datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        duplicate_lead = Lead.query.filter(
+            Lead.admin_id == admin_id,
+            Lead.phone == lead_data.get("phone"),
+            Lead.source == "MAGICBRICKS",
+            Lead.created_at >= today_start
+        ).first()
 
-        # Ingest
-        from app.services.lead_service import LeadService
-        new_lead = LeadService.ingest_lead(admin_id, "magicbricks", data, campaign_id=campaign_id)
-        
-        if not new_lead:
-             # Could be duplicate (handled by LeadService but we want to track processed email)
-             # LeadService returns existing lead if dup. If None, it failed validation.
-             # If duplicate returns Lead object, we proceed to mark email as processed.
-             pass
-
-        if new_lead:
-             # Mark Processed
-            pe = ProcessedEmail(admin_id=admin_id, message_id=msg_id, lead_source="MAGICBRICKS")
+        if duplicate_lead:
+            # Mark processed but don't create lead
+            pe = ProcessedEmail(admin_id=admin_id, message_id=msg_id)
             db.session.add(pe)
             db.session.commit()
-            return {"status": "success", "lead_id": new_lead.id}
-        else:
-             return {"status": "skipped", "reason": "validation_failed"}
+            return {"status": "skipped", "reason": "duplicate_lead_today"}
+
+        # Create Lead
+        new_lead = Lead(
+            admin_id=admin_id,
+            name=lead_data.get("name") or "Unknown Buyer",
+            email=lead_data.get("email"),
+            phone=lead_data.get("phone"),
+            source="magicbricks",
+            status="new",
+            property_type=lead_data.get("property_type"),
+            location=lead_data.get("location"),
+            budget=lead_data.get("budget"),
+            requirement=lead_data.get("requirement"),
+            custom_fields={"purpose": lead_data.get("purpose")}
+        )
+
+        # ---------------------------------------------------------
+        # AGENT ASSIGNMENT LOGIC (ROUND ROBIN)
+        # ---------------------------------------------------------
+        assigned_user_id = None
+        try:
+            # 1. Get all active users (users) for this Admin
+            from app.models import User 
+            
+            active_agents = User.query.filter_by(
+                admin_id=admin_id, 
+                status='active',
+                is_suspended=False
+            ).order_by(User.id).all()
+
+            if active_agents:
+                # 2. Find the last assigned lead for this admin to determine sequence
+                last_lead = Lead.query.filter_by(admin_id=admin_id)\
+                    .filter(Lead.assigned_to.isnot(None))\
+                    .order_by(Lead.created_at.desc())\
+                    .first()
+
+                if not last_lead or not last_lead.assigned_to:
+                    # No previous assignment, assign to first agent
+                    assigned_user_id = active_agents[0].id
+                else:
+                    # Find index of last agent
+                    last_agent_id = last_lead.assigned_to
+                    
+                    # Check if last agent is still in the active list
+                    agent_ids = [agent.id for agent in active_agents]
+                    
+                    if last_agent_id in agent_ids:
+                        current_index = agent_ids.index(last_agent_id)
+                        next_index = (current_index + 1) % len(agent_ids)
+                        assigned_user_id = agent_ids[next_index]
+                    else:
+                        # Last agent removed/inactive, start over
+                        assigned_user_id = agent_ids[0]
+            
+        except Exception as e:
+            logger.error(f"Error in assignment logic for MB lead: {e}")
+        
+        if assigned_user_id:
+            new_lead.assigned_to = assigned_user_id
+        
+        db.session.add(new_lead)
+        
+        # Mark Processed
+        pe = ProcessedEmail(admin_id=admin_id, message_id=msg_id)
+        db.session.add(pe)
+        
+        db.session.commit()
+        return {"status": "success", "lead_id": new_lead.id}
 
     except Exception as e:
         db.session.rollback()
@@ -177,7 +225,7 @@ def sync_magicbricks_leads(admin_id):
                         msg_id = msg.get("Message-ID") or f"no_id_{eid.decode()}"
                         
                         # Process
-                        result = process_single_email(admin_id, msg_id, msg, campaign_id=settings.campaign_id)
+                        result = process_single_email(admin_id, msg_id, msg)
                         
                         if result["status"] == "success":
                             count += 1

@@ -350,15 +350,11 @@ class LeadsManager {
             const dateHtml = `<div class="font-medium text-gray-900">${datePart}</div><div class="text-gray-500 text-[10px]">${timePart}</div>`;
 
             let statusColor = "bg-gray-100 text-gray-800";
-            const s = (lead.status || '').toLowerCase();
-            if (s === 'new') statusColor = "bg-blue-50 text-blue-700";
-            if (s === 'attempted') statusColor = "bg-yellow-50 text-yellow-700";
-            if (s === 'connected') statusColor = "bg-green-50 text-green-700";
-            if (s === 'interested') statusColor = "bg-purple-50 text-purple-700";
-            if (s === 'follow-up') statusColor = "bg-pink-50 text-pink-700";
-            if (s === 'closed') statusColor = "bg-gray-200 text-gray-700";
-            if (s === 'won') statusColor = "bg-green-100 text-green-800 border border-green-200";
-            if (s === 'junk') statusColor = "bg-red-50 text-red-700";
+            if (lead.status === 'new') statusColor = "bg-green-100 text-green-800";
+            if (lead.status === 'contacted') statusColor = "bg-blue-100 text-blue-800";
+            if (lead.status === 'qualified') statusColor = "bg-purple-100 text-purple-800";
+            if (lead.status === 'converted') statusColor = "bg-yellow-100 text-yellow-800";
+            if (lead.status === 'junk') statusColor = "bg-red-100 text-red-800";
 
             let sourceBadge = `<span class="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-800 rounded">${lead.source.toUpperCase()}</span>`;
             if (lead.source === 'facebook') sourceBadge = `<span class="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded">FACEBOOK</span>`;
@@ -386,12 +382,9 @@ class LeadsManager {
                          <select onchange="leadsManager.updateLeadStatus(${lead.id}, this.value)" 
                             class="text-xs rounded border-gray-200 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 ${statusColor}">
                             <option value="new" ${lead.status === 'new' ? 'selected' : ''}>New</option>
-                            <option value="attempted" ${lead.status === 'attempted' ? 'selected' : ''}>Attempted</option>
-                            <option value="connected" ${lead.status === 'connected' ? 'selected' : ''}>Connected</option>
-                            <option value="interested" ${lead.status === 'interested' ? 'selected' : ''}>Interested</option>
-                            <option value="follow-up" ${lead.status === 'follow-up' ? 'selected' : ''}>Follow Up</option>
-                            <option value="closed" ${lead.status === 'closed' ? 'selected' : ''}>Closed</option>
-                            <option value="won" ${lead.status === 'won' ? 'selected' : ''}>Won</option>
+                            <option value="contacted" ${lead.status === 'contacted' ? 'selected' : ''}>Contacted</option>
+                            <option value="qualified" ${lead.status === 'qualified' ? 'selected' : ''}>Qualified</option>
+                            <option value="converted" ${lead.status === 'converted' ? 'selected' : ''}>Converted</option>
                             <option value="junk" ${lead.status === 'junk' ? 'selected' : ''}>Junk</option>
                         </select>
                     </td>

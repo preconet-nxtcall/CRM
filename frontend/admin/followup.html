@@ -1,99 +1,15 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Followups - Preconet CRM</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css">
+    <meta http-equiv="refresh" content="0; url=index.html">
+    <script>
+        window.location.href = "index.html";
+    </script>
 </head>
 
-<body class="bg-gray-50 h-screen flex overflow-hidden">
-
-    <!-- Sidebar -->
-    <aside class="w-64 bg-white border-r border-gray-200 hidden md:flex flex-col z-10" id="sidebar">
-        <div class="p-4 border-b border-gray-100 flex items-center justify-center">
-            <h1 class="text-xl font-bold text-blue-600 tracking-tight">Preconet CRM</h1>
-        </div>
-        <nav class="flex-1 overflow-y-auto py-4">
-            <ul class="space-y-1 px-3">
-                <li><a href="index.html"
-                        class="flex items-center gap-3 px-4 py-2.5 text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-lg font-medium transition-colors"><i
-                            class="fas fa-home w-5"></i> Dashboard</a></li>
-                <li><a href="users.html"
-                        class="flex items-center gap-3 px-4 py-2.5 text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-lg font-medium transition-colors"><i
-                            class="fas fa-users w-5"></i> Users</a></li>
-                <li><a href="leads.html"
-                        class="flex items-center gap-3 px-4 py-2.5 text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-lg font-medium transition-colors"><i
-                            class="fas fa-filter w-5"></i> Leads Pipeline</a></li>
-                <li><a href="admin_call_history.html"
-                        class="flex items-center gap-3 px-4 py-2.5 text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-lg font-medium transition-colors"><i
-                            class="fas fa-phone-alt w-5"></i> Call History</a></li>
-                <li><a href="attendance.html"
-                        class="flex items-center gap-3 px-4 py-2.5 text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-lg font-medium transition-colors"><i
-                            class="far fa-clock w-5"></i> Attendance</a></li>
-                <li><a href="followup.html"
-                        class="flex items-center gap-3 px-4 py-2.5 bg-blue-50 text-blue-600 rounded-lg font-medium transition-colors"><i
-                            class="fas fa-tasks w-5"></i> Followups</a></li>
-                <li><a href="integrations.html"
-                        class="flex items-center gap-3 px-4 py-2.5 text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-lg font-medium transition-colors"><i
-                            class="fas fa-plug w-5"></i> Integrations</a></li>
-            </ul>
-        </nav>
-        <div class="p-4 border-t border-gray-100">
-            <button onclick="auth.logout()"
-                class="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm text-red-600 font-medium hover:bg-red-50 rounded-lg transition-colors"><i
-                    class="fas fa-sign-out-alt"></i> Logout</button>
-        </div>
-    </aside>
-
-    <!-- Main Content -->
-    <main class="flex-1 flex flex-col overflow-hidden relative">
-        <header class="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-6 z-20">
-            <div class="flex items-center gap-4">
-                <button class="md:hidden text-gray-500"
-                    onclick="document.getElementById('sidebar').classList.toggle('hidden')"><i
-                        class="fas fa-bars"></i></button>
-                <h2 class="text-lg font-semibold text-gray-800">Follow-Ups</h2>
-            </div>
-        </header>
-
-        <div class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-6">
-            <div class="dashboard-card overflow-hidden">
-                <div class="overflow-x-auto">
-                    <table class="neodove-table w-full">
-                        <thead>
-                            <tr>
-                                <th>Date & Time</th>
-                                <th>Lead Name</th>
-                                <th>Phone</th>
-                                <th>Assigned To</th>
-                                <th>Status</th>
-                                <th class="text-right">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="followupTableBody">
-                            <tr>
-                                <td colspan="6" class="text-center py-8 text-gray-400">Loading followups...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <script src="js/auth.js"></script>
-    <script src="js/followup.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            if (auth.checkAuth()) {
-                if (window.followupManager) window.followupManager.loadFollowups();
-            }
-        });
-    </script>
+<body>
+    <p>Redirecting to dashboard...</p>
 </body>
 
 </html>

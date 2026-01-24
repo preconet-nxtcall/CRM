@@ -2,243 +2,2335 @@
 <html lang="en">
 
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Preconet CRM - Admin Dashboard</title>
-  <!-- Tailwind CSS (via CDN for speed as per original setup) -->
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>AI-Powered Call Tracking Software for Sales Teams</title>
+  <link rel="shortcut icon" href="../images/favicon.png" type="image/x-icon">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- Custom CSS -->
-  <link rel="stylesheet" href="css/style.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              dark: '#111827', // Sidebar bg
+              primary: '#3B82F6', // Blue accent
+              success: '#10B981', // Green accent
+              warning: '#F59E0B', // Yellow accent
+              danger: '#EF4444', // Red accent
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="css/style.css?v=1.8">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #c1c1c1;
+      border-radius: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #a8a8a8;
+    }
+
+    /* Sidebar Transition */
+    #sidebar {
+      transition: transform 0.3s ease-in-out;
+      z-index: 50;
+    }
+
+    @media (max-width: 1023px) {
+      #sidebar {
+        transform: translateX(-100%);
+        position: fixed;
+        height: 100%;
+      }
+
+      #sidebar.active {
+        transform: translateX(0);
+      }
+    }
+
+    /* Overlay */
+    #overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 40;
+      backdrop-filter: blur(2px);
+    }
+
+    #overlay.active {
+      display: block;
+    }
+
+    /* Card Hover Effects */
+    .hover-card {
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .hover-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+
+    /* Utility for hiding sections */
+    .hidden-section {
+      display: none !important;
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .animate-fade-in {
+      animation: fadeIn 0.5s ease-out forwards;
+    }
+
+    @keyframes spin-slow {
+      from {
+        transform: rotate(0deg);
+      }
+
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .animate-spin-slow {
+      animation: spin-slow 3s linear infinite;
+    }
+
+    /* Custom Animations */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .animate-fade-in {
+      animation: fadeIn 0.4s ease-out forwards;
+    }
+  </style>
 </head>
 
-<body class="bg-gray-50 h-screen flex overflow-hidden">
+<body class="bg-gray-50 text-gray-800 antialiased">
 
-  <!-- Sidebar (Keeping existing sidebar structure but ensuring it fits) -->
-  <aside class="w-64 bg-white border-r border-gray-200 hidden md:flex flex-col z-10" id="sidebar">
-    <div class="p-4 border-b border-gray-100 flex items-center justify-center">
-      <h1 class="text-xl font-bold text-blue-600 tracking-tight">Preconet CRM</h1>
-    </div>
+  <div id="overlay" aria-hidden="true"></div>
 
-    <nav class="flex-1 overflow-y-auto py-4">
-      <ul class="space-y-1 px-3">
-        <li>
-          <a href="index.html"
-            class="flex items-center gap-3 px-4 py-2.5 bg-blue-50 text-blue-600 rounded-lg font-medium group transition-colors">
-            <i class="fas fa-home w-5"></i>
-            Dashboard
-          </a>
-        </li>
-        <li>
-          <a href="users.html"
-            class="flex items-center gap-3 px-4 py-2.5 text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-lg font-medium group transition-colors">
-            <i class="fas fa-users w-5"></i>
-            Users
-          </a>
-        </li>
-        <li>
-          <a href="leads.html"
-            class="flex items-center gap-3 px-4 py-2.5 text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-lg font-medium group transition-colors">
-            <i class="fas fa-filter w-5"></i>
-            Leads Pipeline
-          </a>
-        </li>
-        <li>
-          <a href="admin_call_history.html"
-            class="flex items-center gap-3 px-4 py-2.5 text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-lg font-medium group transition-colors">
-            <i class="fas fa-phone-alt w-5"></i>
-            Call History
-          </a>
-        </li>
-        <li>
-          <a href="attendance.html"
-            class="flex items-center gap-3 px-4 py-2.5 text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-lg font-medium group transition-colors">
-            <i class="far fa-clock w-5"></i>
-            Attendance
-          </a>
-        </li>
-        <li>
-          <a href="followup.html"
-            class="flex items-center gap-3 px-4 py-2.5 text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-lg font-medium group transition-colors">
-            <i class="fas fa-tasks w-5"></i>
-            Followups
-          </a>
-        </li>
-        <li>
-          <a href="integrations.html"
-            class="flex items-center gap-3 px-4 py-2.5 text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-lg font-medium group transition-colors">
-            <i class="fas fa-plug w-5"></i>
-            Integrations
-          </a>
-        </li>
-      </ul>
-    </nav>
+  <div class="flex h-screen overflow-hidden">
 
-    <div class="p-4 border-t border-gray-100">
-      <div class="flex items-center gap-3 mb-4 px-2">
-        <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold"
-          id="admin-avatar">
-          A
+    <!-- SIDEBAR -->
+    <aside id="sidebar" class="w-64 bg-gray-900 text-white flex flex-col shadow-2xl">
+      <!-- Logo Area -->
+      <div class="h-16 flex items-center px-6 border-b border-gray-800 bg-gray-900">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/30">
+            <i class="fas fa-phone-alt text-white text-sm"></i>
+          </div>
+          <div>
+            <h1 class="text-lg font-bold tracking-tight">Nxt Call<span class="text-blue-500">.app</span></h1>
+          </div>
         </div>
-        <div class="overflow-hidden">
-          <p class="text-sm font-medium text-gray-900 truncate" id="sidebar-admin-name">Admin</p>
-          <p class="text-xs text-gray-500 truncate" id="sidebar-admin-email">admin@example.com</p>
-        </div>
-      </div>
-      <button onclick="auth.logout()"
-        class="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm text-red-600 font-medium hover:bg-red-50 rounded-lg transition-colors">
-        <i class="fas fa-sign-out-alt"></i>
-        Logout
-      </button>
-    </div>
-  </aside>
-
-  <!-- Main Content -->
-  <main class="flex-1 flex flex-col overflow-hidden relative">
-    <!-- Header -->
-    <header class="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-6 z-20">
-      <div class="flex items-center gap-4">
-        <button class="md:hidden text-gray-500 hover:text-gray-700"
-          onclick="document.getElementById('sidebar').classList.toggle('hidden')">
-          <i class="fas fa-bars text-xl"></i>
+        <button id="closeSidebar" class="lg:hidden ml-auto text-gray-400 hover:text-white">
+          <i class="fas fa-times"></i>
         </button>
-        <h2 class="text-lg font-semibold text-gray-800">Dashboard Overview</h2>
       </div>
-      <div class="flex items-center gap-4">
-        <div class="text-sm text-gray-500" id="current-date">
-          <!-- Date will be injected here -->
+
+      <!-- Navigation -->
+      <nav class="flex-1 px-3 py-6 space-y-1 overflow-y-auto">
+        <!-- ANALYTICS -->
+        <p class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Analytics</p>
+
+        <a id="menuDashboard"
+          class="menu-item group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg bg-blue-600 text-white shadow-md cursor-pointer">
+          <i class="fas fa-chart-pie w-6 text-center text-blue-200 group-hover:text-white transition-colors"></i>
+          <span class="ml-2">Dashboard</span>
+        </a>
+
+        <a id="menuCallAnalytics"
+          class="menu-item group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-all cursor-pointer">
+          <i class="fas fa-chart-bar w-6 text-center text-gray-400 group-hover:text-white transition-colors"></i>
+          <span class="ml-2">Call Analytics</span>
+        </a>
+
+        <a id="menuPerformance"
+          class="menu-item group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-all cursor-pointer">
+          <i class="fas fa-chart-line w-6 text-center text-gray-400 group-hover:text-white transition-colors"></i>
+          <span class="ml-2">Performance</span>
+        </a>
+
+        <a id="menuAppPerformance"
+          class="menu-item group flex items-center pl-11 pr-3 py-2 text-sm font-medium rounded-lg text-gray-400 hover:bg-gray-800 hover:text-white transition-all cursor-pointer relative">
+          <span
+            class="absolute left-5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-gray-600 group-hover:bg-gray-400"></span>
+          <span>App Usage</span>
+        </a>
+
+        <a id="menuCallHistory"
+          class="menu-item group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-all cursor-pointer">
+          <i class="fas fa-history w-6 text-center text-gray-400 group-hover:text-white transition-colors"></i>
+          <span class="ml-2">Call History</span>
+        </a>
+
+        <!-- MANAGEMENT -->
+        <p class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mt-6 mb-2">Management</p>
+
+        <a id="menuUsers"
+          class="menu-item group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-all cursor-pointer">
+          <i class="fas fa-users w-6 text-center text-gray-400 group-hover:text-white transition-colors"></i>
+          <span class="ml-2">Users</span>
+        </a>
+
+        <!-- Sub-item: Create User -->
+        <a id="menuCreateUser"
+          class="menu-item group flex items-center pl-11 pr-3 py-2 text-sm font-medium rounded-lg text-gray-400 hover:bg-gray-800 hover:text-white transition-all cursor-pointer relative">
+          <span
+            class="absolute left-5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-gray-600 group-hover:bg-gray-400"></span>
+          <span>Create User</span>
+        </a>
+
+        <a id="menuAttendance"
+          class="menu-item group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-all cursor-pointer">
+          <i class="fas fa-calendar-check w-6 text-center text-gray-400 group-hover:text-white transition-colors"></i>
+          <span class="ml-2">Attendance</span>
+        </a>
+
+
+        <a id="menuFollowup"
+          class="menu-item group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-all cursor-pointer">
+          <i class="fas fa-bell w-6 text-center text-gray-400 group-hover:text-white transition-colors"></i>
+          <span class="ml-2">Follow-ups</span>
+        </a>
+
+        <!-- INTEGRATIONS -->
+        <p class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mt-6 mb-2">Integrations</p>
+
+        <a id="menuIntegrations"
+          class="menu-item group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-all cursor-pointer">
+          <i class="fab fa-facebook w-6 text-center text-gray-400 group-hover:text-white transition-colors"></i>
+          <span class="ml-2">Leads Management</span>
+        </a>
+
+        <p class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mt-6 mb-2">CRM</p>
+
+        <a id="menuLeads"
+          class="menu-item group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-all cursor-pointer">
+          <i class="fas fa-funnel-dollar w-6 text-center text-gray-400 group-hover:text-white transition-colors"></i>
+          <span class="ml-2">My Leads</span>
+        </a>
+      </nav>
+
+      <!-- User Profile / Logout -->
+      <div class="p-4 border-t border-gray-800 bg-gray-900">
+        <div class="flex items-center gap-3 mb-3">
+          <div id="sidebarUserInitials"
+            class="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-sm shadow-md">
+            AD
+          </div>
+          <div class="flex-1 min-w-0">
+            <p id="sidebarUserName" class="text-sm font-medium text-white truncate">Admin User</p>
+            <p id="sidebarUserEmail" class="text-xs text-gray-500 truncate">admin@example.com</p>
+          </div>
         </div>
+        <button id="logoutBtn"
+          class="w-full flex items-center justify-center px-4 py-2 border border-gray-700 rounded-lg shadow-sm text-sm font-medium text-gray-300 bg-gray-800 hover:bg-gray-700 hover:text-white transition-colors">
+          <i class="fas fa-sign-out-alt mr-2"></i> Sign out
+        </button>
       </div>
-    </header>
+    </aside>
 
-    <!-- Scrollable Dashboard Area -->
-    <div class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-6">
+    <!-- MAIN CONTENT -->
+    <main id="mainContent" class="flex-1 overflow-y-auto bg-gray-50 relative pb-20 lg:pb-0">
 
-      <!-- KPI Cards Row -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8" id="stats-cards">
-        <!-- Injected via JS -->
-        <!-- Skeleton Loader -->
-        <div class="dashboard-card p-6 animate-pulse h-32"></div>
-        <div class="dashboard-card p-6 animate-pulse h-32"></div>
-        <div class="dashboard-card p-6 animate-pulse h-32"></div>
-        <div class="dashboard-card p-6 animate-pulse h-32"></div>
-      </div>
-
-      <!-- Pipeline Status Bar -->
-      <div class="mb-8">
-        <h3 class="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-3">Lead Pipeline Status</h3>
-        <div class="pipeline-container" id="pipeline-bar">
-          <!-- Segments Injected via JS -->
-        </div>
-      </div>
-
-      <!-- Main Grid: Agent Performance + Analytics -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-
-        <!-- Left: Agent Performance (2 cols wide) -->
-        <div class="lg:col-span-2 space-y-6">
-          <!-- Agent Performance Table -->
-          <div class="dashboard-card overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
-              <h3 class="text-base font-semibold text-gray-800">Agent Performance</h3>
-              <button class="text-xs text-blue-600 hover:underline" onclick="window.location.href='users.html'">View
-                All</button>
-            </div>
-            <div class="overflow-x-auto">
-              <table class="neodove-table w-full">
-                <thead>
-                  <tr>
-                    <th>Agent Name</th>
-                    <th class="text-right">Assigned</th>
-                    <th class="text-right">Converted</th>
-                    <th class="text-right">Rate</th>
-                  </tr>
-                </thead>
-                <tbody id="agent-performance-body">
-                  <!-- Injected via JS -->
-                  <tr>
-                    <td colspan="4" class="text-center text-gray-400 py-8">Loading...</td>
-                  </tr>
-                </tbody>
-              </table>
+      <!-- Header -->
+      <header class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-30">
+        <div class="px-4 sm:px-6 py-4 flex items-center justify-between">
+          <div class="flex items-center gap-3 sm:gap-4">
+            <button id="openSidebar" class="lg:hidden text-gray-500 hover:text-gray-700 p-1">
+              <i class="fas fa-bars text-xl"></i>
+            </button>
+            <div>
+              <h2 id="pageTitle" class="text-lg sm:text-xl font-bold text-gray-900">Dashboard</h2>
+              <p id="pageSubtitle" class="text-[10px] sm:text-xs text-gray-500 mt-0.5">Real-time overview & insights</p>
             </div>
           </div>
+          <div class="flex items-center gap-2 sm:gap-4">
+            <button id="themeToggle"
+              class="px-2 sm:px-3 py-1.5 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+              <i class="fas fa-moon sm:mr-1"></i> <span class="hidden sm:inline">Night Mode</span>
+            </button>
+            <button class="p-2 text-gray-400 hover:text-gray-600 transition-colors relative">
+              <i class="fas fa-bell"></i>
+              <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+            </button>
+            <div class="h-8 w-px bg-gray-200 mx-1 hidden sm:block"></div>
+            <div class="text-right hidden sm:block">
+              <p class="text-xs font-medium text-gray-900" id="currentDate">Loading...</p>
+            </div>
+          </div>
+        </div>
+      </header>
 
-          <!-- Call Analytics Chart -->
-          <div class="dashboard-card p-6">
-            <h3 class="text-base font-semibold text-gray-800 mb-4">Calls Overview (Last 7 Days)</h3>
-            <div class="h-64">
+      <div class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+
+        <!-- INTEGRATIONS SECTION -->
+        <!-- LEAD INTEGRATIONS DASHBOARD (New) -->
+        <section id="sectionIntegrations" class="hidden-section max-w-7xl mx-auto space-y-8 animate-fade-in">
+          <!-- Header -->
+          <!-- <div>
+            <h2 class="text-2xl font-bold text-gray-900">Lead Integrations</h2>
+            <p class="text-gray-500 mt-1">Connect your lead sources to automatically sync leads into your CRM</p>
+          </div> -->
+
+          <!-- Integrations Grid -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+
+            <!-- FACEBOOK CARD -->
+            <div
+              class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col hover:shadow-md transition-shadow group relative overflow-hidden h-full">
+              <div class="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+                <i class="fab fa-facebook-f text-8xl text-blue-600 -mr-4 -mt-4 transform rotate-12"></i>
+              </div>
+
+              <div class="flex items-center justify-between mb-6 relative z-10">
+                <div
+                  class="w-14 h-14 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shadow-inner">
+                  <i class="fab fa-facebook-f text-2xl"></i>
+                </div>
+                <!-- Badge (Updated by JS) -->
+                <span id="badge-fb-status"
+                  class="px-3 py-1 bg-gray-100 text-gray-500 text-xs font-bold uppercase tracking-wider rounded-full">Not
+                  Connected</span>
+              </div>
+
+              <h3 class="text-xl font-bold text-gray-900 relative z-10">Facebook Lead Ads</h3>
+              <p class="text-sm text-gray-500 mt-2 mb-6 relative z-10">
+                Sync lead forms directly from your Facebook & Instagram Business Pages.
+              </p>
+
+              <div class="mt-auto relative z-10">
+                <button onclick="uiManager.openSubSection('sectionIntegrationsFacebook')"
+                  class="w-full py-2.5 px-4 border border-gray-200 hover:border-blue-300 hover:bg-blue-50 text-gray-700 hover:text-blue-700 font-medium rounded-lg transition-colors flex items-center justify-center gap-2">
+                  <span>Manage Integration</span>
+                  <i class="fas fa-arrow-right text-xs"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- INDIAMART CARD -->
+            <div
+              class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col hover:shadow-md transition-shadow group relative overflow-hidden h-full">
+              <div class="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+                <i class="fas fa-bullhorn text-8xl text-[#D93025] -mr-4 -mt-4 transform -rotate-12"></i>
+              </div>
+
+              <div class="flex items-center justify-between mb-6 relative z-10">
+                <div
+                  class="w-14 h-14 bg-red-50 text-[#D93025] rounded-xl flex items-center justify-center shadow-inner">
+                  <i class="fas fa-bullhorn text-2xl"></i>
+                </div>
+                <!-- Badge (Updated by JS) -->
+                <span id="badge-im-status"
+                  class="px-3 py-1 bg-gray-100 text-gray-500 text-xs font-bold uppercase tracking-wider rounded-full">Not
+                  Connected</span>
+              </div>
+
+              <h3 class="text-xl font-bold text-gray-900 relative z-10">IndiaMART Leads</h3>
+              <p class="text-sm text-gray-500 mt-2 mb-6 relative z-10">
+                Pull leads securely from your IndiaMART CRM API in real-time.
+              </p>
+
+              <div class="mt-auto relative z-10">
+                <button onclick="uiManager.openSubSection('sectionIntegrationsIndiamart')"
+                  class="w-full py-2.5 px-4 bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-medium rounded-lg shadow hover:shadow-lg transition-all flex items-center justify-center gap-2">
+                  <span>Connect Now</span>
+                  <i class="fas fa-plug text-xs"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- MAGICBRICKS CARD -->
+            <div
+              class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col hover:shadow-md transition-shadow group relative overflow-hidden h-full">
+              <div class="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+                <i class="fas fa-home text-8xl text-red-600 -mr-4 -mt-4 transform rotate-12"></i>
+              </div>
+
+              <div class="flex items-center justify-between mb-6 relative z-10">
+                <div class="w-14 h-14 bg-red-50 text-red-600 rounded-xl flex items-center justify-center shadow-inner">
+                  <i class="fas fa-home text-2xl"></i>
+                </div>
+                <!-- Badge -->
+                <span id="badge-mb-status"
+                  class="px-3 py-1 bg-gray-100 text-gray-500 text-xs font-bold uppercase tracking-wider rounded-full">Not
+                  Connected</span>
+              </div>
+
+              <h3 class="text-xl font-bold text-gray-900 relative z-10">Magicbricks Leads</h3>
+              <p class="text-sm text-gray-500 mt-2 mb-6 relative z-10">
+                Sync buyer leads from your Magicbricks email account.
+              </p>
+
+              <div class="mt-auto relative z-10">
+                <button onclick="uiManager.openSubSection('sectionIntegrationsMagicbricks')"
+                  class="w-full py-2.5 px-4 bg-[#D32F2F] hover:bg-[#b71c1c] text-white font-medium rounded-lg shadow hover:shadow-lg transition-all flex items-center justify-center gap-2">
+                  <span>Connect Now</span>
+                  <i class="fas fa-plug text-xs"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- 99ACRES CARD -->
+            <div
+              class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col hover:shadow-md transition-shadow group relative overflow-hidden h-full">
+              <div class="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+                <i class="fas fa-building text-8xl text-blue-800 -mr-4 -mt-4 transform -rotate-12"></i>
+              </div>
+
+              <div class="flex items-center justify-between mb-6 relative z-10">
+                <div
+                  class="w-14 h-14 bg-blue-50 text-blue-800 rounded-xl flex items-center justify-center shadow-inner">
+                  <i class="fas fa-building text-2xl"></i>
+                </div>
+                <!-- Badge -->
+                <span id="badge-nna-status"
+                  class="px-3 py-1 bg-gray-100 text-gray-500 text-xs font-bold uppercase tracking-wider rounded-full">Not
+                  Connected</span>
+              </div>
+
+              <h3 class="text-xl font-bold text-gray-900 relative z-10">99acres Leads</h3>
+              <p class="text-sm text-gray-500 mt-2 mb-6 relative z-10">
+                Sync buyer leads automatically from your 99acres email account.
+              </p>
+
+              <div class="mt-auto relative z-10">
+
+                <button onclick="uiManager.openSubSection('sectionIntegrations99acres')"
+                  class="w-full py-2.5 px-4 bg-[#005CA8] hover:bg-[#004a87] text-white font-medium rounded-lg shadow hover:shadow-lg transition-all flex items-center justify-center gap-2">
+                  <span>Connect Now</span>
+                  <i class="fas fa-plug text-xs"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- JUSTDIAL CARD -->
+            <div
+              class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col hover:shadow-md transition-shadow group relative overflow-hidden h-full">
+              <div class="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+                <i class="fas fa-search-location text-8xl text-orange-600 -mr-4 -mt-4 transform rotate-12"></i>
+              </div>
+
+              <div class="flex items-center justify-between mb-6 relative z-10">
+                <div
+                  class="w-14 h-14 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center shadow-inner">
+                  <i class="fas fa-search-location text-2xl"></i>
+                </div>
+                <!-- Badge -->
+                <span id="badge-jd-status"
+                  class="px-3 py-1 bg-gray-100 text-gray-500 text-xs font-bold uppercase tracking-wider rounded-full">Not
+                  Connected</span>
+              </div>
+
+
+              <h3 class="text-xl font-bold text-gray-900 relative z-10">JustDial Leads</h3>
+              <p class="text-sm text-gray-500 mt-2 mb-6 relative z-10">
+                Sync business enquires from your JustDial email automatically.
+              </p>
+
+              <div class="mt-auto relative z-10">
+                <button onclick="uiManager.openSubSection('sectionIntegrationsJustDial')"
+                  class="w-full py-2.5 px-4 bg-[#FF6600] hover:bg-[#e65c00] text-white font-medium rounded-lg shadow hover:shadow-lg transition-all flex items-center justify-center gap-2">
+                  <span>Connect Now</span>
+                  <i class="fas fa-plug text-xs"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- HOUSING CARD -->
+            <div
+              class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col hover:shadow-md transition-shadow group relative overflow-hidden h-full">
+              <div class="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+                <i class="fas fa-city text-8xl text-purple-600 -mr-4 -mt-4 transform -rotate-12"></i>
+              </div>
+
+              <div class="flex items-center justify-between mb-6 relative z-10">
+                <div
+                  class="w-14 h-14 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center shadow-inner">
+                  <i class="fas fa-city text-2xl"></i>
+                </div>
+                <!-- Badge -->
+                <span id="badge-housing-status"
+                  class="px-3 py-1 bg-gray-100 text-gray-500 text-xs font-bold uppercase tracking-wider rounded-full">Not
+                  Connected</span>
+              </div>
+
+              <h3 class="text-xl font-bold text-gray-900 relative z-10">Housing.com</h3>
+              <p class="text-sm text-gray-500 mt-2 mb-6 relative z-10">
+                Sync real estate leads from your Housing.com email account.
+              </p>
+
+              <div class="mt-auto relative z-10">
+                <button onclick="uiManager.openSubSection('sectionIntegrationsHousing')"
+                  class="w-full py-2.5 px-4 bg-[#800080] hover:bg-[#6b026b] text-white font-medium rounded-lg shadow hover:shadow-lg transition-all flex items-center justify-center gap-2">
+                  <span>Connect Now</span>
+                  <i class="fas fa-plug text-xs"></i>
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- COMING SOON CARD (4th Card) -->
+          <div
+            class="bg-gray-50 p-6 rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-center h-full hover:border-gray-300 transition-colors">
+            <div class="w-14 h-14 bg-gray-100 text-gray-400 rounded-xl flex items-center justify-center mb-4">
+              <i class="fas fa-plus text-2xl"></i>
+            </div>
+            <h3 class="text-lg font-bold text-gray-500">More Coming Soon</h3>
+            <p class="text-xs text-gray-400 mt-1">New Integrations</p>
+          </div>
+
+          <!-- SECOND ROW PLACEHOLDERS (As requested) -->
+          <div
+            class="bg-gray-50 p-6 rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-center h-full hover:border-gray-300 transition-colors opacity-60">
+            <h3 class="text-lg font-bold text-gray-400">Slot 5</h3>
+          </div>
+          <div
+            class="bg-gray-50 p-6 rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-center h-full hover:border-gray-300 transition-colors opacity-60">
+            <h3 class="text-lg font-bold text-gray-400">Slot 6</h3>
+          </div>
+          <div
+            class="bg-gray-50 p-6 rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-center h-full hover:border-gray-300 transition-colors opacity-60">
+            <h3 class="text-lg font-bold text-gray-400">Slot 7</h3>
+          </div>
+          <div
+            class="bg-gray-50 p-6 rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-center h-full hover:border-gray-300 transition-colors opacity-60">
+            <h3 class="text-lg font-bold text-gray-400">Slot 8</h3>
+          </div>
+
+      </div>
+      </section>
+
+      <!-- FACEBOOK MODAL -->
+      <div id="sectionIntegrationsFacebook"
+        class="fixed inset-0 z-50 hidden-section flex items-center justify-center p-4">
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity"
+          onclick="uiManager.showMainIntegrations()"></div>
+
+        <!-- Modal Content -->
+        <div
+          class="relative bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden transform transition-all animate-fade-in">
+          <!-- Close Button -->
+          <button onclick="uiManager.showMainIntegrations()"
+            class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors z-10">
+            <i class="fas fa-times text-xl"></i>
+          </button>
+
+          <!-- Header -->
+          <div class="px-6 py-8 text-center border-b border-gray-50 bg-gradient-to-b from-blue-50/50 to-white">
+            <div
+              class="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-white shadow-lg shadow-blue-500/30">
+              <i class="fab fa-facebook-f text-3xl"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-gray-900 tracking-tight">Connect Facebook Page</h3>
+            <p class="text-gray-500 mt-2 text-sm mx-auto">
+              Connect your Facebook Business Page to automatically sync lead forms to your CRM.
+            </p>
+          </div>
+
+          <!-- Content -->
+          <div class="p-8 text-center">
+            <!-- Status State -->
+            <div id="fb-status-container" class="hidden mb-6">
+              <div
+                class="inline-flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-full border border-green-100 text-sm font-medium mb-4">
+                <i class="fas fa-check-circle"></i> Connected
+              </div>
+              <div
+                class="flex items-center justify-center gap-4 p-4 bg-gray-50 rounded-lg transform scale-95 border border-gray-200">
+                <div id="fb-page-img" class="w-12 h-12 bg-gray-200 rounded-full bg-cover bg-center"></div>
+                <div class="text-left w-full overflow-hidden">
+                  <h4 id="fb-page-name" class="font-bold text-gray-900 truncate">Page Name</h4>
+                  <p id="fb-page-id" class="text-xs text-gray-500 truncate">ID: <span id="fb-page-id-val"></span></p>
+                </div>
+                <button onclick="facebookManager.disconnect()"
+                  class="ml-auto text-red-500 hover:text-red-700 text-xs font-medium bg-white px-2 py-1 rounded border border-red-100 hover:bg-red-50 transition-colors">
+                  Disconnect
+                </button>
+              </div>
+            </div>
+
+            <!-- Connect Button -->
+            <button id="btn-fb-connect" onclick="facebookManager.login()"
+              class="w-full inline-flex justify-center items-center gap-2 px-6 py-3 bg-[#1877F2] hover:bg-[#166fe5] text-white font-bold rounded-lg shadow-lg hover:shadow-blue-500/30 transition-all transform active:scale-95 text-lg">
+              <i class="fab fa-facebook"></i> Connect Page
+            </button>
+
+            <p class="text-[10px] text-gray-400 mt-4 leading-relaxed">
+              Requires 'pages_show_list' and 'leads_retrieval' permissions. <br>
+              Data storage compliant with Meta Platform Terms.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- INDIAMART MODAL -->
+      <div id="sectionIntegrationsIndiamart"
+        class="fixed inset-0 z-50 hidden-section flex items-center justify-center p-4">
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity"
+          onclick="uiManager.showMainIntegrations()"></div>
+
+        <!-- Modal Content -->
+        <div
+          class="relative bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden transform transition-all animate-fade-in">
+          <!-- Close Button -->
+          <button onclick="uiManager.showMainIntegrations()"
+            class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors z-10">
+            <i class="fas fa-times text-xl"></i>
+          </button>
+
+          <!-- Header -->
+          <div class="px-6 py-8 text-center border-b border-gray-50 bg-gradient-to-b from-red-50/50 to-white">
+            <div
+              class="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center mx-auto mb-4 text-white shadow-lg shadow-red-500/30">
+              <i class="fas fa-bullhorn text-3xl"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-gray-900 tracking-tight">Connect IndiaMART</h3>
+            <p class="text-gray-500 mt-2 text-sm mx-auto">
+              Sync leads directly from your IndiaMART Seller Account.
+            </p>
+          </div>
+
+          <!-- Content -->
+          <div class="p-8 text-center">
+
+            <!-- CONNECTED STATE -->
+            <div id="im-status-container" class="hidden mb-8">
+              <div
+                class="inline-flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-full border border-green-100 text-sm font-medium mb-4">
+                <i class="fas fa-check-circle"></i> Connected
+              </div>
+              <div
+                class="flex flex-col items-center justify-center gap-2 p-4 bg-gray-50 rounded-lg w-full border border-gray-200 mb-4">
+                <p class="text-sm text-gray-600"><strong>Mobile:</strong> <span id="im-mobile-display"></span></p>
+                <p class="text-sm text-gray-600"><strong>API Key:</strong> <span id="im-apikey-display"></span></p>
+              </div>
+
+              <div class="flex justify-center gap-4">
+                <button id="btn-im-sync" onclick="indiamartManager.sync()"
+                  class="px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition">
+                  <i class="fas fa-sync-alt"></i> Sync Now
+                </button>
+                <button onclick="indiamartManager.disconnect()"
+                  class="px-4 py-2 text-red-500 hover:text-red-700 text-sm font-medium transition-colors border border-red-200 rounded-lg hover:bg-red-50">
+                  Disconnect
+                </button>
+              </div>
+            </div>
+
+            <!-- CONNECT FORM -->
+            <div id="im-connect-form" class="space-y-4">
+              <div class="text-left">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Mobile Number</label>
+                <input type="text" id="im-mobile" placeholder="Start with 91 (e.g., 919876543210)"
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all">
+              </div>
+              <div class="text-left">
+                <label class="block text-sm font-medium text-gray-700 mb-1">API Key (CRM Key)</label>
+                <input type="text" id="im-apikey" placeholder="Enter CRM API Key from IndiaMART"
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all">
+                <p class="text-xs text-gray-500 mt-1">
+                  <a href="https://seller.indiamart.com/leadmanager/crmapi" target="_blank"
+                    class="text-blue-600 hover:text-blue-800 underline flex items-center gap-1">
+                    <i class="fas fa-external-link-alt text-[10px]"></i> Get your API Key here
+                  </a>
+                </p>
+              </div>
+
+              <button id="btn-im-connect" onclick="indiamartManager.connect()"
+                class="w-full py-3 bg-[#D93025] hover:bg-[#b01e15] text-white font-bold rounded-lg shadow-lg hover:shadow-red-500/30 transition-all mt-2">
+                Connect IndiaMART
+              </button>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- MAGICBRICKS MODAL (Moved Outside) -->
+      <div id="sectionIntegrationsMagicbricks"
+        class="fixed inset-0 z-50 hidden-section flex items-center justify-center p-4">
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity"
+          onclick="uiManager.showMainIntegrations()"></div>
+
+        <!-- Modal Content -->
+        <div
+          class="relative bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden transform transition-all animate-fade-in">
+          <!-- Close Button -->
+          <button onclick="uiManager.showMainIntegrations()"
+            class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors z-10">
+            <i class="fas fa-times text-xl"></i>
+          </button>
+
+          <!-- Header -->
+          <div class="px-6 py-4 text-center border-b border-gray-50 bg-gradient-to-b from-red-50/50 to-white">
+            <div
+              class="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center mx-auto mb-2 text-white shadow-lg shadow-red-500/30">
+              <i class="fas fa-home text-xl"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 tracking-tight">Connect Magicbricks</h3>
+            <p class="text-gray-500 mt-1 text-xs mx-auto">
+              Sync buyer leads automatically from your email inbox.
+            </p>
+          </div>
+
+          <!-- Content -->
+          <div class="p-6 text-center">
+
+            <!-- CONNECTED STATE -->
+            <div id="mb-status-container" class="hidden mb-4">
+              <div
+                class="inline-flex items-center gap-2 px-3 py-1 bg-green-50 text-green-700 rounded-full border border-green-100 text-xs font-medium mb-3">
+                <i class="fas fa-check-circle"></i> Connected
+              </div>
+              <div
+                class="flex flex-col items-center justify-center gap-1 p-3 bg-gray-50 rounded-lg w-full border border-gray-200 mb-3">
+                <p class="text-xs text-gray-600"><strong>Email:</strong> <span id="mb-email-display"></span></p>
+                <p class="text-xs text-gray-500 text-center italic">Last Synced: <span
+                    id="mb-last-sync-val">Never</span></p>
+              </div>
+
+              <div class="flex justify-center gap-3">
+                <button id="btn-mb-sync" onclick="magicbricksManager.sync()"
+                  class="px-3 py-1.5 bg-blue-600 text-white rounded shadow hover:bg-blue-700 transition text-sm">
+                  <i class="fas fa-sync-alt"></i> Sync Now
+                </button>
+                <button onclick="magicbricksManager.disconnect()"
+                  class="px-3 py-1.5 text-red-500 hover:text-red-700 text-xs font-medium transition-colors border border-red-200 rounded hover:bg-red-50">
+                  Disconnect
+                </button>
+              </div>
+            </div>
+
+            <!-- CONNECT FORM -->
+            <div id="mb-connect-form" class="w-full text-left">
+              <div class="space-y-3">
+                <div>
+                  <label class="block text-xs font-medium text-gray-700">Email Address (Gmail)</label>
+                  <input type="email" id="mb-email" placeholder="leads@example.com"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 border p-2 text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-700">App Password</label>
+                  <input type="password" id="mb-password" placeholder="xxxx xxxx xxxx xxxx"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 border p-2 text-sm">
+                  <p class="text-[10px] text-gray-500 mt-1">
+                    Use a <a href="https://myaccount.google.com/apppasswords" target="_blank"
+                      class="text-blue-600 hover:text-blue-800 underline">Google App Password</a>, not your main
+                    password.
+                  </p>
+                </div>
+                <div class="bg-blue-50 p-2 rounded-lg text-[10px] text-blue-800 space-y-0.5 mt-1">
+                  <p class="font-bold mb-0.5"><i class="fas fa-info-circle"></i> How to generate App Password:</p>
+                  <ol class="list-decimal list-inside space-y-0 ml-1 leading-tight">
+                    <li>Go to <strong>Google Account > Security</strong>.</li>
+                    <li>Enable <strong>2-Step Verification</strong>.</li>
+                    <li>Search for <strong>"App Passwords"</strong>.</li>
+                    <li>Create one named "Magicbricks" & copy it here.</li>
+                  </ol>
+                </div>
+                <button id="btn-mb-connect" onclick="magicbricksManager.connect()"
+                  class="w-full px-6 py-2.5 bg-[#D32F2F] hover:bg-[#b71c1c] text-white font-bold rounded-lg shadow-lg hover:shadow-red-500/30 transition-all transform active:scale-95 text-base mt-2">
+                  Connect Magicbricks
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- 99ACRES MODAL -->
+      <div id="sectionIntegrations99acres"
+        class="fixed inset-0 z-50 hidden-section flex items-center justify-center p-4">
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity"
+          onclick="uiManager.showMainIntegrations()"></div>
+
+        <!-- Modal Content -->
+        <div
+          class="relative bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden transform transition-all animate-fade-in">
+          <!-- Close Button -->
+          <button onclick="uiManager.showMainIntegrations()"
+            class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors z-10">
+            <i class="fas fa-times text-xl"></i>
+          </button>
+
+          <!-- Header -->
+          <div class="px-6 py-4 text-center border-b border-gray-50 bg-gradient-to-b from-blue-50/50 to-white">
+            <div
+              class="w-12 h-12 bg-blue-800 rounded-full flex items-center justify-center mx-auto mb-2 text-white shadow-lg shadow-blue-500/30">
+              <i class="fas fa-building text-xl"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 tracking-tight">Connect 99acres</h3>
+            <p class="text-gray-500 mt-1 text-xs mx-auto">
+              Sync buyer leads automatically from your email inbox.
+            </p>
+          </div>
+
+          <!-- Content -->
+          <div class="p-6 text-center">
+
+            <!-- CONNECTED STATE -->
+            <div id="nna-status-container" class="hidden mb-4">
+              <div
+                class="inline-flex items-center gap-2 px-3 py-1 bg-green-50 text-green-700 rounded-full border border-green-100 text-xs font-medium mb-3">
+                <i class="fas fa-check-circle"></i> Connected
+              </div>
+              <div
+                class="flex flex-col items-center justify-center gap-1 p-3 bg-gray-50 rounded-lg w-full border border-gray-200 mb-3">
+                <p class="text-xs text-gray-600"><strong>Email:</strong> <span id="nna-email-display"></span></p>
+                <p class="text-xs text-gray-500 text-center italic">Last Synced: <span
+                    id="nna-last-sync-val">Never</span></p>
+              </div>
+
+              <div class="flex justify-center gap-3">
+                <button id="btn-nna-sync" onclick="ninetyNineAcresManager.sync()"
+                  class="px-3 py-1.5 bg-blue-600 text-white rounded shadow hover:bg-blue-700 transition text-sm">
+                  <i class="fas fa-sync-alt"></i> Sync Now
+                </button>
+                <button onclick="ninetyNineAcresManager.disconnect()"
+                  class="px-3 py-1.5 text-red-500 hover:text-red-700 text-xs font-medium transition-colors border border-red-200 rounded hover:bg-red-50">
+                  Disconnect
+                </button>
+              </div>
+            </div>
+
+            <!-- CONNECT FORM -->
+            <div id="nna-connect-form" class="w-full text-left">
+              <div class="space-y-3">
+                <div>
+                  <label class="block text-xs font-medium text-gray-700">Email Address (Gmail)</label>
+                  <input type="email" id="nna-email" placeholder="leads@example.com"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 border p-2 text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-700">App Password</label>
+                  <input type="password" id="nna-password" placeholder="xxxx xxxx xxxx xxxx"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 border p-2 text-sm">
+                  <p class="text-[10px] text-gray-500 mt-1">
+                    Use a <a href="https://myaccount.google.com/apppasswords" target="_blank"
+                      class="text-blue-600 hover:text-blue-800 underline">Google App Password</a>, not your main
+                    password.
+                  </p>
+                </div>
+                <div class="bg-blue-50 p-2 rounded-lg text-[10px] text-blue-800 space-y-0.5 mt-1">
+                  <p class="font-bold mb-0.5"><i class="fas fa-info-circle"></i> How to generate App Password:</p>
+                  <ol class="list-decimal list-inside space-y-0 ml-1 leading-tight">
+                    <li>Go to <strong>Google Account > Security</strong>.</li>
+                    <li>Enable <strong>2-Step Verification</strong>.</li>
+                    <li>Search for <strong>"App Passwords"</strong>.</li>
+                    <li>Create one named "99acres" & copy it here.</li>
+                  </ol>
+                </div>
+
+                <button id="btn-nna-connect" onclick="ninetyNineAcresManager.connect()"
+                  class="w-full px-6 py-2.5 bg-[#005CA8] hover:bg-[#004a87] text-white font-bold rounded-lg shadow-lg hover:shadow-blue-500/30 transition-all transform active:scale-95 text-base mt-2">
+                  Connect 99acres
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- JUSTDIAL MODAL -->
+      <div id="sectionIntegrationsJustDial"
+        class="fixed inset-0 z-50 hidden-section flex items-center justify-center p-4">
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity"
+          onclick="uiManager.showMainIntegrations()"></div>
+
+        <!-- Modal Content -->
+        <div
+          class="relative bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden transform transition-all animate-fade-in">
+          <!-- Close Button -->
+          <button onclick="uiManager.showMainIntegrations()"
+            class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors z-10">
+            <i class="fas fa-times text-xl"></i>
+          </button>
+
+          <!-- Header -->
+          <div class="px-6 py-4 text-center border-b border-gray-50 bg-gradient-to-b from-orange-50/50 to-white">
+            <div
+              class="w-12 h-12 bg-orange-600 rounded-full flex items-center justify-center mx-auto mb-2 text-white shadow-lg shadow-orange-500/30">
+              <i class="fas fa-search-location text-xl"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 tracking-tight">Connect JustDial</h3>
+            <p class="text-gray-500 mt-1 text-xs mx-auto">
+              Sync business enquires automatically from your email inbox.
+            </p>
+          </div>
+
+          <!-- Content -->
+          <div class="p-6 text-center">
+
+            <!-- CONNECTED STATE -->
+            <div id="jd-status-container" class="hidden mb-4">
+              <div
+                class="inline-flex items-center gap-2 px-3 py-1 bg-green-50 text-green-700 rounded-full border border-green-100 text-xs font-medium mb-3">
+                <i class="fas fa-check-circle"></i> Connected
+              </div>
+              <div
+                class="flex flex-col items-center justify-center gap-1 p-3 bg-gray-50 rounded-lg w-full border border-gray-200 mb-3">
+                <p class="text-xs text-gray-600"><strong>Email:</strong> <span id="jd-email-display"></span></p>
+                <p class="text-xs text-gray-500 text-center italic">Last Synced: <span
+                    id="jd-last-sync-val">Never</span></p>
+              </div>
+
+              <div class="flex justify-center gap-3">
+                <button id="btn-jd-sync" onclick="justDialManager.sync()"
+                  class="px-3 py-1.5 bg-blue-600 text-white rounded shadow hover:bg-blue-700 transition text-sm">
+                  <i class="fas fa-sync-alt"></i> Sync Now
+                </button>
+                <button onclick="justDialManager.disconnect()"
+                  class="px-3 py-1.5 text-red-500 hover:text-red-700 text-xs font-medium transition-colors border border-red-200 rounded hover:bg-red-50">
+                  Disconnect
+                </button>
+              </div>
+            </div>
+
+            <!-- CONNECT FORM -->
+            <div id="jd-connect-form" class="w-full text-left">
+              <div class="space-y-3">
+                <div>
+                  <label class="block text-xs font-medium text-gray-700">Email Address (Gmail)</label>
+                  <input type="email" id="jd-email" placeholder="leads@example.com"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 border p-2 text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-700">App Password</label>
+                  <input type="password" id="jd-password" placeholder="xxxx xxxx xxxx xxxx"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 border p-2 text-sm">
+                  <p class="text-[10px] text-gray-500 mt-1">
+                    Use a <a href="https://myaccount.google.com/apppasswords" target="_blank"
+                      class="text-blue-600 hover:text-blue-800 underline">Google App Password</a>, not your main
+                    password.
+                  </p>
+                </div>
+                <div class="bg-blue-50 p-2 rounded-lg text-[10px] text-blue-800 space-y-0.5 mt-1">
+                  <p class="font-bold mb-0.5"><i class="fas fa-info-circle"></i> How to generate App Password:</p>
+                  <ol class="list-decimal list-inside space-y-0 ml-1 leading-tight">
+                    <li>Go to <strong>Google Account > Security</strong>.</li>
+                    <li>Enable <strong>2-Step Verification</strong>.</li>
+                    <li>Search for <strong>"App Passwords"</strong>.</li>
+                    <li>Create one named "JustDial" & copy it here.</li>
+                  </ol>
+                </div>
+                <button id="btn-jd-connect" onclick="justDialManager.connect()"
+                  class="w-full px-6 py-2.5 bg-[#FF6600] hover:bg-[#e65c00] text-white font-bold rounded-lg shadow-lg hover:shadow-orange-500/30 transition-all transform active:scale-95 text-base mt-2">
+                  Connect JustDial
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+
+
+
+
+
+      <!-- HOUSING MODAL -->
+      <div id="sectionIntegrationsHousing"
+        class="fixed inset-0 z-50 hidden-section flex items-center justify-center p-4">
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity"
+          onclick="uiManager.showMainIntegrations()"></div>
+
+        <!-- Modal Content -->
+        <div
+          class="relative bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden transform transition-all animate-fade-in">
+          <!-- Close Button -->
+          <button onclick="uiManager.showMainIntegrations()"
+            class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors z-10">
+            <i class="fas fa-times text-xl"></i>
+          </button>
+
+          <!-- Header -->
+          <div class="px-6 py-4 text-center border-b border-gray-50 bg-gradient-to-b from-purple-50/50 to-white">
+            <div
+              class="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center mx-auto mb-2 text-white shadow-lg shadow-purple-500/30">
+              <i class="fas fa-city text-xl"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 tracking-tight">Connect Housing.com</h3>
+            <p class="text-gray-500 mt-1 text-xs mx-auto">
+              Sync real estate leads automatically from your Housing.com email.
+            </p>
+          </div>
+
+          <!-- Content -->
+          <div class="p-6 text-center">
+
+            <!-- CONNECTED STATE -->
+            <div id="housing-status-container" class="hidden mb-4">
+              <div
+                class="inline-flex items-center gap-2 px-3 py-1 bg-green-50 text-green-700 rounded-full border border-green-100 text-xs font-medium mb-3">
+                <i class="fas fa-check-circle"></i> Connected
+              </div>
+              <div
+                class="flex flex-col items-center justify-center gap-1 p-3 bg-gray-50 rounded-lg w-full border border-gray-200 mb-3">
+                <p class="text-xs text-gray-600"><strong>Email:</strong> <span id="housing-email-display"></span></p>
+                <p class="text-xs text-gray-500 text-center italic">Last Synced: <span
+                    id="housing-last-sync-val">Never</span></p>
+              </div>
+
+              <div class="flex justify-center gap-3">
+                <button id="btn-housing-sync" onclick="housingManager.sync()"
+                  class="px-3 py-1.5 bg-blue-600 text-white rounded shadow hover:bg-blue-700 transition text-sm">
+                  <i class="fas fa-sync-alt"></i> Sync Now
+                </button>
+                <button onclick="housingManager.disconnect()"
+                  class="px-3 py-1.5 text-red-500 hover:text-red-700 text-xs font-medium transition-colors border border-red-200 rounded hover:bg-red-50">
+                  Disconnect
+                </button>
+              </div>
+            </div>
+
+            <!-- CONNECT FORM -->
+            <div id="housing-connect-form" class="w-full text-left">
+              <div class="space-y-3">
+                <div>
+                  <label class="block text-xs font-medium text-gray-700">Email Address (Gmail)</label>
+                  <input type="email" id="housing-email" placeholder="leads@example.com"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 border p-2 text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-700">App Password</label>
+                  <input type="password" id="housing-password" placeholder="xxxx xxxx xxxx xxxx"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 border p-2 text-sm">
+                  <p class="text-[10px] text-gray-500 mt-1">
+                    Use a <a href="https://myaccount.google.com/apppasswords" target="_blank"
+                      class="text-blue-600 hover:text-blue-800 underline">Google App Password</a>, not your main
+                    password.
+                  </p>
+                </div>
+                <div class="bg-blue-50 p-2 rounded-lg text-[10px] text-blue-800 space-y-0.5 mt-1">
+                  <p class="font-bold mb-0.5"><i class="fas fa-info-circle"></i> How to generate App Password:</p>
+                  <ol class="list-decimal list-inside space-y-0 ml-1 leading-tight">
+                    <li>Go to <strong>Google Account > Security</strong>.</li>
+                    <li>Enable <strong>2-Step Verification</strong>.</li>
+                    <li>Search for <strong>"App Passwords"</strong>.</li>
+                    <li>Create one named "Housing" & copy it here.</li>
+                  </ol>
+                </div>
+                <button id="btn-housing-connect" onclick="housingManager.connect()"
+                  class="w-full px-6 py-2.5 bg-[#800080] hover:bg-[#6b026b] text-white font-bold rounded-lg shadow-lg hover:shadow-purple-500/30 transition-all transform active:scale-95 text-base mt-2">
+                  Connect Housing
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- LEADS SECTION -->
+      <section id="sectionLeads" class="hidden-section space-y-6">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div
+            class="p-4 sm:px-6 sm:py-5 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 class="text-lg font-bold text-gray-900">Incoming Leads</h3>
+              <p class="text-sm text-gray-500">Real-time leads from all sources</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <!-- Filter Buttons -->
+              <div class="inline-flex rounded-md shadow-sm" role="group">
+                <button type="button" onclick="leadsManager.filterLeads('all')" id="btn-filter-all"
+                  class="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 border border-blue-600 rounded-l-lg hover:bg-blue-700 transition-colors">
+                  All
+                </button>
+                <button type="button" onclick="leadsManager.filterLeads('facebook')" id="btn-filter-facebook"
+                  class="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border-t border-b border-r border-gray-200 hover:bg-gray-100 transition-colors">
+                  Facebook
+                </button>
+                <button type="button" onclick="leadsManager.filterLeads('indiamart')" id="btn-filter-indiamart"
+                  class="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border-t border-b border-r border-gray-200 hover:bg-gray-100 transition-colors">
+                  IndiaMART
+                </button>
+                <button type="button" onclick="leadsManager.filterLeads('magicbricks')" id="btn-filter-magicbricks"
+                  class="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border-t border-b border-r border-gray-200 hover:bg-gray-100 transition-colors">
+                  Magicbricks
+                </button>
+
+                <button type="button" onclick="leadsManager.filterLeads('99acres')" id="btn-filter-99acres"
+                  class="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border-t border-b border-r border-gray-200 hover:bg-gray-100 transition-colors">
+                  99acres
+                </button>
+                <button type="button" onclick="leadsManager.filterLeads('justdial')" id="btn-filter-justdial"
+                  class="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border-t border-b border-r border-gray-200 hover:bg-gray-100 transition-colors">
+                  JustDial
+                </button>
+                <button type="button" onclick="leadsManager.filterLeads('housing')" id="btn-filter-housing"
+                  class="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border-t border-b border-r border-gray-200 rounded-r-lg hover:bg-gray-100 transition-colors">
+                  Housing
+                </button>
+              </div>
+
+              <button onclick="leadsManager.loadLeads()"
+                class="ml-2 text-blue-600 hover:text-blue-800 text-sm font-medium p-2 rounded hover:bg-blue-50 transition-colors">
+                <i class="fas fa-sync-alt"></i>
+              </button>
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm mobile-card-table">
+              <thead
+                class="bg-gray-50 text-gray-500 uppercase tracking-wider font-semibold text-xs border-b border-gray-100">
+                <tr>
+                  <th class="px-4 py-3">Date</th>
+                  <th class="px-4 py-3">Name</th>
+                  <th class="px-4 py-3">Phone</th>
+                  <th class="px-4 py-3">Email</th>
+                  <th class="px-4 py-3">Source</th>
+                  <th class="px-4 py-3">Details</th>
+                  <th class="px-4 py-3">Assigned To</th>
+                  <th class="px-4 py-3">Status</th>
+                  <th class="px-4 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="leadsTableBody" class="divide-y divide-gray-100 bg-white">
+                <!-- Injected by JS -->
+              </tbody>
+            </table>
+          </div>
+          <div id="leadsPagination" class="p-4 border-t border-gray-100"></div>
+        </div>
+      </section>
+
+      <!-- DASHBOARD SECTION -->
+      <section id="sectionDashboard" class="space-y-6">
+
+        <!-- Stats Grid -->
+        <div id="stats-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <!-- Content injected by JS -->
+        </div>
+
+        <!-- Main Charts Row -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Performance Chart -->
+          <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 hover-card">
+            <div class="flex items-center justify-between mb-6">
+              <div>
+                <h3 class="text-lg font-bold text-gray-900">Call Volume Trend</h3>
+                <p class="text-sm text-gray-500">All time performance</p>
+              </div>
+            </div>
+            <div class="h-72 w-full">
               <canvas id="performanceChart"></canvas>
             </div>
           </div>
+
+          <!-- Recent Activity -->
+          <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover-card flex flex-col">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">Recent Activity</h3>
+            <div id="user-logs-container" class="flex-1 overflow-y-auto space-y-4 pr-2 max-h-[300px]">
+              <!-- Content injected by JS -->
+            </div>
+          </div>
         </div>
 
-        <!-- Right: Sources and Activity (1 col wide) -->
-        <div class="space-y-6">
-
-          <!-- Lead Sources Donut -->
-          <div class="dashboard-card p-6">
-            <h3 class="text-base font-semibold text-gray-800 mb-4">Lead Sources</h3>
-            <div class="h-48 relative flex items-center justify-center">
-              <canvas id="sourceChart"></canvas>
+        <!-- Secondary Row -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Sync Status -->
+          <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 hover-card">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">Sync Status</h3>
+            <div id="recent-sync-list" class="space-y-3">
+              <!-- Content injected by JS -->
             </div>
-            <div id="source-legend" class="mt-4 space-y-2">
-              <!-- Legend injected here -->
+          </div>
+        </div>
+      </section>
+
+      <!-- USERS SECTION -->
+      <section id="sectionUsers" class="hidden-section space-y-6">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div
+            class="p-4 sm:px-6 sm:py-5 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <h3 class="text-lg font-bold text-gray-900">User Management</h3>
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <div class="relative">
+                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                <input id="userSearchInput" type="text" placeholder="Search users..."
+                  class="pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full sm:w-48 shadow-sm transition-all hover:border-blue-300 bg-white">
+              </div>
+              <select id="userStatusFilter"
+                class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer hover:border-blue-300 bg-white">
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm mobile-card-table">
+              <thead
+                class="bg-gray-50 text-gray-500 uppercase tracking-wider font-semibold text-xs border-b border-gray-100">
+                <tr>
+                  <th class="px-4 py-3 sm:px-6 sm:py-4">User</th>
+                  <th class="px-4 py-3 sm:px-6 sm:py-4">Contact</th>
+                  <th class="px-4 py-3 sm:px-6 sm:py-4">Performance</th>
+                  <th class="px-4 py-3 sm:px-6 sm:py-4">Status</th>
+                  <th class="px-4 py-3 sm:px-6 sm:py-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="usersTableBody" class="divide-y divide-gray-100 bg-white">
+                <!-- Content injected by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="sectionCreateUser" class="hidden-section max-w-3xl mx-auto">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <!-- Header with Blue Icon -->
+          <div class="px-4 py-6 sm:px-8 sm:pt-8 sm:pb-6 text-center border-b border-gray-50">
+            <div
+              class="w-14 h-14 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4 text-blue-600 shadow-sm border border-blue-100">
+              <i class="fas fa-user-plus text-2xl"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-gray-900 tracking-tight">Create New User</h3>
+            <p class="text-gray-500 mt-1">Add a new team member to the system</p>
+          </div>
+
+          <div class="p-4 sm:p-8">
+            <form id="createUserForm" class="space-y-6">
+              <!-- Row 1: Name & Email -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-2">Full Name</label>
+                  <input id="userName" type="text"
+                    class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-gray-800 placeholder-gray-400 font-medium"
+                    required placeholder="John Doe">
+                </div>
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
+                  <div class="relative">
+                    <input id="userEmail" type="email"
+                      class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-gray-800 placeholder-gray-400 font-medium"
+                      required placeholder="john@example.com">
+                    <i
+                      class="fas fa-envelope absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Row 2: Phone with Country Code -->
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Phone Number</label>
+                <div class="flex gap-3">
+                  <div class="relative w-32 shrink-0">
+                    <select id="countryCodeSelect"
+                      class="appearance-none w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-gray-800 font-medium cursor-pointer">
+                      <option value="+91" selected>India (+91)</option>
+                      <option value="+1">USA (+1)</option>
+                      <option value="+44">UK (+44)</option>
+                      <option value="+971">UAE (+971)</option>
+                      <option value="+1">Canada (+1)</option>
+                      <option value="+61">Australia (+61)</option>
+                      <option value="+880">Bangladesh (+880)</option>
+                      <option value="+966">Saudi Arabia (+966)</option>
+                      <option value="+49">Germany (+49)</option>
+                      <option value="+33">France (+33)</option>
+                      <option value="+81">Japan (+81)</option>
+                      <option value="+86">China (+86)</option>
+                      <option value="+55">Brazil (+55)</option>
+                      <option value="+7">Russia (+7)</option>
+                      <option value="+39">Italy (+39)</option>
+                      <option value="+34">Spain (+34)</option>
+                      <option value="+92">Pakistan (+92)</option>
+                      <option value="+62">Indonesia (+62)</option>
+                      <option value="+90">Turkey (+90)</option>
+                      <option value="+82">South Korea (+82)</option>
+                      <option value="+52">Mexico (+52)</option>
+                      <option value="+20">Egypt (+20)</option>
+                      <option value="+84">Vietnam (+84)</option>
+                      <option value="+63">Philippines (+63)</option>
+                      <option value="+27">South Africa (+27)</option>
+                      <option value="+234">Nigeria (+234)</option>
+                      <option value="+66">Thailand (+66)</option>
+                      <option value="+98">Iran (+98)</option>
+                      <option value="+54">Argentina (+54)</option>
+                      <option value="+48">Poland (+48)</option>
+                      <option value="+31">Netherlands (+31)</option>
+                      <option value="+32">Belgium (+32)</option>
+                      <option value="+41">Switzerland (+41)</option>
+                      <option value="+46">Sweden (+46)</option>
+                      <option value="+43">Austria (+43)</option>
+                      <option value="+65">Singapore (+65)</option>
+                      <option value="+60">Malaysia (+60)</option>
+                      <option value="+852">Hong Kong (+852)</option>
+                      <option value="+972">Israel (+972)</option>
+                      <option value="+45">Denmark (+45)</option>
+                      <option value="+358">Finland (+358)</option>
+                      <option value="+47">Norway (+47)</option>
+                      <option value="+353">Ireland (+353)</option>
+                      <option value="+64">New Zealand (+64)</option>
+                      <option value="+974">Qatar (+974)</option>
+                      <option value="+965">Kuwait (+965)</option>
+                      <option value="+968">Oman (+968)</option>
+                      <option value="+973">Bahrain (+973)</option>
+                      <option value="+94">Sri Lanka (+94)</option>
+                      <option value="+977">Nepal (+977)</option>
+                    </select>
+                    <i
+                      class="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-xs"></i>
+                  </div>
+                  <input id="userPhone" type="tel"
+                    class="flex-1 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-gray-800 placeholder-gray-400 font-medium"
+                    placeholder="98765 43210" required>
+                </div>
+              </div>
+
+              <!-- Row 3: Password & Confirm Password -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-2">Password</label>
+                  <div class="relative">
+                    <input id="userPassword" type="password"
+                      class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-gray-800 placeholder-gray-400 font-medium pr-10"
+                      required placeholder="••••••••">
+                    <button type="button" onclick="togglePassword('userPassword', 'eyeIconUser1')"
+                      class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none">
+                      <i id="eyeIconUser1" class="fas fa-eye"></i>
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-2">Re-type Password</label>
+                  <div class="relative">
+                    <input id="userConfirmPassword" type="password"
+                      class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-gray-800 placeholder-gray-400 font-medium pr-10"
+                      required placeholder="••••••••">
+                    <button type="button" onclick="togglePassword('userConfirmPassword', 'eyeIconUser2')"
+                      class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none">
+                      <i id="eyeIconUser2" class="fas fa-eye"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="pt-6">
+                <button type="submit"
+                  class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-lg shadow-lg hover:shadow-blue-500/25 transition-all transform active:scale-[0.99] text-base flex items-center justify-center gap-2">
+                  <span>Create Account</span>
+                  <i class="fas fa-arrow-right text-sm"></i>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- ATTENDANCE SECTION -->
+      <section id="sectionAttendance" class="hidden-section space-y-6">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
+          <!-- Header -->
+          <div
+            class="p-4 sm:px-6 sm:py-5 border-b border-gray-100 flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-gray-50/50">
+            <div>
+              <h3 class="text-xl font-bold text-gray-900 tracking-tight">Attendance Records</h3>
+              <p class="text-sm text-gray-500 mt-1">Track daily check-ins and performance</p>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2 pb-1">
+              <!-- User Filter -->
+              <div class="relative group shrink-0">
+                <select id="attendanceUserFilter"
+                  class="appearance-none pl-3 pr-8 py-2 text-sm border border-gray-200 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white transition-all cursor-pointer hover:border-blue-300 text-gray-700 font-medium">
+                  <option value="all">All Users</option>
+                </select>
+                <i
+                  class="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-xs"></i>
+              </div>
+
+              <!-- Month Filter -->
+              <input type="month" id="attendanceMonthFilter"
+                class="shrink-0 px-2 py-2 text-sm border border-gray-200 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all hover:border-blue-300 text-gray-700 font-medium bg-white w-32">
+
+              <!-- Date Filter -->
+              <input type="date" id="attendanceDateFilter"
+                class="shrink-0 px-2 py-2 text-sm border border-gray-200 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all hover:border-blue-300 text-gray-700 font-medium bg-white w-32">
+
+              <button id="btnExportAttendance"
+                class="shrink-0 px-3 py-2 text-sm font-medium bg-gray-900 text-white rounded-lg shadow-lg shadow-gray-200 hover:bg-gray-800 hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center gap-2">
+                <i class="fas fa-download text-xs"></i> <span>Export</span>
+              </button>
             </div>
           </div>
 
-          <!-- Recent Activity Feed -->
-          <div class="dashboard-card">
-            <div class="px-6 py-4 border-b border-gray-100">
-              <h3 class="text-base font-semibold text-gray-800">Recent Updates</h3>
+          <!-- Content -->
+          <div class="p-2 sm:p-6">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm mobile-card-table">
+                <thead class="bg-gray-50 text-gray-500 uppercase tracking-wider font-semibold">
+                  <tr>
+                    <th class="px-4 py-3 sm:px-6 sm:py-4">User</th>
+                    <th class="px-4 py-3 sm:px-6 sm:py-4">Check In</th>
+                    <th class="px-4 py-3 sm:px-6 sm:py-4">Check Out</th>
+                    <th class="px-4 py-3 sm:px-6 sm:py-4">Status</th>
+                    <th class="px-4 py-3 sm:px-6 sm:py-4">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="attendance-table-body" class="divide-y divide-gray-100 bg-white">
+                  <!-- Content injected by JS -->
+                </tbody>
+              </table>
             </div>
-            <div class="p-6 pt-2" id="activity-feed">
-              <!-- Activity items injected -->
-              <p class="text-sm text-gray-400 text-center py-4">No recent activity.</p>
+            <div id="attendance-pagination" class="mt-6"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CALL HISTORY SECTION -->
+      <section id="sectionCallHistory" class="hidden-section space-y-6">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-2 sm:p-4">
+          <!-- Header -->
+          <div
+            class="p-4 sm:px-6 sm:py-5 border-b border-gray-100 flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-gray-50/50">
+            <div>
+              <h3 class="text-xl font-bold text-gray-900 tracking-tight">Call History</h3>
+              <p class="text-sm text-gray-500 mt-1">Detailed log of team communications</p>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2 pb-1">
+              <!-- Search -->
+              <div class="relative shrink-0">
+                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                <input id="callSearchInput" type="text" placeholder="Search..."
+                  class="pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-gray-700 w-32 transition-all hover:border-blue-300 bg-white">
+              </div>
+
+              <!-- User Filter -->
+              <div class="relative group shrink-0">
+                <select id="callUserFilter"
+                  class="appearance-none pl-3 pr-8 py-2 text-sm border border-gray-200 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white transition-all cursor-pointer hover:border-blue-300 text-gray-700 font-medium">
+                  <option value="all">All Users</option>
+                </select>
+                <i
+                  class="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-xs"></i>
+              </div>
+
+              <!-- Month Filter -->
+              <input type="month" id="callMonthFilter"
+                class="shrink-0 px-2 py-2 text-sm border border-gray-200 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all hover:border-blue-300 text-gray-700 font-medium bg-white w-32">
+
+              <!-- Type Filter -->
+              <div class="relative group shrink-0">
+                <select id="callTypeFilter"
+                  class="appearance-none pl-3 pr-8 py-2 text-sm border border-gray-200 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white transition-all cursor-pointer hover:border-blue-300 text-gray-700 font-medium">
+                  <option value="all">All Types</option>
+                  <option value="incoming">Incoming</option>
+                  <option value="outgoing">Outgoing</option>
+                  <option value="missed">Missed</option>
+                </select>
+                <i
+                  class="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-xs"></i>
+              </div>
+
+              <button id="btnExportCalls"
+                class="shrink-0 px-3 py-2 text-sm font-medium bg-gray-900 text-white rounded-lg shadow-lg shadow-gray-200 hover:bg-gray-800 hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center gap-2">
+                <i class="fas fa-download text-xs"></i> <span>Export</span>
+              </button>
             </div>
           </div>
 
+          <!-- Content -->
+          <div class="p-2">
+            <div id="call-history-container" class="space-y-3">
+              <!-- Content injected by JS -->
+            </div>
+            <div id="call-history-pagination" class="mt-6"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FOLLOW-UPS SECTION -->
+      <section id="sectionFollowup" class="hidden-section space-y-6">
+        <div class="bg-white rounded-lg shadow-sm p-4 sm:p-6">
+          <!-- Header -->
+          <div class="p-4 sm:px-6 sm:py-5 border-b border-gray-100 bg-gray-50/50">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <h3 class="text-xl font-bold text-gray-900 tracking-tight">Follow-up Reminders</h3>
+                <p class="text-sm text-gray-500 mt-1">View follow-up reminders created by users from the mobile app
+                </p>
+              </div>
+
+              <!-- Filters -->
+              <div class="flex flex-wrap items-center gap-3">
+                <!-- User Filter -->
+                <div class="relative">
+                  <select id="followupUserFilter"
+                    class="appearance-none pl-3 pr-8 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all cursor-pointer min-w-[150px]">
+                    <option value="all">All Users</option>
+                    <!-- Populated via JS -->
+                  </select>
+                  <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                    <i class="fas fa-chevron-down text-xs"></i>
+                  </div>
+                </div>
+
+                <!-- Date Filter Tabs -->
+                <div class="flex flex-wrap rounded-lg border border-gray-200 bg-white p-1">
+                  <button data-filter="all"
+                    class="followup-date-filter px-3 py-1.5 text-sm font-medium rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-100 active">All</button>
+                  <button data-filter="today"
+                    class="followup-date-filter px-3 py-1.5 text-sm font-medium rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">Today</button>
+                  <button data-filter="tomorrow"
+                    class="followup-date-filter px-3 py-1.5 text-sm font-medium rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">Tomorrow</button>
+                  <button data-filter="yesterday"
+                    class="followup-date-filter px-3 py-1.5 text-sm font-medium rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">Yesterday</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Table -->
+          <div class="overflow-x-auto">
+            <table class="w-full mobile-card-table">
+              <thead class="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Contact
+                  </th>
+                  <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Phone
+                  </th>
+                  <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Message
+                  </th>
+                  <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">User
+                  </th>
+                  <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Date &
+                    Time</th>
+                  <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status
+                  </th>
+                  <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Created
+                    At</th>
+                </tr>
+              </thead>
+              <tbody id="followupsTableBody" class="divide-y divide-gray-100">
+                <!-- Populated by JavaScript -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Empty State (Hidden by default) -->
+          <div id="followupsEmptyState" class="hidden py-12 text-center">
+            <div class="text-gray-400 mb-2">
+              <i class="fas fa-bell-slash text-4xl"></i>
+            </div>
+            <h3 class="text-lg font-medium text-gray-900">No reminders found</h3>
+            <p class="text-gray-500">New follow-up reminders will appear here.</p>
+          </div>
+
+          <!-- Pagination -->
+          <div id="followupsPagination" class="mt-6"></div>
+
+        </div>
+      </section>
+
+      <!-- CALL ANALYTICS SECTION -->
+      <section id="sectionCallAnalytics" class="hidden-section space-y-8 animate-fade-in">
+
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h2 class="text-2xl font-bold text-gray-900 tracking-tight">Analytics Overview</h2>
+            <p class="text-sm text-gray-500 mt-1">Deep insights into your team's call performance</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="text-xs font-medium px-3 py-1 bg-blue-50 text-blue-700 rounded-full border border-blue-100">
+              <i class="fas fa-sync-alt mr-1.5 animate-spin-slow"></i> Live Data
+            </span>
+          </div>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <!-- Total Calls -->
+          <div
+            class="bg-white p-4 sm:p-2 rounded-2xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-gray-100 hover:shadow-lg transition-all duration-300 group relative overflow-hidden">
+            <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+              <i class="fas fa-phone-alt text-6xl text-blue-600 transform rotate-12"></i>
+            </div>
+            <div class="flex flex-col h-full justify-between relative z-10">
+              <div class="flex items-center gap-3 mb-2">
+                <div
+                  class="p-2.5 bg-blue-50 rounded-xl text-blue-600 group-hover:scale-110 transition-transform duration-300">
+                  <i class="fas fa-phone text-lg"></i>
+                </div>
+                <h3 class="text-sm font-semibold text-gray-600 uppercase tracking-wide">Total Calls</h3>
+              </div>
+              <div>
+                <h2 id="analytics-total-calls" class="text-3xl font-bold text-gray-900 mt-2">0</h2>
+                <p class="text-xs text-green-600 font-medium mt-1 flex items-center">
+                  <i class="fas fa-arrow-up mr-1"></i> 12% vs last week
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Total Duration -->
+          <div
+            class="bg-white p-4 sm:p-2 rounded-2xl shadow-[0_2px_10px_-3px_rgba(124,58,237,0.1)] border border-gray-100 hover:shadow-lg transition-all duration-300 group relative overflow-hidden">
+            <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+              <i class="fas fa-clock text-6xl text-purple-600 transform -rotate-12"></i>
+            </div>
+            <div class="flex flex-col h-full justify-between relative z-10">
+              <div class="flex items-center gap-3 mb-2">
+                <div
+                  class="p-2.5 bg-purple-50 rounded-xl text-purple-600 group-hover:scale-110 transition-transform duration-300">
+                  <i class="fas fa-stopwatch text-lg"></i>
+                </div>
+                <h3 class="text-sm font-semibold text-gray-600 uppercase tracking-wide">Total Duration</h3>
+              </div>
+              <div>
+                <h2 id="analytics-total-duration" class="text-3xl font-bold text-gray-900 mt-2">0s</h2>
+                <p class="text-xs text-gray-400 font-medium mt-1">Accumulated talk time</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Answered -->
+          <div
+            class="bg-white p-4 sm:p-2 rounded-2xl shadow-[0_2px_10px_-3px_rgba(16,185,129,0.1)] border border-gray-100 hover:shadow-lg transition-all duration-300 group relative overflow-hidden">
+            <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+              <i class="fas fa-check-double text-6xl text-emerald-600 transform rotate-6"></i>
+            </div>
+            <div class="flex flex-col h-full justify-between relative z-10">
+              <div class="flex items-center gap-3 mb-2">
+                <div
+                  class="p-2.5 bg-emerald-50 rounded-xl text-emerald-600 group-hover:scale-110 transition-transform duration-300">
+                  <i class="fas fa-check-circle text-lg"></i>
+                </div>
+                <h3 class="text-sm font-semibold text-gray-600 uppercase tracking-wide">Answered</h3>
+              </div>
+              <div>
+                <h2 id="analytics-total-answered" class="text-3xl font-bold text-gray-900 mt-2">0</h2>
+                <p class="text-xs text-emerald-600 font-medium mt-1 flex items-center">
+                  <i class="fas fa-check mr-1"></i> High connect rate
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Last Sync -->
+          <div
+            class="bg-white p-4 sm:p-2 rounded-2xl shadow-[0_2px_10px_-3px_rgba(245,158,11,0.1)] border border-gray-100 hover:shadow-lg transition-all duration-300 group relative overflow-hidden">
+            <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+              <i class="fas fa-sync text-6xl text-orange-500 transform rotate-180"></i>
+            </div>
+            <div class="flex flex-col h-full justify-between relative z-10">
+              <div class="flex items-center gap-3 mb-2">
+                <div
+                  class="p-2.5 bg-orange-50 rounded-xl text-orange-600 group-hover:scale-110 transition-transform duration-300">
+                  <i class="fas fa-cloud-download-alt text-lg"></i>
+                </div>
+                <h3 class="text-sm font-semibold text-gray-600 uppercase tracking-wide">Last Sync</h3>
+              </div>
+              <div>
+                <h2 id="analytics-last-sync" class="text-xl font-bold text-gray-900 mt-3 truncate">Never</h2>
+                <p class="text-xs text-gray-400 font-medium mt-1">Data freshness</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- Secondary Stats (Breakdown) -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-2">
+          <h3 class="text-lg font-bold text-gray-900 mb-6 px-2">Call Breakdown</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <!-- Outbound -->
+            <div
+              class="p-4 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-between group hover:bg-blue-50 hover:border-blue-100 transition-colors">
+              <div>
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 group-hover:text-blue-600">
+                  Outbound</p>
+                <p id="analytics-outbound" class="text-2xl font-bold text-gray-900">0</p>
+              </div>
+              <div
+                class="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm text-gray-400 group-hover:text-blue-500">
+                <i class="fas fa-arrow-circle-up text-xl transform rotate-45"></i>
+              </div>
+            </div>
+
+            <!-- Inbound -->
+            <div
+              class="p-4 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-between group hover:bg-indigo-50 hover:border-indigo-100 transition-colors">
+              <div>
+                <p
+                  class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 group-hover:text-indigo-600">
+                  Inbound</p>
+                <p id="analytics-inbound" class="text-2xl font-bold text-gray-900">0</p>
+              </div>
+              <div
+                class="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm text-gray-400 group-hover:text-indigo-500">
+                <i class="fas fa-arrow-circle-down text-xl transform rotate-45"></i>
+              </div>
+            </div>
+
+            <!-- Avg Outbound -->
+            <div
+              class="p-4 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-between group hover:bg-teal-50 hover:border-teal-100 transition-colors">
+              <div>
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 group-hover:text-teal-600">
+                  Avg Outbound</p>
+                <p id="analytics-avg-outbound" class="text-xl font-bold text-gray-900">0s</p>
+              </div>
+              <div
+                class="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm text-gray-400 group-hover:text-teal-500">
+                <i class="fas fa-stopwatch text-xl"></i>
+              </div>
+            </div>
+
+            <!-- Avg Inbound -->
+            <div
+              class="p-4 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-between group hover:bg-rose-50 hover:border-rose-100 transition-colors">
+              <div>
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 group-hover:text-rose-600">
+                  Avg Inbound</p>
+                <p id="analytics-avg-inbound" class="text-xl font-bold text-gray-900">0s</p>
+              </div>
+              <div
+                class="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm text-gray-400 group-hover:text-rose-500">
+                <i class="fas fa-headset text-xl"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- User Table -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div
+            class="p-4 sm:p-2 border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h3 class="text-lg font-bold text-gray-900">User Performance</h3>
+              <p class="text-sm text-gray-500">Detailed breakdown by team member</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <!-- Filter Buttons -->
+              <div class="inline-flex rounded-lg border border-gray-200 bg-white p-1">
+                <button id="perf-filter-all"
+                  class="px-3 py-1.5 text-sm font-medium rounded-md text-gray-700 hover:bg-gray-50 bg-gray-100 active focus:outline-none focus:ring-2 focus:ring-blue-500">All</button>
+                <button id="perf-filter-today"
+                  class="px-3 py-1.5 text-sm font-medium rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">Today</button>
+                <button id="perf-filter-month"
+                  class="px-3 py-1.5 text-sm font-medium rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">Monthly</button>
+              </div>
+              <!-- Download Button -->
+              <button id="btnDownloadReport"
+                class="ml-2 px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg shadow-sm hover:bg-blue-700 transition-all flex items-center gap-2">
+                <i class="fas fa-file-pdf"></i> Download Report
+              </button>
+            </div>
+          </div>
+          <div id="call-analytics-table-container" class="p-0">
+            <!-- Content injected by JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- PERFORMANCE SECTION -->
+      <section id="sectionPerformance" class="hidden-section space-y-6">
+        <div
+          class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+          <h3 class="text-lg font-bold text-gray-900">Team Performance Ranking</h3>
+          <div class="flex gap-3">
+            <select id="performanceUserFilter"
+              class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="all">All Users</option>
+            </select>
+            <select id="performanceSort"
+              class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="desc">Highest Score First</option>
+              <option value="asc">Lowest Score First</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
+          <div class="h-80">
+            <canvas id="performanceBarCanvas"></canvas>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm mobile-card-table">
+              <thead class="bg-gray-50 text-gray-500 uppercase tracking-wider font-semibold">
+                <tr>
+                  <th class="px-6 py-4 whitespace-nowrap">Rank</th>
+                  <th class="px-6 py-4 whitespace-nowrap">Team Member</th>
+                  <th class="px-6 py-4 whitespace-nowrap">Efficiency Score</th>
+                  <th class="px-6 py-4 whitespace-nowrap">Details</th>
+                </tr>
+              </thead>
+              <tbody id="performanceTableBody" class="divide-y divide-gray-100 bg-white">
+                <!-- Content injected by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- APP PERFORMANCE SECTION -->
+      <section id="sectionAppPerformance" class="hidden-section space-y-6">
+        <div class="bg-white rounded-lg shadow-sm p-4 sm:p-6">
+          <!-- Header -->
+          <div class="p-4 sm:px-6 sm:py-5 border-b border-gray-100 bg-gray-50/50">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <h3 class="text-xl font-bold text-gray-900 tracking-tight">App Usage Monitor</h3>
+                <p class="text-sm text-gray-500 mt-1">Track application usage during work sessions</p>
+              </div>
+
+              <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                <div class="relative">
+                  <select id="appPerfUserFilter"
+                    class="appearance-none pl-3 pr-8 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[150px]">
+                    <option value="all">All Users</option>
+                  </select>
+                  <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                    <i class="fas fa-chevron-down text-xs"></i>
+                  </div>
+                </div>
+
+                <div class="inline-flex flex-wrap rounded-lg border border-gray-200 bg-white p-1 gap-2 items-center">
+                  <!-- Date Picker -->
+                  <input type="date" id="appPerfDateFilter"
+                    class="px-2 py-1.5 text-sm border border-gray-200 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all hover:border-blue-300 text-gray-700 font-medium bg-white">
+
+                  <div class="h-4 w-px bg-gray-200"></div>
+
+                  <button id="app-perf-filter-today"
+                    class="px-3 py-1.5 text-sm font-medium rounded-md text-gray-700 bg-gray-100 active">Today</button>
+                  <button id="app-perf-filter-yesterday"
+                    class="px-3 py-1.5 text-sm font-medium rounded-md text-gray-700 hover:bg-gray-50">Yesterday</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Table -->
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm mobile-card-table">
+              <thead class="bg-gray-50 text-gray-500 uppercase tracking-wider font-semibold border-b border-gray-100">
+                <tr>
+                  <th class="px-6 py-4">User</th>
+                  <th class="px-6 py-4">Start Time</th>
+                  <th class="px-6 py-4">End Time</th>
+                  <th class="px-6 py-4">Total Usage</th>
+                  <th class="px-6 py-4 text-center">Details</th>
+                </tr>
+              </thead>
+              <tbody id="appPerformanceTableBody" class="divide-y divide-gray-100 bg-white">
+                <!-- JS Injected -->
+              </tbody>
+            </table>
+          </div>
+
+          <div id="appPerformanceEmpty" class="hidden py-12 text-center text-gray-500">
+            <i class="fas fa-mobile-alt text-4xl mb-3 text-gray-300"></i>
+            <p>No app usage records found for this period.</p>
+          </div>
+        </div>
+      </section>
+
+  </div>
+  </main>
+  </div>
+
+
+
+  <div id="userManagementModal" class="fixed inset-0 z-50 hidden" aria-labelledby="modal-title" role="dialog"
+    aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+      <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+      <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+      <div
+        class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all w-full sm:my-8 sm:align-middle sm:max-w-2xl">
+        <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+          <div class="sm:flex sm:items-start">
+            <div
+              class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 sm:mx-0 sm:h-10 sm:w-10">
+              <i class="fas fa-user text-blue-600"></i>
+            </div>
+            <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+              <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                User Details
+              </h3>
+              <button onclick="document.getElementById('userManagementModal').classList.add('hidden')"
+                class="absolute top-4 right-4 text-gray-400 hover:text-gray-500 focus:outline-none">
+                <i class="fas fa-times text-xl"></i>
+              </button>
+              <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="bg-gray-50 p-3 rounded-lg">
+                  <p class="text-xs text-gray-500 uppercase">Full Name</p>
+                  <p id="um-modal-name" class="font-medium text-gray-900">-</p>
+                </div>
+                <div class="bg-gray-50 p-3 rounded-lg">
+                  <p class="text-xs text-gray-500 uppercase">Email</p>
+                  <p id="um-modal-email" class="font-medium text-gray-900">-</p>
+                </div>
+                <div class="bg-gray-50 p-3 rounded-lg">
+                  <p class="text-xs text-gray-500 uppercase">Phone</p>
+                  <p id="um-modal-phone" class="font-medium text-gray-900">-</p>
+                </div>
+                <div class="bg-gray-50 p-3 rounded-lg">
+                  <p class="text-xs text-gray-500 uppercase">Status</p>
+                  <p id="um-modal-status" class="font-medium text-gray-900">-</p>
+                </div>
+                <div class="bg-gray-50 p-3 rounded-lg">
+                  <p class="text-xs text-gray-500 uppercase">Last Sync</p>
+                  <p id="um-modal-last-sync" class="font-medium text-gray-900">-</p>
+                </div>
+                <div class="bg-gray-50 p-3 rounded-lg">
+                  <p class="text-xs text-gray-500 uppercase">Last Login</p>
+                  <p id="um-modal-last-login" class="font-medium text-gray-900">-</p>
+                </div>
+                <div class="bg-gray-50 p-3 rounded-lg">
+                  <p class="text-xs text-gray-500 uppercase">Created At</p>
+                  <p id="um-modal-created" class="font-medium text-gray-900">-</p>
+                </div>
+              </div>
+
+              <h4 class="text-md font-medium text-gray-900 mt-6 mb-3">Performance Stats</h4>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="border border-gray-200 p-3 rounded-lg text-center">
+                  <p class="text-xs text-gray-500 uppercase">Score</p>
+                  <p id="um-modal-score" class="text-xl font-bold text-blue-600">0</p>
+                </div>
+                <div class="border border-gray-200 p-3 rounded-lg text-center">
+                  <p class="text-xs text-gray-500 uppercase">Attendance</p>
+                  <p id="um-modal-attendance" class="text-xl font-bold text-gray-900">0</p>
+                </div>
+                <div class="border border-gray-200 p-3 rounded-lg text-center">
+                  <p class="text-xs text-gray-500 uppercase">Total Calls</p>
+                  <p id="um-modal-calls" class="text-xl font-bold text-gray-900">0</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+          <button type="button"
+            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+            onclick="document.getElementById('userManagementModal').classList.add('hidden')">
+            Close
+          </button>
         </div>
       </div>
-
     </div>
-  </main>
+  </div>
 
-  <!-- Mobile Bottom Nav -->
-  <div class="mobile-bottom-nav lg:hidden">
-    <a href="index.html" class="mobile-nav-item active">
+  <div id="editUserModal" class="fixed inset-0 z-50 hidden" aria-labelledby="modal-title" role="dialog"
+    aria-modal="true">
+    <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+      <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+      <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+      <div
+        class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+        <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+          <div class="sm:flex sm:items-start w-full">
+            <div
+              class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 sm:mx-0 sm:h-10 sm:w-10">
+              <i class="fas fa-user-edit text-blue-600"></i>
+            </div>
+            <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+              <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">Edit User Password</h3>
+              <div class="mt-4 space-y-4">
+                <input type="hidden" id="editUserId">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700">Full Name</label>
+                  <input type="text" id="editUserName" readonly
+                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 bg-gray-100 text-gray-600 cursor-not-allowed sm:text-sm">
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700">Email Address</label>
+                  <input type="email" id="editUserEmail" readonly
+                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 bg-gray-100 text-gray-600 cursor-not-allowed sm:text-sm">
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700">Phone</label>
+                  <input type="text" id="editUserPhone" readonly
+                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 bg-gray-100 text-gray-600 cursor-not-allowed sm:text-sm">
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700">
+                    New Password <span class="text-red-500">*</span>
+                  </label>
+                  <input type="password" id="editUserPassword" placeholder="Enter new password" required
+                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+          <button type="button" onclick="usersManager.saveEdit()"
+            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm">
+            Save Changes
+          </button>
+          <button type="button" onclick="document.getElementById('editUserModal').classList.add('hidden')"
+            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="userCallHistoryModal" class="fixed inset-0 z-50 hidden" aria-labelledby="modal-title" role="dialog"
+    aria-modal="true">
+    <div
+      class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0 flex flex-col justify-center h-full">
+      <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+
+      <!-- Modal Panel -->
+      <div
+        class="modal-content inline-block bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all w-full sm:my-8 sm:max-w-4xl flex flex-col max-h-[90vh] mx-auto relative z-10">
+        <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 flex-1 overflow-hidden flex flex-col">
+          <div class="sm:flex sm:items-start flex-1 overflow-hidden flex flex-col">
+            <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full flex-1 flex flex-col overflow-hidden">
+              <div class="flex justify-between items-start mb-4">
+                <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                  Call History: <span id="modalUserTitle" class="font-bold text-blue-600">User</span>
+                </h3>
+                <button onclick="document.getElementById('userCallHistoryModal').classList.add('hidden')"
+                  class="text-gray-400 hover:text-gray-500 focus:outline-none p-2 -mr-2 -mt-2">
+                  <i class="fas fa-times text-xl"></i>
+                </button>
+              </div>
+
+              <!-- Modal Filters -->
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 flex-shrink-0">
+                <div class="inline-flex rounded-lg border border-gray-200 bg-white p-1">
+                  <button id="modal-history-filter-all"
+                    class="px-3 py-1 text-xs font-medium rounded-md text-gray-700 hover:bg-gray-50 bg-gray-100 active focus:outline-none ring-1 ring-transparent focus:ring-blue-500">All</button>
+                  <button id="modal-history-filter-today"
+                    class="px-3 py-1 text-xs font-medium rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none ring-1 ring-transparent focus:ring-blue-500">Today</button>
+                  <button id="modal-history-filter-month"
+                    class="px-3 py-1 text-xs font-medium rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none ring-1 ring-transparent focus:ring-blue-500">Month</button>
+                </div>
+                <button id="modal-history-download"
+                  class="px-3 py-1.5 text-xs font-medium bg-gray-900 text-white rounded-lg shadow-sm hover:bg-gray-800 transition-all flex items-center gap-2">
+                  <i class="fas fa-file-pdf"></i> Download Report
+                </button>
+              </div>
+              <div class="mt-4 overflow-x-auto overflow-y-auto flex-1 min-h-0 border border-gray-100 rounded-md">
+                <table class="min-w-full divide-y divide-gray-200">
+                  <thead class="bg-gray-50">
+                    <tr>
+                      <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Type
+                      </th>
+                      <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Number
+                      </th>
+                      <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Duration
+                      </th>
+                      <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Date & Time
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody id="modalCallHistoryBody" class="bg-white divide-y divide-gray-200">
+                    <!-- Content injected by JS -->
+                  </tbody>
+                </table>
+              </div>
+              <!-- Pagination Container -->
+              <div id="modalCallHistoryPagination"></div>
+            </div>
+          </div>
+        </div>
+        <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+          <button type="button"
+            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+            onclick="document.getElementById('userCallHistoryModal').classList.add('hidden')">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="imagePreviewModal" class="fixed inset-0 z-50 hidden" aria-labelledby="modal-title" role="dialog"
+    aria-modal="true">
+    <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+      <div class="fixed inset-0 bg-gray-900 bg-opacity-90 transition-opacity" aria-hidden="true"
+        onclick="document.getElementById('imagePreviewModal').classList.add('hidden')"></div>
+      <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+      <div
+        class="inline-block align-bottom bg-transparent rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
+        <div class="relative">
+          <button onclick="document.getElementById('imagePreviewModal').classList.add('hidden')"
+            class="absolute -top-10 right-0 text-white hover:text-gray-300 focus:outline-none">
+            <i class="fas fa-times text-2xl"></i>
+          </button>
+          <img id="previewImage" src="" alt="Attendance Image" class="w-full h-auto rounded-lg shadow-2xl">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- App Usage Details Modal -->
+  <div id="appUsageModal" class="fixed inset-0 z-50 hidden" aria-labelledby="modal-title" role="dialog"
+    aria-modal="true">
+    <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+      <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+        onclick="document.getElementById('appUsageModal').classList.add('hidden')"></div>
+      <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+      <div
+        class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-xl sm:w-full">
+        <div class="bg-blue-600 px-4 py-3 sm:px-6 flex justify-between items-center">
+          <h3 class="text-lg leading-6 font-medium text-white" id="appUsageModalTitle">App Usage Details</h3>
+          <button onclick="document.getElementById('appUsageModal').classList.add('hidden')"
+            class="text-blue-100 hover:text-white">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="bg-white px-4 pt-5 pb-4 sm:p-6 max-h-[70vh] overflow-y-auto">
+          <h4 id="appUsageUserTime" class="text-sm text-gray-500 mb-4 font-medium border-b pb-2">User - Date</h4>
+          <div class="space-y-3" id="appUsageList">
+            <!-- App Items -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  </div> <!-- Close p-4 -->
+  </main> <!-- Close main -->
+  </div> <!-- Close flex wrapper -->
+
+  <div id="lead-details-modal" class="fixed inset-0 z-50 hidden" aria-labelledby="modal-title" role="dialog"
+    aria-modal="true">
+    <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+      <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"
+        onclick="document.getElementById('lead-details-modal').classList.add('hidden')"></div>
+      <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+      <div
+        class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+        <div class="bg-gray-50 px-4 py-3 border-b border-gray-200 flex justify-between items-center">
+          <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">Lead Details</h3>
+          <button onclick="document.getElementById('lead-details-modal').classList.add('hidden')"
+            class="text-gray-400 hover:text-gray-500 focus:outline-none">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+          <div id="lead-details-content">
+            <!-- Content injected by JS -->
+          </div>
+        </div>
+        <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+          <button type="button"
+            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+            onclick="document.getElementById('lead-details-modal').classList.add('hidden')">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CALL HISTORY MODAL -->
+  <div id="modal-call-history" class="fixed inset-0 z-50 hidden-section flex items-center justify-center p-4">
+    <!-- Backdrop -->
+    <div class="absolute inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity"
+      onclick="document.getElementById('modal-call-history').classList.add('hidden-section'); document.body.style.overflow = 'auto';">
+    </div>
+
+    <!-- Modal Content -->
+    <div
+      class="relative bg-white rounded-2xl shadow-xl w-full max-w-4xl overflow-hidden transform transition-all animate-fade-in flex flex-col max-h-[90vh]">
+
+      <!-- Header -->
+      <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50">
+        <div>
+          <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <i class="fas fa-history text-blue-600"></i>
+            Call History
+          </h3>
+          <p class="text-xs text-gray-500 mt-0.5">Showing logs for <span id="call-history-phone"
+              class="font-bold text-gray-800"></span></p>
+        </div>
+        <button
+          onclick="document.getElementById('modal-call-history').classList.add('hidden-section'); document.body.style.overflow = 'auto';"
+          class="text-gray-400 hover:text-gray-600 transition-colors bg-white p-1.5 rounded-full shadow-sm hover:shadow">
+          <i class="fas fa-times text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Content (Scrollable) -->
+      <div class="p-0 overflow-y-auto flex-1">
+        <table class="w-full text-left border-collapse">
+          <thead class="bg-gray-50 sticky top-0 z-10 shadow-sm">
+            <tr>
+              <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Date & Time</th>
+              <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Type</th>
+              <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Duration</th>
+              <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Recording</th>
+            </tr>
+          </thead>
+          <tbody id="call-history-table-body" class="divide-y divide-gray-100">
+            <!-- Rows injected via JS -->
+            <tr>
+              <td colspan="4" class="text-center py-8 text-gray-400">Loading...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Footer -->
+      <div class="px-6 py-3 border-t border-gray-100 bg-gray-50 text-right">
+        <button
+          onclick="document.getElementById('modal-call-history').classList.add('hidden-section'); document.body.style.overflow = 'auto';"
+          class="px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors shadow-sm text-sm">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- jspdf -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.1/jspdf.plugin.autotable.min.js"></script>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="js/auth.js?v=2.8"></script>
+
+
+  <script src="js/users.js?v=2.8"></script>
+  <script src="js/attendance.js?v=2.8"></script>
+  <script src="js/call_history.js?v=2.16"></script>
+  <script src="js/create_user.js"></script>
+  <script src="js/dashboard.js?v=2.8"></script>
+  <script src="js/facebook.js?v=1.0"></script>
+  <script src="js/leads.js?v=1.0"></script>
+  <script src="js/indiamart.js?v=1.0"></script>
+  <script src="js/magicbricks.js?v=1.0"></script>
+
+  <script src="js/99acres.js?v=1.0"></script>
+  <script src="js/justdial.js?v=1.0"></script>
+  <script src="js/housing.js?v=1.0"></script>
+  <script src="js/integrations.js?v=1.0"></script>
+
+  <script src="js/main.js?v=2.9"></script>
+  <script src="js/performance.js?v=2.8"></script>
+  <script src="js/app_performance.js?v=2.8"></script>
+  <script src="js/sync.js?v=2.8"></script>
+  <script src="js/call_analytics.js?v=2.8"></script>
+  <script src="js/followup.js?v=3.0"></script>
+  <!-- Toggle Password Helper -->
+  <script>
+    window.togglePassword = function (inputId, iconId) {
+      const input = document.getElementById(inputId);
+      const icon = document.getElementById(iconId);
+      if (!input || !icon) return;
+
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+      } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+      }
+    };
+  </script>
+  <!-- Mobile Bottom Navigation -->
+  <div class="mobile-bottom-nav">
+    <a id="mobileNavHome" class="mobile-nav-item active" href="#">
       <i class="fas fa-home"></i>
       <span>Home</span>
     </a>
-    <a href="leads.html" class="mobile-nav-item">
-      <i class="fas fa-filter"></i>
-      <span>Leads</span>
-    </a>
-    <a href="admin_call_history.html" class="mobile-nav-item">
-      <i class="fas fa-phone"></i>
+    <a id="mobileNavCalls" class="mobile-nav-item" href="#">
+      <i class="fas fa-history"></i>
       <span>Calls</span>
     </a>
+    <a id="mobileNavUsers" class="mobile-nav-item" href="#">
+      <i class="fas fa-users"></i>
+      <span>Users</span>
+    </a>
+    <a id="mobileNavAnalytics" class="mobile-nav-item" href="#">
+      <i class="fas fa-chart-bar"></i>
+      <span>Analytics</span>
+    </a>
+    <a id="mobileNavMore" class="mobile-nav-item" href="#" onclick="document.getElementById('openSidebar').click()">
+      <i class="fas fa-bars"></i>
+      <span>More</span>
+    </a>
   </div>
-
-  <!-- Scripts -->
-  <script src="js/auth.js"></script>
-  <script src="js/dashboard.js"></script>
-  <script>
-    // Init
-    document.addEventListener('DOMContentLoaded', () => {
-      // Set Date
-      const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-      document.getElementById('current-date').textContent = new Date().toLocaleDateString('en-US', options);
-
-      // Check auth and load
-      if (auth.checkAuth()) {
-        const dashboard = new DashboardManager();
-        dashboard.loadStats();
-      }
-    });
-  </script>
 </body>
 
 </html>

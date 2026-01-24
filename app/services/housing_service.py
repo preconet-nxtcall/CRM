@@ -84,9 +84,9 @@ def parse_housing_email_body(body):
 
     return data
 
-def process_single_email(admin_id, msg_id, email_message, campaign_id=None):
+def process_single_email(admin_id, msg_id, email_message):
     """
-    Parses and saves a single email using LeadService
+    Parses and saves a single email
     """
     try:
         # Check Deduplication by Message-ID
@@ -111,39 +111,84 @@ def process_single_email(admin_id, msg_id, email_message, campaign_id=None):
         if not lead_data:
             return {"status": "ignored", "reason": "parsing_failed_or_not_lead"}
 
-        # Create Lead Data
+        # Business Logic Deduplication
+        today_start = datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        duplicate_lead = Lead.query.filter(
+            Lead.admin_id == admin_id,
+            Lead.phone == lead_data.get("phone"),
+            Lead.source == "housing",
+            Lead.created_at >= today_start
+        ).first()
+
+        if duplicate_lead:
+             # Mark processed
+            pe = ProcessedEmail(admin_id=admin_id, message_id=msg_id, lead_source="HOUSING")
+            db.session.add(pe)
+            db.session.commit()
+            return {"status": "skipped", "reason": "duplicate_lead_today"}
+
+        # Create Lead
         # Store Project in Requirement if available
         requirement_text = lead_data.get("project") or "Residential Property"
         if lead_data.get("budget"):
             requirement_text += f" (Budget: {lead_data.get('budget')})"
 
-        data = {
-            "name": lead_data.get("name") or "Unknown Housing Caller",
-            "email": lead_data.get("email"),
-            "phone": lead_data.get("phone"),
-            "source": "housing",
-            "status": "new",
-            "location": lead_data.get("location"),
-            "requirement": requirement_text,
-            "budget": lead_data.get("budget"),
-            "custom_fields": {"raw_subject": email_message.get("Subject")}
-        }
+        new_lead = Lead(
+            admin_id=admin_id,
+            name=lead_data.get("name") or "Unknown Housing Caller",
+            email=lead_data.get("email"),
+            phone=lead_data.get("phone"),
+            source="housing",
+            status="new",
+            location=lead_data.get("location"),
+            requirement=requirement_text, # Store Project + Budget
+            budget=lead_data.get("budget"),
+            custom_fields={"raw_subject": email_message.get("Subject")}
+        )
 
-        # Ingest
-        from app.services.lead_service import LeadService
-        new_lead = LeadService.ingest_lead(admin_id, "housing", data, campaign_id=campaign_id)
+        # ---------------------------------------------------------
+        # AGENT ASSIGNMENT LOGIC (ROUND ROBIN)
+        # ---------------------------------------------------------
+        assigned_user_id = None
+        try:
+            from app.models import User 
+            active_agents = User.query.filter_by(
+                admin_id=admin_id, 
+                status='active',
+                is_suspended=False
+            ).order_by(User.id).all()
+
+            if active_agents:
+                last_lead = Lead.query.filter_by(admin_id=admin_id)\
+                    .filter(Lead.assigned_to.isnot(None))\
+                    .order_by(Lead.created_at.desc())\
+                    .first()
+
+                if not last_lead or not last_lead.assigned_to:
+                    assigned_user_id = active_agents[0].id
+                else:
+                    last_agent_id = last_lead.assigned_to
+                    agent_ids = [agent.id for agent in active_agents]
+                    
+                    if last_agent_id in agent_ids:
+                        current_index = agent_ids.index(last_agent_id)
+                        next_index = (current_index + 1) % len(agent_ids)
+                        assigned_user_id = agent_ids[next_index]
+                    else:
+                        assigned_user_id = agent_ids[0]
+        except Exception as e:
+            logger.error(f"Error in assignment logic for Housing lead: {e}")
         
-        if not new_lead:
-             pass
-
-        if new_lead:
-            # Mark Processed
-            pe = ProcessedEmail(admin_id=admin_id, message_id=msg_id, lead_source="HOUSING")
-            db.session.add(pe)
-            db.session.commit()
-            return {"status": "success", "lead_id": new_lead.id}
-        else:
-             return {"status": "skipped", "reason": "validation_failed"}
+        if assigned_user_id:
+            new_lead.assigned_to = assigned_user_id
+        
+        db.session.add(new_lead)
+        
+        pe = ProcessedEmail(admin_id=admin_id, message_id=msg_id, lead_source="HOUSING")
+        db.session.add(pe)
+        
+        db.session.commit()
+        return {"status": "success", "lead_id": new_lead.id}
 
     except Exception as e:
         db.session.rollback()
@@ -165,6 +210,8 @@ def sync_housing_leads(admin_id):
         mail.select("inbox")
 
         # Search for UNSEEN emails from Housing
+        # Often from "leads@housing.com" or similar. Case insensitive.
+        # We will use SUBJECT "Housing" or FROM "housing" as a broad filter first
         status, messages = mail.search(None, '(UNSEEN (OR FROM "housing" SUBJECT "housing"))')
         
         email_ids = messages[0].split()
@@ -177,7 +224,7 @@ def sync_housing_leads(admin_id):
                         msg = email.message_from_bytes(response_part[1])
                         msg_id = msg.get("Message-ID") or f"no_id_{eid.decode()}"
                         
-                        result = process_single_email(admin_id, msg_id, msg, campaign_id=settings.campaign_id)
+                        result = process_single_email(admin_id, msg_id, msg)
                         
                         if result["status"] == "success":
                             count += 1

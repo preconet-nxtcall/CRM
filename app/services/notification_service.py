@@ -155,44 +155,5 @@ class NotificationService:
 """
         return NotificationService.send_email(email, subject, html_content)
 
-    @staticmethod
-    def send_whatsapp(phone, template_name, params=None):
-        """
-        Sends a WhatsApp message using a provider (e.g., Interakt, Wati, Twilio).
-        """
-        try:
-            import requests
-            
-            # Configuration (placeholder keys)
-            wa_api_url = current_app.config.get("WHATSAPP_API_URL")
-            wa_api_key = current_app.config.get("WHATSAPP_API_KEY")
-            
-            if not wa_api_url or not wa_api_key:
-                logging.warning(f"Skipping WhatsApp to {phone}: API Not Configured.")
-                return False
-
-            if not phone:
-                return False
-
-            payload = {
-                "phoneNumber": phone,
-                "template": template_name,
-                "parameters": params or {}
-            }
-            
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {wa_api_key}"
-            }
-            
-            # Fire and forget (with timeout)
-            requests.post(wa_api_url, json=payload, headers=headers, timeout=5)
-            logging.info(f"WhatsApp sent to {phone} (Template: {template_name})")
-            return True
-
-        except Exception as e:
-            logging.error(f"Failed to send WhatsApp to {phone}: {e}")
-            return False
-
 
 

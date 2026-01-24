@@ -1,193 +1,382 @@
-/* Neodove-Inspired Admin CSS */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
+/* Default Light Theme */
 :root {
-    --primary: #2563EB; /* Neodove Blue */
-    --primary-hover: #1D4ED8;
-    --bg-body: #F3F4F6; /* Soft Gray Background */
-    --bg-card: #FFFFFF;
-    --text-main: #111827;
-    --text-muted: #6B7280;
-    --border-light: #E5E7EB;
-    
-    /* Pipeline Colors */
-    --status-new: #3B82F6;       /* Blue */
-    --status-attempted: #F59E0B; /* Amber */
-    --status-connected: #10B981; /* Emerald */
-    --status-interested: #8B5CF6;/* Violet */
-    --status-followup: #EC4899;  /* Pink */
-    --status-closed: #6B7280;    /* Gray */
+    --bg: #f9fafb;
+    /* Gray-50 matches tailwind bg-gray-50 */
+    --text: #1f2937;
+    /* Gray-800 matches tailwind text-gray-800 */
+    --card: #ffffff;
+    --border: #e5e7eb;
+    /* Gray-200 */
+    --nav-bg: #111827;
+    /* Gray-900 for sidebar */
+    --nav-text: #ffffff;
 }
 
+/* Dark Theme */
+.dark-mode {
+    --bg: #121212;
+    --text: #ffffff;
+    --card: #1e1e1e;
+    --border: #333333;
+    --nav-bg: #000000;
+    --nav-text: #e5e5e5;
+}
+
+/* Apply variables globally */
 body {
-    font-family: 'Inter', sans-serif;
-    background-color: var(--bg-body);
-    color: var(--text-main);
-    -webkit-font-smoothing: antialiased;
+    background-color: var(--bg);
+    color: var(--text);
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Utilities */
-.text-primary { color: var(--primary); }
-.bg-primary { background-color: var(--primary); }
-.border-light { border-color: var(--border-light); }
-
-/* Card Styles */
-.dashboard-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border-light);
-    border-radius: 8px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05); /* Subtle shadow */
-    transition: box-shadow 0.2s;
-}
-.dashboard-card:hover {
-    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+/* Override Tailwind bg-white and border-gray colors for specific components when in dark mode */
+.dark-mode.bg-white,
+.dark-mode .bg-white {
+    background-color: var(--card) !important;
 }
 
-/* KPI Cards */
-.kpi-value {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--text-main);
-}
-.kpi-label {
-    font-size: 0.875rem;
-    color: var(--text-muted);
-    font-weight: 500;
+.dark-mode.bg-gray-50,
+.dark-mode .bg-gray-50 {
+    background-color: var(--bg) !important;
 }
 
-/* Pipeline Bar */
-.pipeline-container {
-    display: flex;
+.dark-mode.text-gray-900,
+.dark-mode .text-gray-900 {
+    color: var(--text) !important;
+}
+
+.dark-mode.text-gray-800,
+.dark-mode .text-gray-800 {
+    color: var(--text) !important;
+}
+
+.dark-mode .border-gray-100,
+.dark-mode .border-gray-200 {
+    border-color: var(--border) !important;
+}
+
+/* Sidebar and Navbar adjustments */
+/* Sidebar and Navbar adjustments */
+.card,
+.sidebar,
+.navbar {
+    background-color: var(--card);
+    border-color: var(--border);
+}
+
+/* Fix specific dark mode issues with cards */
+.dark-mode .shadow-sm {
+    box-shadow: 0 1px 2px 0 rgba(255, 255, 255, 0.05);
+}
+
+.dark-mode input,
+.dark-mode select {
+    background-color: #2d2d2d !important;
+    border-color: #444 !important;
+    color: #fff !important;
+}
+
+.dark-mode .bg-gray-900 {
+    background-color: #000 !important;
+    /* Darker sidebar */
+}
+
+/* Text Color Overrides for Dark Mode */
+.dark-mode .text-gray-700,
+.dark-mode .text-gray-600,
+.dark-mode .text-gray-500 {
+    color: #d1d5db !important;
+    /* Gray-300 - lighter for readability */
+}
+
+.dark-mode .text-gray-400 {
+    color: #9ca3af !important;
+    /* Gray-400 */
+}
+
+/* Navbar Title Fix */
+.dark-mode #pageTitle {
+    color: #ffffff !important;
+}
+
+.dark-mode #pageSubtitle {
+    color: #d1d5db !important;
+}
+
+/* Fix Graph Labels visibility if needed (invert colors) */
+.dark-mode canvas {
+    filter: invert(0) !important;
+    /* Keeping charts authentic for now unless requested otherwise */
+}
+
+/* Ensure headings are white */
+.dark-mode h1,
+.dark-mode h2,
+.dark-mode h3,
+.dark-mode h4,
+/* Default Light Theme */
+:root {
+    --bg: #f9fafb;
+    /* Gray-50 matches tailwind bg-gray-50 */
+    --text: #1f2937;
+    /* Gray-800 matches tailwind text-gray-800 */
+    --card: #ffffff;
+    --border: #e5e7eb;
+    /* Gray-200 */
+    --nav-bg: #111827;
+    /* Gray-900 for sidebar */
+    --nav-text: #ffffff;
+}
+
+/* Dark Theme */
+.dark-mode {
+    --bg: #121212;
+    --text: #ffffff;
+    --card: #1e1e1e;
+    --border: #333333;
+    --nav-bg: #000000;
+    --nav-text: #e5e5e5;
+}
+
+/* Apply variables globally */
+body {
+    background-color: var(--bg);
+    color: var(--text);
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Override Tailwind bg-white and border-gray colors for specific components when in dark mode */
+.dark-mode.bg-white,
+.dark-mode .bg-white {
+    background-color: var(--card) !important;
+}
+
+.dark-mode.bg-gray-50,
+.dark-mode .bg-gray-50 {
+    background-color: var(--bg) !important;
+}
+
+.dark-mode.text-gray-900,
+.dark-mode .text-gray-900 {
+    color: var(--text) !important;
+}
+
+.dark-mode.text-gray-800,
+.dark-mode .text-gray-800 {
+    color: var(--text) !important;
+}
+
+.dark-mode .border-gray-100,
+.dark-mode .border-gray-200 {
+    border-color: var(--border) !important;
+}
+
+/* Sidebar and Navbar adjustments */
+/* Sidebar and Navbar adjustments */
+.card,
+.sidebar,
+.navbar {
+    background-color: var(--card);
+    border-color: var(--border);
+}
+
+/* Fix specific dark mode issues with cards */
+.dark-mode .shadow-sm {
+    box-shadow: 0 1px 2px 0 rgba(255, 255, 255, 0.05);
+}
+
+.dark-mode input,
+.dark-mode select {
+    background-color: #2d2d2d !important;
+    border-color: #444 !important;
+    color: #fff !important;
+}
+
+.dark-mode .bg-gray-900 {
+    background-color: #000 !important;
+    /* Darker sidebar */
+}
+
+/* Text Color Overrides for Dark Mode */
+.dark-mode .text-gray-700,
+.dark-mode .text-gray-600,
+.dark-mode .text-gray-500 {
+    color: #d1d5db !important;
+    /* Gray-300 - lighter for readability */
+}
+
+.dark-mode .text-gray-400 {
+    color: #9ca3af !important;
+    /* Gray-400 */
+}
+
+/* Navbar Title Fix */
+.dark-mode #pageTitle {
+    color: #ffffff !important;
+}
+
+.dark-mode #pageSubtitle {
+    color: #d1d5db !important;
+}
+
+/* Fix Graph Labels visibility if needed (invert colors) */
+.dark-mode canvas {
+    filter: invert(0) !important;
+    /* Keeping charts authentic for now unless requested otherwise */
+}
+
+/* Ensure headings are white */
+.dark-mode h1,
+.dark-mode h2,
+.dark-mode h3,
+.dark-mode h4,
+.dark-mode h5,
+.dark-mode h6 {
+    color: #ffffff !important;
+}
+
+/* Responsive Table Logic (Mobile Cards) */
+/* Hide Audio Volume Button and Current Time (Show Timeline) */
+audio.hide-volume::-webkit-media-controls-mute-button,
+audio.hide-volume::-webkit-media-controls-volume-slider,
+audio.hide-volume::-webkit-media-controls-current-time-display {
+    display: none !important;
+}
+
+/* =========================================
+   Mobile Card Table Styles
+   ========================================= */
+@media (max-width: 640px) {
+  .mobile-card-table {
+    display: block;
     width: 100%;
-    gap: 4px;
-    padding: 4px;
-    background: #fff;
-    border: 1px solid var(--border-light);
-    border-radius: 6px;
-    margin-bottom: 24px;
-}
+  }
 
-.pipeline-segment {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 12px 4px;
-    cursor: default;
-    position: relative;
-    border-radius: 4px;
-    transition: background-color 0.2s;
-}
+  .mobile-card-table thead {
+    display: none; /* Hide headers */
+  }
 
-/* Pipeline Hover Effect: Show subtle bg on hover */
-.pipeline-segment:hover {
-    background-color: #F9FAFB;
-}
-
-/* Colors for the bottom border indicator */
-.pipeline-segment::after {
-    content: '';
-    position: absolute;
-    bottom: 0px;
-    left: 10%;
-    width: 80%;
-    height: 3px;
-    border-radius: 3px 3px 0 0;
-}
-
-.pipeline-segment.seg-new::after { background-color: var(--status-new); }
-.pipeline-segment.seg-attempted::after { background-color: var(--status-attempted); }
-.pipeline-segment.seg-connected::after { background-color: var(--status-connected); }
-.pipeline-segment.seg-interested::after { background-color: var(--status-interested); }
-.pipeline-segment.seg-followup::after { background-color: var(--status-followup); }
-.pipeline-segment.seg-closed::after { background-color: var(--status-closed); }
-
-.pipeline-count {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: var(--text-main);
-    line-height: 1.2;
-}
-
-.pipeline-label {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-top: 4px;
-}
-
-/* Table Styles - Clean Enterprise Look */
-.neodove-table {
+  .mobile-card-table tbody {
+    display: block;
     width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
-}
+  }
 
-.neodove-table th {
-    background-color: #F9FAFB;
-    font-weight: 600;
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    color: var(--text-muted);
-    padding: 12px 16px;
-    text-align: left;
-    border-bottom: 1px solid var(--border-light);
-}
+  .mobile-card-table tr {
+    display: block;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.75rem; /* rounded-xl */
+    margin-bottom: 1rem;
+    padding: 1rem;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  }
+  
+  /* Dark mode support for cards */
+  .dark-mode .mobile-card-table tr {
+    background: #1f2937; /* gray-800 */
+    border-color: #374151; /* gray-700 */
+  }
 
-.neodove-table td {
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--border-light);
-    font-size: 0.875rem;
-    color: var(--text-main);
-}
-
-.neodove-table tr:last-child td {
-    border-bottom: none;
-}
-
-/* Activity Feed */
-.activity-item {
+  .mobile-card-table td {
     display: flex;
-    gap: 12px;
-    padding: 12px 0;
+    justify-content: space-between;
+    align-items: center; /* Align content vertically */
+    padding: 0.5rem 0;
     border-bottom: 1px solid #f3f4f6;
-}
-.activity-item:last-child { border-bottom: none; }
+    text-align: right;
+    font-size: 0.875rem; /* text-sm */
+  }
+  
+  .dark-mode .mobile-card-table td {
+      border-color: #374151;
+  }
 
-.activity-icon {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background-color: #EFF6FF; /* Blue 50 */
-    color: var(--primary);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.875rem;
+  .mobile-card-table td:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .mobile-card-table td:first-child {
+    padding-top: 0;
+  }
+
+  /* Label pseudo-element */
+  .mobile-card-table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #6b7280; /* text-gray-500 */
+    margin-right: 1rem;
+    text-align: left;
+    flex-shrink: 0; /* Prevent label from shrinking */
+  }
+  
+  .dark-mode .mobile-card-table td::before {
+      color: #9ca3af; /* text-gray-400 */
+  }
+  
+  /* Adjustments for content inside tds */
+  .mobile-card-table td > * {
+      text-align: right;
+      width: auto;
+  }
 }
 
-.activity-content {
-    flex: 1;
-}
-.activity-title {
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: var(--text-main);
-}
-.activity-time {
-    font-size: 0.75rem;
-    color: var(--text-muted);
+/* =========================================
+   Mobile Bottom Navigation
+   ========================================= */
+.mobile-bottom-nav {
+    display: none; /* Hidden by default */
 }
 
-/* Responsive fixes */
-@media (max-width: 768px) {
-    .pipeline-container {
-        flex-wrap: wrap;
+@media (max-width: 1023px) { /* Match lg:hidden breakpoint */
+    .mobile-bottom-nav {
+        display: flex;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background-color: white;
+        border-top: 1px solid #e5e7eb;
+        padding-bottom: env(safe-area-inset-bottom); /* iOS safe area */
+        z-index: 40;
+        height: 3.5rem; /* 56px */
+        justify-content: space-around;
+        align-items: center;
+        box-shadow: 0 -1px 3px rgba(0,0,0,0.05);
     }
-    .pipeline-segment {
-        flex: 1 1 30%; /* 3 per row on mobile */
-        margin-bottom: 8px;
+    
+    .dark-mode .mobile-bottom-nav {
+        background-color: #111827; /* gray-900 */
+        border-color: #374151; /* gray-700 */
+    }
+
+    .mobile-nav-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 0.5rem;
+        color: #6b7280; /* gray-500 */
+        font-size: 0.75rem; /* text-xs */
+        flex: 1;
+        height: 100%;
+        text-decoration: none;
+    }
+    
+    .mobile-nav-item i {
+        font-size: 1.125rem; /* text-lg */
+        margin-bottom: 0.125rem;
+    }
+
+    .mobile-nav-item.active {
+        color: #2563eb; /* blue-600 */
+    }
+    
+     .dark-mode .mobile-nav-item {
+        color: #9ca3af;
+    }
+    
+    .dark-mode .mobile-nav-item.active {
+        color: #60a5fa; /* blue-400 */
     }
 }

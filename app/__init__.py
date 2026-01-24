@@ -106,19 +106,6 @@ def create_app(config_class=Config):
             trigger='interval', 
             minutes=10
         )
-
-        # Followup Reminder Job (Every 5 mins)
-        from app.services.followup_service import scheduled_followup_job
-        if scheduler.get_job('followup_reminders'):
-             scheduler.remove_job('followup_reminders')
-             
-        scheduler.add_job(
-            id='followup_reminders', 
-            func=scheduled_followup_job, 
-            args=[app], 
-            trigger='interval', 
-            minutes=5
-        )
     except Exception as e:
         print(f"Scheduler Error: {e}")
 
@@ -262,7 +249,6 @@ def create_app(config_class=Config):
     from app.routes.auth_pwd import bp as auth_pwd_bp # NEW
     from app.routes.app_usage import bp as app_usage_bp # NEW
     from app.routes.facebook import bp as facebook_bp # NEW
-    from app.routes.admin_lead_analytics import admin_lead_analytics_bp # NEW
 
     # =======================================================
     # REGISTER BLUEPRINTS
@@ -288,17 +274,11 @@ def create_app(config_class=Config):
     app.register_blueprint(auth_pwd_bp) # NEW
     app.register_blueprint(app_usage_bp) # NEW
     app.register_blueprint(facebook_bp) # NEW
-    app.register_blueprint(admin_lead_analytics_bp) # NEW
     
     from app.routes.indiamart import bp as indiamart_bp
     app.register_blueprint(indiamart_bp) # NEW
     
-    from app.routes.leads import bp as leads_bp
-    app.register_blueprint(leads_bp) # NEW
 
-    from app.routes.campaigns import bp as campaigns_bp
-    app.register_blueprint(campaigns_bp) # NEW
-    
     from app.routes.magicbricks import bp as magicbricks_bp
     app.register_blueprint(magicbricks_bp) # NEW
     
