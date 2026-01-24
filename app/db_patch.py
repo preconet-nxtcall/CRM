@@ -167,7 +167,10 @@ def run_schema_patch():
                     'property_type': 'VARCHAR(100)',
                     'location': 'VARCHAR(255)',
                     'budget': 'VARCHAR(100)',
-                    'requirement': 'TEXT'
+                    'requirement': 'TEXT',
+                    'sub_source': 'VARCHAR(100)',
+                    'assignment_time': 'TIMESTAMP',
+                    'lead_identifier': 'VARCHAR(100)'
                 }
                 for col, dtype in new_lead_cols.items():
                     if col not in lead_cols:
@@ -347,6 +350,137 @@ def run_schema_patch():
                          print("✅ Added connection_id to facebook_pages")
                     except Exception as e:
                          print(f"❌ Failed to add connection_id: {e}")
+
+            # -------------------------------------------------------------
+            # CAMPAIGN TABLES (NeoDove Support)
+            # -------------------------------------------------------------
+            if 'campaigns' not in inspector.get_table_names():
+                print("Creating campaigns table...")
+                try:
+                    conn.execute(text('''
+                        CREATE TABLE campaigns (
+                            id SERIAL PRIMARY KEY,
+                            admin_id INTEGER NOT NULL,
+                            name VARCHAR(150) NOT NULL,
+                            description TEXT,
+                            status VARCHAR(20) DEFAULT 'active',
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (admin_id) REFERENCES admins (id)
+                        )
+                    '''))
+                    conn.execute(text('CREATE INDEX idx_campaign_admin ON campaigns (admin_id)'))
+                    print("✅ Created campaigns table")
+                except Exception as e:
+                    print(f"❌ Failed to create campaigns: {e}")
+
+            if 'campaign_agents' not in inspector.get_table_names():
+                print("Creating campaign_agents table...")
+                try:
+                    conn.execute(text('''
+                        CREATE TABLE campaign_agents (
+                            campaign_id INTEGER NOT NULL,
+                            user_id INTEGER NOT NULL,
+                            PRIMARY KEY (campaign_id, user_id),
+                            FOREIGN KEY (campaign_id) REFERENCES campaigns (id),
+                            FOREIGN KEY (user_id) REFERENCES users (id)
+                        )
+                    '''))
+                    print("✅ Created campaign_agents table")
+                except Exception as e:
+                    print(f"❌ Failed to create campaign_agents: {e}")
+
+            # Add campaign_id to Leads
+            if 'leads' in inspector.get_table_names():
+                lead_cols = [c['name'] for c in inspector.get_columns('leads')]
+                if 'campaign_id' not in lead_cols:
+                    print("Adding campaign_id to leads table...")
+                    try:
+                        conn.execute(text('ALTER TABLE leads ADD COLUMN campaign_id INTEGER REFERENCES campaigns(id)'))
+                         # Add index
+                        conn.execute(text('CREATE INDEX idx_lead_campaign ON leads (campaign_id)'))
+                        print("✅ Added campaign_id to leads")
+                    except Exception as e:
+                        print(f"❌ Failed to add campaign_id to leads: {e}")
+
+            # Add campaign_id to FacebookConnection
+            if 'facebook_connections' in inspector.get_table_names():
+                fb_cols = [c['name'] for c in inspector.get_columns('facebook_connections')]
+                if 'campaign_id' not in fb_cols:
+                    print("Adding campaign_id to facebook_connections table...")
+                    try:
+                        conn.execute(text('ALTER TABLE facebook_connections ADD COLUMN campaign_id INTEGER REFERENCES campaigns(id)'))
+                        print("✅ Added campaign_id to facebook_connections")
+                    except Exception as e:
+                        print(f"❌ Failed to add campaign_id to facebook_connections: {e}")
+
+            # Add campaign_id to IndiamartSettings
+            if 'indiamart_settings' in inspector.get_table_names():
+                im_cols = [c['name'] for c in inspector.get_columns('indiamart_settings')]
+                if 'campaign_id' not in im_cols:
+                    print("Adding campaign_id to indiamart_settings table...")
+                    try:
+                        conn.execute(text('ALTER TABLE indiamart_settings ADD COLUMN campaign_id INTEGER REFERENCES campaigns(id)'))
+                        print("✅ Added campaign_id to indiamart_settings")
+                    except Exception as e:
+                        print(f"❌ Failed to add campaign_id to indiamart_settings: {e}")
+
+            # Add campaign_id to MagicbricksSettings
+            if 'magicbricks_settings' in inspector.get_table_names():
+                cols = [c['name'] for c in inspector.get_columns('magicbricks_settings')]
+                if 'campaign_id' not in cols:
+                    print("Adding campaign_id to magicbricks_settings table...")
+                    try:
+                        conn.execute(text('ALTER TABLE magicbricks_settings ADD COLUMN campaign_id INTEGER REFERENCES campaigns(id)'))
+                        print("✅ Added campaign_id to magicbricks_settings")
+                    except Exception as e:
+                        print(f"❌ Failed to add campaign_id to magicbricks_settings: {e}")
+
+            # Add campaign_id to NinetyNineAcresSettings
+            if 'ninety_nine_acres_settings' in inspector.get_table_names():
+                cols = [c['name'] for c in inspector.get_columns('ninety_nine_acres_settings')]
+                if 'campaign_id' not in cols:
+                    print("Adding campaign_id to ninety_nine_acres_settings table...")
+                    try:
+                        conn.execute(text('ALTER TABLE ninety_nine_acres_settings ADD COLUMN campaign_id INTEGER REFERENCES campaigns(id)'))
+                        print("✅ Added campaign_id to ninety_nine_acres_settings")
+                    except Exception as e:
+                        print(f"❌ Failed to add campaign_id to ninety_nine_acres_settings: {e}")
+
+            # Add campaign_id to HousingSettings
+            if 'housing_settings' in inspector.get_table_names():
+                cols = [c['name'] for c in inspector.get_columns('housing_settings')]
+                if 'campaign_id' not in cols:
+                    print("Adding campaign_id to housing_settings table...")
+                    try:
+                        conn.execute(text('ALTER TABLE housing_settings ADD COLUMN campaign_id INTEGER REFERENCES campaigns(id)'))
+                        print("✅ Added campaign_id to housing_settings")
+                    except Exception as e:
+                        print(f"❌ Failed to add campaign_id to housing_settings: {e}")
+
+            # Add campaign_id to JustDialSettings
+            if 'justdial_settings' in inspector.get_table_names():
+                cols = [c['name'] for c in inspector.get_columns('justdial_settings')]
+                if 'campaign_id' not in cols:
+                    print("Adding campaign_id to justdial_settings table...")
+                    try:
+                        conn.execute(text('ALTER TABLE justdial_settings ADD COLUMN campaign_id INTEGER REFERENCES campaigns(id)'))
+                        print("✅ Added campaign_id to justdial_settings")
+                    except Exception as e:
+                        print(f"❌ Failed to add campaign_id to justdial_settings: {e}")
+
+            # -------------------------------------------------------------
+            # FOLLOWUPS TABLE
+            # -------------------------------------------------------------
+            if 'followups' in inspector.get_table_names():
+                cols = [c['name'] for c in inspector.get_columns('followups')]
+                if 'notified' not in cols:
+                    print("Adding notified to followups table...")
+                    try:
+                        conn.execute(text('ALTER TABLE followups ADD COLUMN notified BOOLEAN DEFAULT FALSE'))
+                        print("✅ Added notified to followups")
+                    except Exception as e:
+                        print(f"❌ Failed to add notified to followups: {e}")
 
             conn.commit()
             print("Schema patch complete.")

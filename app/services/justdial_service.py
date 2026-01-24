@@ -83,9 +83,9 @@ def parse_justdial_email_body(body):
 
     return data
 
-def process_single_email(admin_id, msg_id, email_message):
+def process_single_email(admin_id, msg_id, email_message, campaign_id=None):
     """
-    Parses and saves a single email
+    Parses and saves a single email using LeadService
     """
     try:
         # Check Deduplication by Message-ID
@@ -110,78 +110,33 @@ def process_single_email(admin_id, msg_id, email_message):
         if not lead_data:
             return {"status": "ignored", "reason": "parsing_failed_or_not_lead"}
 
-        # Business Logic Deduplication
-        today_start = datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-        duplicate_lead = Lead.query.filter(
-            Lead.admin_id == admin_id,
-            Lead.phone == lead_data.get("phone"),
-            Lead.source == "justdial",
-            Lead.created_at >= today_start
-        ).first()
+        # Create Lead
+        data = {
+            "name": lead_data.get("name") or "Unknown JD Caller",
+            "email": lead_data.get("email"),
+            "phone": lead_data.get("phone"),
+            "source": "justdial",
+            "status": "new",
+            "location": lead_data.get("location"),
+            "requirement": lead_data.get("category"), # Store Category in Requirement
+            "custom_fields": {"raw_subject": email_message.get("Subject")}
+        }
 
-        if duplicate_lead:
-             # Mark processed
+        # Ingest
+        from app.services.lead_service import LeadService
+        new_lead = LeadService.ingest_lead(admin_id, "justdial", data, campaign_id=campaign_id)
+        
+        if not new_lead:
+             pass
+
+        if new_lead:
+            # Mark Processed
             pe = ProcessedEmail(admin_id=admin_id, message_id=msg_id, lead_source="JUSTDIAL")
             db.session.add(pe)
             db.session.commit()
-            return {"status": "skipped", "reason": "duplicate_lead_today"}
-
-        # Create Lead
-        new_lead = Lead(
-            admin_id=admin_id,
-            name=lead_data.get("name") or "Unknown JD Caller",
-            email=lead_data.get("email"),
-            phone=lead_data.get("phone"),
-            source="justdial",
-            status="new",
-            location=lead_data.get("location"),
-            requirement=lead_data.get("category"), # Store Category in Requirement
-            custom_fields={"raw_subject": email_message.get("Subject")}
-        )
-
-        # ---------------------------------------------------------
-        # AGENT ASSIGNMENT LOGIC (ROUND ROBIN)
-        # ---------------------------------------------------------
-        assigned_user_id = None
-        try:
-            from app.models import User 
-            active_agents = User.query.filter_by(
-                admin_id=admin_id, 
-                status='active',
-                is_suspended=False
-            ).order_by(User.id).all()
-
-            if active_agents:
-                last_lead = Lead.query.filter_by(admin_id=admin_id)\
-                    .filter(Lead.assigned_to.isnot(None))\
-                    .order_by(Lead.created_at.desc())\
-                    .first()
-
-                if not last_lead or not last_lead.assigned_to:
-                    assigned_user_id = active_agents[0].id
-                else:
-                    last_agent_id = last_lead.assigned_to
-                    agent_ids = [agent.id for agent in active_agents]
-                    
-                    if last_agent_id in agent_ids:
-                        current_index = agent_ids.index(last_agent_id)
-                        next_index = (current_index + 1) % len(agent_ids)
-                        assigned_user_id = agent_ids[next_index]
-                    else:
-                        assigned_user_id = agent_ids[0]
-        except Exception as e:
-            logger.error(f"Error in assignment logic for JustDial lead: {e}")
-        
-        if assigned_user_id:
-            new_lead.assigned_to = assigned_user_id
-        
-        db.session.add(new_lead)
-        
-        pe = ProcessedEmail(admin_id=admin_id, message_id=msg_id, lead_source="JUSTDIAL")
-        db.session.add(pe)
-        
-        db.session.commit()
-        return {"status": "success", "lead_id": new_lead.id}
+            return {"status": "success", "lead_id": new_lead.id}
+        else:
+             return {"status": "skipped", "reason": "validation_failed"}
 
     except Exception as e:
         db.session.rollback()
@@ -216,7 +171,7 @@ def sync_justdial_leads(admin_id):
                         msg = email.message_from_bytes(response_part[1])
                         msg_id = msg.get("Message-ID") or f"no_id_{eid.decode()}"
                         
-                        result = process_single_email(admin_id, msg_id, msg)
+                        result = process_single_email(admin_id, msg_id, msg, campaign_id=settings.campaign_id)
                         
                         if result["status"] == "success":
                             count += 1

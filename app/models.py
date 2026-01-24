@@ -369,7 +369,9 @@ class Followup(db.Model):
     message = db.Column(db.Text, nullable=True)
     
     date_time = db.Column(db.DateTime, nullable=False)
+    date_time = db.Column(db.DateTime, nullable=False)
     status = db.Column(db.String(20), default="pending", nullable=False) # pending, completed, cancelled
+    notified = db.Column(db.Boolean, default=False) # True if reminder sent
     
     created_at = db.Column(db.DateTime, default=now)
     updated_at = db.Column(db.DateTime, default=now, onupdate=now)
@@ -462,6 +464,9 @@ class FacebookConnection(db.Model):
     install_id = db.Column(db.String(100), nullable=True)
     status = db.Column(db.String(50), default="active") # active, disconnected
     
+    # NEW: Link to Campaign (Default campaign for leads from this page)
+    campaign_id = db.Column(db.Integer, db.ForeignKey("campaigns.id"), nullable=True)
+
     created_at = db.Column(db.DateTime, default=now)
     updated_at = db.Column(db.DateTime, default=now, onupdate=now)
 
@@ -509,14 +514,58 @@ class FacebookPage(db.Model):
 
 
 # =========================================================
-# LEADS
+# CAMPAIGN ARCHITECTURE (NeoDove/Runo Style)
+# =========================================================
+
+# Association Table for Many-to-Many between Campaign and User (Agents)
+campaign_agents = db.Table('campaign_agents',
+    db.Column('campaign_id', db.Integer, db.ForeignKey('campaigns.id'), primary_key=True),
+    db.Column('user_id', db.Integer, db.ForeignKey('users.id'), primary_key=True)
+)
+
+class Campaign(db.Model):
+    __tablename__ = "campaigns"
+    
+    id = db.Column(db.Integer, primary_key=True)
+    admin_id = db.Column(db.Integer, db.ForeignKey("admins.id"), nullable=False, index=True)
+    
+    name = db.Column(db.String(150), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    status = db.Column(db.String(20), default="active") # active, inactive
+    
+    created_at = db.Column(db.DateTime, default=now)
+    updated_at = db.Column(db.DateTime, default=now, onupdate=now)
+    
+    # Relationships
+    admin = db.relationship("Admin", backref=db.backref("campaigns", lazy="dynamic", cascade="all, delete-orphan"))
+    agents = db.relationship("User", secondary=campaign_agents, lazy="subquery", 
+        backref=db.backref("campaigns", lazy=True))
+        
+    leads = db.relationship("Lead", backref="campaign", lazy="dynamic", cascade="all, delete-orphan")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "admin_id": self.admin_id,
+            "name": self.name,
+            "description": self.description,
+            "status": self.status,
+            "agent_count": len(self.agents),
+            "created_at": self.created_at.isoformat() if self.created_at else None
+        }
+
+
+# =========================================================
+# LEADS (Updated)
 # =========================================================
 class Lead(db.Model):
     __tablename__ = "leads"
 
     id = db.Column(db.Integer, primary_key=True)
-    # UPDATED: Linked to ADMIN (Company)
     admin_id = db.Column(db.Integer, db.ForeignKey("admins.id"), nullable=False, index=True)
+    
+    # NEW: Campaign Link
+    campaign_id = db.Column(db.Integer, db.ForeignKey("campaigns.id"), nullable=True, index=True)
     
     # Facebook/IndiaMART specific ID (Scoped uniqueness per Admin)
     facebook_lead_id = db.Column(db.String(100), unique=False, nullable=True, index=True)
@@ -533,17 +582,22 @@ class Lead(db.Model):
     
     # Meta
     source = db.Column(db.String(50), default="facebook")
-    status = db.Column(db.String(50), default="new") # new, contacted, qualified, converted, junk
+    sub_source = db.Column(db.String(100), nullable=True) # Specific form or campaign name
+    status = db.Column(db.String(50), default="new") 
     
     assigned_to = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    assignment_time = db.Column(db.DateTime, nullable=True) # Track when agent was assigned
     
+    # Generic Unique ID (Website, Manual, etc.)
+    lead_identifier = db.Column(db.String(100), unique=True, nullable=True, index=True)
+
     # Real Estate Fields
     property_type = db.Column(db.String(100), nullable=True)
     location = db.Column(db.String(255), nullable=True)
     budget = db.Column(db.String(100), nullable=True)
-    requirement = db.Column(db.Text, nullable=True) # Full description
+    requirement = db.Column(db.Text, nullable=True) 
 
-    custom_fields = db.Column(JSONAuto()) # Store extra fields from FB form
+    custom_fields = db.Column(JSONAuto())
     
     created_at = db.Column(db.DateTime, default=now)
     updated_at = db.Column(db.DateTime, default=now, onupdate=now)
@@ -554,13 +608,18 @@ class Lead(db.Model):
         return {
             "id": self.id,
             "admin_id": self.admin_id,
+            "campaign_id": self.campaign_id,
+            "campaign_name": self.campaign.name if self.campaign else None,
             "facebook_lead_id": self.facebook_lead_id,
+            "lead_identifier": self.lead_identifier,
             "name": self.name,
             "email": self.email,
             "phone": self.phone,
             "source": self.source,
+            "sub_source": self.sub_source,
             "status": self.status,
             "assigned_to": self.assigned_to,
+            "assignment_time": self.assignment_time.isoformat() if self.assignment_time else None,
             "assigned_agent_name": self.assignee.name if self.assignee else None,
             "property_type": self.property_type,
             "location": self.location,
@@ -580,11 +639,14 @@ class IndiamartSettings(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     admin_id = db.Column(db.Integer, db.ForeignKey("admins.id"), nullable=False, unique=True)
     
+    # NEW: Link to Campaign
+    campaign_id = db.Column(db.Integer, db.ForeignKey("campaigns.id"), nullable=True)
+    
     mobile_number = db.Column(db.String(20), nullable=False)
     api_key = db.Column(db.String(100), nullable=False)
     
     last_sync_time = db.Column(db.DateTime, nullable=True)
-    auto_sync_enabled = db.Column(db.Boolean, default=True) # NEW: Auto Sync Toggle
+    auto_sync_enabled = db.Column(db.Boolean, default=True) 
     created_at = db.Column(db.DateTime, default=now)
     updated_at = db.Column(db.DateTime, default=now, onupdate=now)
 
@@ -597,8 +659,6 @@ class IndiamartSettings(db.Model):
         return decrypt_value(self.api_key)
 
     def to_dict(self):
-        # Determine strict or masked display? Always mask for UI.
-        # Decrypt first to get last 4 digits
         real_key = self.get_api_key()
         masked = None
         if real_key:
@@ -607,6 +667,7 @@ class IndiamartSettings(db.Model):
         return {
             "id": self.id,
             "admin_id": self.admin_id,
+            "campaign_id": self.campaign_id,
             "mobile_number": self.mobile_number,
             "api_key": masked,
             "last_sync_time": self.last_sync_time.isoformat() if self.last_sync_time else None,
@@ -624,6 +685,9 @@ class MagicbricksSettings(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     admin_id = db.Column(db.Integer, db.ForeignKey("admins.id"), nullable=False, unique=True)
     
+    # NEW: Link to Campaign
+    campaign_id = db.Column(db.Integer, db.ForeignKey("campaigns.id"), nullable=True)
+
     imap_host = db.Column(db.String(100), default="imap.gmail.com")
     email_id = db.Column(db.String(100), nullable=False)
     app_password = db.Column(db.String(255), nullable=False) # Encrypted
@@ -646,6 +710,7 @@ class MagicbricksSettings(db.Model):
         return {
             "id": self.id,
             "admin_id": self.admin_id,
+            "campaign_id": self.campaign_id,
             "email_id": self.email_id,
             "imap_host": self.imap_host,
             "last_sync_time": self.last_sync_time.isoformat() if self.last_sync_time else None,
@@ -676,6 +741,9 @@ class NinetyNineAcresSettings(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     admin_id = db.Column(db.Integer, db.ForeignKey("admins.id"), nullable=False, unique=True)
     
+    # NEW: Link to Campaign
+    campaign_id = db.Column(db.Integer, db.ForeignKey("campaigns.id"), nullable=True)
+
     imap_host = db.Column(db.String(100), default="imap.gmail.com")
     email_id = db.Column(db.String(100), nullable=False)
     app_password = db.Column(db.String(255), nullable=False) # Encrypted
@@ -699,6 +767,7 @@ class NinetyNineAcresSettings(db.Model):
         return {
             "id": self.id,
             "admin_id": self.admin_id,
+            "campaign_id": self.campaign_id,
             "email_id": self.email_id,
             "imap_host": self.imap_host,
             "last_sync_time": self.last_sync_time.isoformat() if self.last_sync_time else None,
@@ -716,6 +785,9 @@ class JustDialSettings(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     admin_id = db.Column(db.Integer, db.ForeignKey("admins.id"), nullable=False, unique=True)
     
+    # NEW: Link to Campaign
+    campaign_id = db.Column(db.Integer, db.ForeignKey("campaigns.id"), nullable=True)
+
     imap_host = db.Column(db.String(100), default="imap.gmail.com")
     email_id = db.Column(db.String(100), nullable=False)
     app_password = db.Column(db.String(255), nullable=False) # Encrypted
@@ -739,6 +811,50 @@ class JustDialSettings(db.Model):
         return {
             "id": self.id,
             "admin_id": self.admin_id,
+            "campaign_id": self.campaign_id,
+            "email_id": self.email_id,
+            "imap_host": self.imap_host,
+            "last_sync_time": self.last_sync_time.isoformat() if self.last_sync_time else None,
+            "is_active": self.is_active,
+            "is_connected": bool(self.app_password)
+        }
+
+# =========================================================
+# HOUSING INTEGRATION
+# =========================================================
+class HousingSettings(db.Model):
+    __tablename__ = "housing_settings"
+
+    id = db.Column(db.Integer, primary_key=True)
+    admin_id = db.Column(db.Integer, db.ForeignKey("admins.id"), nullable=False, unique=True)
+    
+    # NEW: Link to Campaign
+    campaign_id = db.Column(db.Integer, db.ForeignKey("campaigns.id"), nullable=True)
+
+    imap_host = db.Column(db.String(100), default="imap.gmail.com")
+    email_id = db.Column(db.String(100), nullable=False)
+    app_password = db.Column(db.String(255), nullable=False) # Encrypted
+    
+    last_sync_time = db.Column(db.DateTime, nullable=True)
+    is_active = db.Column(db.Boolean, default=True)
+    
+    created_at = db.Column(db.DateTime, default=now)
+    updated_at = db.Column(db.DateTime, default=now, onupdate=now)
+
+    def set_app_password(self, pwd):
+        from app.utils.security import encrypt_value
+        self.app_password = encrypt_value(pwd)
+
+    def get_app_password(self):
+        from app.utils.security import decrypt_value
+        return decrypt_value(self.app_password)
+
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "admin_id": self.admin_id,
+            "campaign_id": self.campaign_id,
             "email_id": self.email_id,
             "imap_host": self.imap_host,
             "last_sync_time": self.last_sync_time.isoformat() if self.last_sync_time else None,
@@ -750,37 +866,4 @@ class JustDialSettings(db.Model):
 # =========================================================
 # HOUSING INTEGRATION
 # =========================================================
-class HousingSettings(db.Model):
-    __tablename__ = "housing_settings"
 
-    id = db.Column(db.Integer, primary_key=True)
-    admin_id = db.Column(db.Integer, db.ForeignKey("admins.id"), nullable=False, unique=True)
-    
-    imap_host = db.Column(db.String(100), default="imap.gmail.com")
-    email_id = db.Column(db.String(100), nullable=False)
-    app_password = db.Column(db.String(255), nullable=False) # Encrypted
-    
-    last_sync_time = db.Column(db.DateTime, nullable=True)
-    is_active = db.Column(db.Boolean, default=True)
-    
-    created_at = db.Column(db.DateTime, default=now)
-    updated_at = db.Column(db.DateTime, default=now, onupdate=now)
-
-    def set_app_password(self, pwd):
-        from app.utils.security import encrypt_value
-        self.app_password = encrypt_value(pwd)
-
-    def get_app_password(self):
-        from app.utils.security import decrypt_value
-        return decrypt_value(self.app_password)
-
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "admin_id": self.admin_id,
-            "email_id": self.email_id,
-            "imap_host": self.imap_host,
-            "last_sync_time": self.last_sync_time.isoformat() if self.last_sync_time else None,
-            "is_active": self.is_active,
-            "is_connected": bool(self.app_password)
-        }

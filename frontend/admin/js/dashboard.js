@@ -1,220 +1,327 @@
-/* admin/js/dashboard.js */
+/* admin/js/dashboard.js - Neodove Redesign */
+
 class DashboardManager {
   constructor() {
     this.stats = {};
-    this.performanceChart = null; // IMPORTANT: prevent "canvas already in use"
+    this.analytics = {};
+    this.performanceChart = null;
+    this.sourceChart = null;
   }
 
   async loadStats() {
     try {
-      let url = `/api/admin/dashboard-stats?timezone_offset=${new Date().getTimezoneOffset()}`;
+      await Promise.all([
+        this.fetchGeneralStats(),
+        this.fetchLeadAnalytics(),
+        this.fetchRecentActivity()
+      ]);
 
-      const resp = await auth.makeAuthenticatedRequest(url);
-      if (!resp) return;
-
-      const data = await resp.json();
-      if (!resp.ok) {
-        auth.showNotification(data.error || 'Failed to load dashboard stats', 'error');
-        return;
-      }
-
-      this.stats = data.stats || {};
-
-      // Update Sidebar Admin Profile
-      const adminNameEl = document.getElementById('sidebar-admin-name');
-      const adminEmailEl = document.getElementById('sidebar-admin-email');
-
-      if (adminNameEl && this.stats.admin_name) {
-        adminNameEl.textContent = this.stats.admin_name;
-      }
-      if (adminEmailEl && this.stats.admin_email) {
-        adminEmailEl.textContent = this.stats.admin_email;
-      }
-
-      this.renderStats();
-      this.renderRecentSync();
-      this.renderUserLogs();
-      this.renderPerformanceChart();
+      this.updateProfile();
+      this.renderKPICards();
+      this.renderPipelineBar();
+      this.renderAgentTable();
+      this.renderSourceChart();
+      this.renderCallChart();
 
     } catch (e) {
-      console.error(e);
-      auth.showNotification('Failed to load dashboard stats', 'error');
+      console.error("Dashboard Load Error:", e);
+      // Optional: visual error feedback in UI
     }
   }
 
-  renderStats() {
+  async fetchGeneralStats() {
+    const url = `/api/admin/dashboard-stats?timezone_offset=${new Date().getTimezoneOffset()}`;
+    const resp = await auth.makeAuthenticatedRequest(url);
+    if (resp && resp.ok) {
+      const data = await resp.json();
+      this.stats = data.stats || {};
+    }
+  }
+
+  async fetchLeadAnalytics() {
+    const resp = await auth.makeAuthenticatedRequest('/api/admin/analytics/leads');
+    if (resp && resp.ok) {
+      this.analytics = await resp.json();
+    }
+  }
+
+  async fetchRecentActivity() {
+    // Reuse existing endpoint for online/offline status as "Activity"
+    // In a real scenario, this would be a dedicated activity log endpoint
+    const resp = await auth.makeAuthenticatedRequest('/api/admin/recent-sync');
+    if (resp && resp.ok) {
+      const data = await resp.json();
+      this.renderActivityFeed(data.recent_sync || []);
+    }
+  }
+
+  updateProfile() {
+    if (this.stats.admin_name) {
+      document.getElementById('sidebar-admin-name').textContent = this.stats.admin_name;
+    }
+    if (this.stats.admin_email) {
+      document.getElementById('sidebar-admin-email').textContent = this.stats.admin_email;
+    }
+  }
+
+  /* ------------------------------------------------
+     1. KPI Cards
+  ------------------------------------------------ */
+  renderKPICards() {
     const container = document.getElementById('stats-cards');
     if (!container) return;
 
-    const s = this.stats;
+    // Calculate Call Count (Today) from chart data if possible, or use total calls
+    // Since API gives "call_trend", the last item is today
+    let callsToday = 0;
+    if (this.stats.call_trend && this.stats.call_trend.data) {
+      const dataArr = this.stats.call_trend.data;
+      callsToday = dataArr[dataArr.length - 1] || 0;
+    }
 
     const cards = [
-      { title: "Total Users", value: s.total_users ?? 0, icon: "users", color: "blue" },
-      { title: "Active Users", value: s.active_users ?? 0, icon: "user-check", color: "green" },
-      { title: "Users With Sync", value: s.synced_users ?? 0, icon: "sync", color: "purple" },
-      { title: "Remaining Slots", value: s.remaining_slots ?? 0, icon: "user-plus", color: "orange" }
+      { title: "Total Leads", value: this.analytics.total_leads || 0, icon: "database", color: "blue" },
+      { title: "Calls Today", value: callsToday, icon: "phone", color: "green" },
+      { title: "Missed Calls", value: this.stats.missed_calls_today || 0, icon: "phone-slash", color: "red" },
+      { title: "Conversion Rate", value: (this.analytics.conversion_rate || 0) + '%', icon: "chart-line", color: "purple" }
     ];
 
     container.innerHTML = cards.map(c => `
-      <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover-card flex items-center gap-4 transition-all duration-200">
-        <div class="w-14 h-14 rounded-full flex items-center justify-center bg-${c.color}-50 text-${c.color}-600 shadow-sm">
-          <i class="fas fa-${c.icon} text-xl"></i>
-        </div>
-        <div>
-          <p class="text-3xl font-bold text-gray-900 tracking-tight">${c.value}</p>
-          <p class="text-sm font-medium text-gray-500">${c.title}</p>
-        </div>
-      </div>
-    `).join('');
+             <div class="dashboard-card p-6 flex items-start justify-between">
+                <div>
+                    <h4 class="kpi-label mb-1">${c.title}</h4>
+                    <span class="kpi-value text-gray-900">${c.value}</span>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-${c.color}-50 flex items-center justify-center text-${c.color}-600">
+                    <i class="fas fa-${c.icon}"></i>
+                </div>
+            </div>
+        `).join('');
   }
 
-  /* ------------------------------
-     RECENT SYNC
-  ------------------------------ */
-  async renderRecentSync() {
-    try {
-      const resp = await auth.makeAuthenticatedRequest('/api/admin/recent-sync');
-      if (!resp) return;
+  /* ------------------------------------------------
+     2. Pipeline Bar
+  ------------------------------------------------ */
+  renderPipelineBar() {
+    const container = document.getElementById('pipeline-bar');
+    if (!container) return;
 
-      const data = await resp.json();
-      if (!resp.ok) {
-        auth.showNotification(data.error || 'Failed to load recent sync', 'error');
-        return;
+    const statusMap = this.analytics.by_status || {};
+
+    // Define logical pipeline order
+    const order = [
+      { key: 'New', label: 'New Leads', class: 'seg-new' },
+      { key: 'Attempted', label: 'Attempted', class: 'seg-attempted' },
+      { key: 'Connected', label: 'Connected', class: 'seg-connected' },
+      { key: 'Interested', label: 'Interested', class: 'seg-interested' },
+      { key: 'Follow Up', label: 'Follow Up', class: 'seg-followup' }, // Note: check DB key carefully
+      { key: 'Closed', label: 'Closed', class: 'seg-closed' },
+    ];
+
+    // Normalization helper for insensitive match if needed
+    const getCount = (key) => {
+      // Check direct match
+      if (statusMap[key] !== undefined) return statusMap[key];
+      // Check lowercase/alternates
+      for (let k in statusMap) {
+        if (k.toLowerCase() === key.toLowerCase()) return statusMap[k];
+        if (key === 'Follow Up' && (k === 'FollowUp' || k === 'Follow-Up')) return statusMap[k];
       }
+      return 0;
+    };
 
-      const list = document.getElementById('recent-sync-list');
-      if (!list) return;
-
-      const items = data.recent_sync || [];
-
-      // Helper function to check if sync date is today
-      const isOnlineToday = (lastSyncISO) => {
-        if (!lastSyncISO) return false;
-        try {
-          const syncDate = new Date(lastSyncISO);
-          const today = new Date();
-
-          // Compare year, month, and day
-          return syncDate.getFullYear() === today.getFullYear() &&
-            syncDate.getMonth() === today.getMonth() &&
-            syncDate.getDate() === today.getDate();
-        } catch (e) {
-          return false;
-        }
-      };
-
-      list.innerHTML = items.map(r => {
-        // Calculate online status in frontend based on local date
-        const isOnline = isOnlineToday(r.last_sync);
-
-        return `
-        <div class="border p-3 rounded bg-white">
-          <div class="flex justify-between items-start">
-            <div>
-              <div class="font-medium">${r.name}</div>
-              <div class="text-xs text-gray-500">
-                Last Sync: ${window.formatDateTime(r.last_sync)}
-              </div>
-            </div>
-            <div class="text-sm ${isOnline ? 'text-green-600' : 'text-red-600'}">
-              ${isOnline ? 'Online' : 'Offline'}
-            </div>
-          </div>
-        </div>
-      `}).join('');
-
-    } catch (e) {
-      console.error(e);
-      auth.showNotification("Failed to load recent sync", "error");
-    }
+    container.innerHTML = order.map(stage => {
+      const count = getCount(stage.key);
+      return `
+                <div class="pipeline-segment ${stage.class}">
+                    <span class="pipeline-count">${count}</span>
+                    <span class="pipeline-label">${stage.label}</span>
+                </div>
+            `;
+    }).join('');
   }
 
-  /* ------------------------------
-     USER LOGS
-  ------------------------------ */
-  async renderUserLogs() {
-    try {
-      const resp = await auth.makeAuthenticatedRequest('/api/admin/user-logs');
-      if (!resp) return;
+  /* ------------------------------------------------
+     3. Agent Performance Table
+  ------------------------------------------------ */
+  renderAgentTable() {
+    const tbody = document.getElementById('agent-performance-body');
+    if (!tbody) return;
 
-      const data = await resp.json();
-      if (!resp.ok) return;
+    const agents = this.analytics.agent_performance || [];
 
-      const container = document.getElementById('user-logs-container');
-      if (!container) return;
-
-      const logs = data.logs || [];
-
-      container.innerHTML = logs.map(l => `
-        <div class="p-4 rounded border bg-white hover:bg-gray-50 transition-colors">
-          <div class="flex justify-between items-center">
-            <div class="flex items-center gap-3">
-              <div class="w-2 h-2 rounded-full ${l.is_active ? 'bg-green-500' : 'bg-red-500'}"></div>
-              <div>
-                <div class="font-medium text-gray-900">${l.user_name || 'Unknown'}</div>
-                <div class="text-xs text-gray-500">Last Check-in: ${l.timestamp !== 'Never' ? window.formatDateTime(l.timestamp) : 'Never'}</div>
-              </div>
-            </div>
-            
-          </div>
-        </div>
-      `).join('');
-
-    } catch (e) {
-      console.error(e);
+    if (agents.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-gray-400">No agent data available</td></tr>`;
+      return;
     }
+
+    tbody.innerHTML = agents.map(agent => `
+            <tr>
+                <td>
+                    <div class="flex items-center gap-2">
+                        <div class="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold">
+                            ${agent.name.charAt(0).toUpperCase()}
+                        </div>
+                        <span class="font-medium text-gray-800">${agent.name}</span>
+                    </div>
+                </td>
+                <td class="text-right font-medium">${agent.assigned}</td>
+                <td class="text-right text-gray-600">${agent.converted}</td>
+                <td class="text-right">
+                    <span class="bg-green-50 text-green-700 px-2 py-1 rounded text-xs font-semibold">
+                        ${agent.conversion_rate}%
+                    </span>
+                </td>
+            </tr>
+        `).join('');
   }
 
-  /* ------------------------------
-     PERFORMANCE CHART
-  ------------------------------ */
-  renderPerformanceChart() {
-    const canvas = document.getElementById('performanceChart');
-    if (!canvas || typeof Chart === 'undefined') return;
+  /* ------------------------------------------------
+     4. Call Analytics Chart (Bar)
+  ------------------------------------------------ */
+  renderCallChart() {
+    const ctx = document.getElementById('performanceChart');
+    if (!ctx) return;
 
-    // Destroy previous chart to avoid canvas reuse error
-    if (this.performanceChart) {
-      this.performanceChart.destroy();
-    }
+    if (this.performanceChart) this.performanceChart.destroy();
 
-    // Use call_trend from API
     const trend = this.stats.call_trend || {};
-    const labels = trend.labels || ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-    const dataPoints = trend.data || [0, 0, 0, 0, 0, 0, 0];
+    const labels = trend.labels || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const data = trend.data || [0, 0, 0, 0, 0, 0, 0];
 
-    this.performanceChart = new Chart(canvas, {
-      type: 'line',
+    // Create a gradient for the bar
+    const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 300);
+    gradient.addColorStop(0, '#2563EB'); // Blue 600
+    gradient.addColorStop(1, '#93C5FD'); // Blue 300
+
+    this.performanceChart = new Chart(ctx, {
+      type: 'bar',
       data: {
         labels: labels,
         datasets: [{
           label: 'Total Calls',
-          data: dataPoints,
-          borderColor: '#2563EB',
-          backgroundColor: 'rgba(37, 99, 235, 0.1)',
-          borderWidth: 2,
-          fill: true,
-          tension: 0.3
+          data: data,
+          backgroundColor: '#2563EB',
+          borderRadius: 4,
+          barThickness: 20
         }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: {
-            display: true
-          }
+          legend: { display: false }
         },
         scales: {
           y: {
             beginAtZero: true,
-            ticks: {
-              precision: 0
-            }
+            grid: {
+              color: '#F3F4F6',
+              borderDash: [2, 4]
+            },
+            ticks: { font: { size: 10 } }
+          },
+          x: {
+            grid: { display: false },
+            ticks: { font: { size: 10 } }
           }
         }
       }
     });
   }
+
+  /* ------------------------------------------------
+     5. Lead Source Chart (Donut)
+  ------------------------------------------------ */
+  renderSourceChart() {
+    const ctx = document.getElementById('sourceChart');
+    const legendContainer = document.getElementById('source-legend');
+    if (!ctx) return;
+
+    if (this.sourceChart) this.sourceChart.destroy();
+
+    const sources = this.analytics.by_source || {};
+    const labels = Object.keys(sources);
+    const data = Object.values(sources);
+
+    // Neodove/Modern SaaS Palette
+    const colors = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#6B7280'];
+
+    this.sourceChart = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: data,
+          backgroundColor: colors,
+          borderWidth: 0,
+          hoverOffset: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '75%',
+        plugins: {
+          legend: { display: false }
+        }
+      }
+    });
+
+    // Custom Legend
+    if (legendContainer && labels.length > 0) {
+      legendContainer.innerHTML = labels.map((label, i) => `
+                <div class="flex items-center justify-between text-sm">
+                    <div class="flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full" style="background-color: ${colors[i % colors.length]}"></span>
+                        <span class="text-gray-600">${label}</span>
+                    </div>
+                    <span class="font-bold text-gray-800">${data[i]}</span>
+                </div>
+            `).join('');
+    } else if (legendContainer) {
+      legendContainer.innerHTML = '<div class="text-center text-xs text-gray-400">No source data</div>';
+    }
+  }
+
+  /* ------------------------------------------------
+     6. Activity Feed
+  ------------------------------------------------ */
+  renderActivityFeed(activities) {
+    const container = document.getElementById('activity-feed');
+    if (!container) return;
+
+    if (activities.length === 0) return; // Keep default empty msg
+
+    // Helper to check today
+    const isOnlineToday = (isoDate) => {
+      if (!isoDate) return false;
+      const d = new Date(isoDate);
+      const now = new Date();
+      return d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    };
+
+    container.innerHTML = activities.slice(0, 5).map(act => {
+      const isOnline = isOnlineToday(act.last_sync);
+      // Mocking "Action" text based on status because we don't have event logs yet
+      // If user syncs, it means they are active/app usage
+      const actionText = isOnline ? "Active on App" : "Last Sync";
+      const timeText = window.formatDateTime(act.last_sync);
+
+      return `
+                <div class="activity-item">
+                    <div class="activity-icon ${isOnline ? 'bg-blue-50 text-blue-600' : 'bg-gray-50 text-gray-400'}">
+                        <i class="fas fa-${isOnline ? 'mobile-alt' : 'clock'}"></i>
+                    </div>
+                    <div class="activity-content">
+                        <p class="activity-title">
+                            <span class="font-semibold">${act.name}</span>
+                            <span class="font-normal text-gray-500">${actionText}</span>
+                        </p>
+                        <p class="activity-time">${timeText}</p>
+                    </div>
+                </div>
+            `;
+    }).join('');
+  }
 }
-
-

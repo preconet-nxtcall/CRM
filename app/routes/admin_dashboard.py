@@ -80,14 +80,22 @@ def dashboard_stats():
         print(f"DEBUG: Timezone offset: {offset_min}, Local delta: {local_delta}")
         print(f"DEBUG: Now local: {now_local}")
         
+
         # Group calls by local date
         trend_map = {}
+        missed_today = 0
+        today_str = str(now_local.date())
+
         for c in all_calls:
             if c.timestamp:
                 # Convert UTC timestamp to local time
                 local_dt = c.timestamp + local_delta
                 date_key = str(local_dt.date())
                 trend_map[date_key] = trend_map.get(date_key, 0) + 1
+                
+                # Check for missed calls today
+                if date_key == today_str and c.call_type and c.call_type.lower() == 'missed':
+                    missed_today += 1
         
         print(f"DEBUG: Trend map (all dates): {trend_map}")
         
@@ -103,6 +111,7 @@ def dashboard_stats():
             print(f"DEBUG: {d.strftime('%a')} {date_key}: {count} calls")
 
     else:
+        missed_today = 0
         # No users - return empty data with correct day labels
         try:
             offset_min = int(request.args.get("timezone_offset", 0))
@@ -127,6 +136,7 @@ def dashboard_stats():
             "synced_users": synced,
             "sync_rate": round((synced / total) * 100, 2) if total else 0,
             "avg_performance": avg_perf,
+            "missed_calls_today": missed_today,
             "call_trend": {
                 "labels": day_labels,
                 "data": daily_counts
