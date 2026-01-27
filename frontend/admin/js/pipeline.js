@@ -271,20 +271,24 @@ class PipelineManager {
         const counts = stages.map(s => pipeline[s.key] || 0);
         const maxVal = Math.max(...counts) || 1;
 
-        container.innerHTML = stages.map(stage => {
+        // Generate Centered Inverted Pyramid
+        container.innerHTML = `<div class="w-full flex flex-col items-center py-2 space-y-1">` + stages.map(stage => {
             const count = pipeline[stage.key] || 0;
-            const percent = ((count / maxVal) * 100).toFixed(0);
+            let percent = (count / maxVal) * 100;
+
+            // Visual tweaks: Ensure at least 20% width so text fits
+            if (percent < 20) percent = 20;
 
             return `
-                <div class="flex items-center text-xs">
-                    <div class="w-20 font-medium text-gray-600 truncate">${stage.key}</div>
-                    <div class="flex-1 mx-3 h-2 bg-gray-100 rounded-full overflow-hidden">
-                        <div class="h-full ${stage.bg} rounded-full" style="width: ${percent}%"></div>
+                <div class="w-full flex justify-center mb-1 group cursor-default" title="${stage.key}: ${count}">
+                    <div class="${stage.bg} text-white text-xs font-bold py-2 px-4 rounded-lg shadow-sm flex items-center justify-between hover:opacity-90 transition-all" 
+                         style="width: ${percent}%; min-width: 120px;">
+                        <span class="truncate mr-2">${stage.key}</span>
+                        <span>${count}</span>
                     </div>
-                    <div class="w-12 text-right font-bold text-gray-800">${count}</div>
                 </div>
             `;
-        }).join('');
+        }).join('') + `</div>`;
     }
 }
 
