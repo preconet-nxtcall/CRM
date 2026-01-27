@@ -2045,8 +2045,22 @@
           <div class="flex flex-col gap-6">
             <!-- Agent Table -->
             <div class="bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col">
-              <div class="px-6 py-4 border-b border-gray-100">
+              <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
                 <h3 class="font-bold text-gray-900 text-lg">Agent Performance</h3>
+                <div class="flex items-center gap-2">
+                  <button onclick="pipelineManager.changeAgentMonth(-1)"
+                    class="p-1.5 text-gray-400 hover:text-blue-600 rounded bg-gray-50 hover:bg-blue-50 transition-colors"
+                    title="Previous Month">
+                    <i class="fas fa-chevron-left text-xs"></i>
+                  </button>
+                  <span id="agent-month-display"
+                    class="text-xs font-medium text-gray-600 min-w-[70px] text-center">Loading...</span>
+                  <button onclick="pipelineManager.changeAgentMonth(1)"
+                    class="p-1.5 text-gray-400 hover:text-blue-600 rounded bg-gray-50 hover:bg-blue-50 transition-colors"
+                    title="Next Month">
+                    <i class="fas fa-chevron-right text-xs"></i>
+                  </button>
+                </div>
               </div>
               <div class="overflow-x-auto">
                 <table class="w-full text-left">

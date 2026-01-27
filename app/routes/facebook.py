@@ -224,6 +224,7 @@ def disconnect():
 def get_leads():
     """
     Get all leads for the current Admin or Agent.
+    Default: Shows today's records with 10 per page.
     """
     try:
         claims = get_jwt()
@@ -238,14 +239,31 @@ def get_leads():
             if not user: return jsonify({"error": "User not found"}), 404
             admin_id = user.admin_id
         
-        # Pagination
+        # Pagination - default to 10 records per page
         page = request.args.get('page', 1, type=int)
-        per_page = request.args.get('per_page', 20, type=int)
+        per_page = request.args.get('per_page', 10, type=int)
         source_filter = request.args.get('source')
+        date_filter = request.args.get('date_filter', 'today')  # today, week, month, all
 
         query = Lead.query.filter_by(admin_id=admin_id)
+        
+        # Apply source filter
         if source_filter and source_filter.lower() != 'all':
              query = query.filter(Lead.source == source_filter.lower())
+        
+        # Apply date filter - default to today's records
+        from datetime import datetime, timedelta
+        if date_filter == 'today':
+            today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            today_end = today_start + timedelta(days=1)
+            query = query.filter(Lead.created_at >= today_start, Lead.created_at < today_end)
+        elif date_filter == 'week':
+            week_start = datetime.now() - timedelta(days=7)
+            query = query.filter(Lead.created_at >= week_start)
+        elif date_filter == 'month':
+            month_start = datetime.now() - timedelta(days=30)
+            query = query.filter(Lead.created_at >= month_start)
+        # 'all' means no date filter
         
         query = query.order_by(Lead.created_at.desc())
         paginated = query.paginate(page=page, per_page=per_page, error_out=False)

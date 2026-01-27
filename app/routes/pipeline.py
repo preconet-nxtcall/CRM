@@ -89,7 +89,7 @@ def pipeline_stats():
         conversion_rate = round((converted_leads / total_leads) * 100, 2)
 
     # 6. Pipeline Breakdown
-    # Statuses: New, Attempted, Connected, Interested, Follow-Up, Closed, Lost, Won
+    # Statuses: New, Attempted, Converted, Interested, Follow-Up, Won, Lost
     # We group by status
     status_counts = (
         db.session.query(Lead.status, func.count(Lead.id))
@@ -98,15 +98,14 @@ def pipeline_stats():
         .all()
     )
     
-    # Normalize keys
+    # Normalize keys - Match frontend 7 statuses
     pipeline_data = {
         "New": 0,
         "Attempted": 0,
-        "Connected": 0,
+        "Converted": 0,
         "Interested": 0,
-        "Follow-Up": 0, # Covers "Follow-Up" and "Follow Up"
+        "Follow-Up": 0,
         "Won": 0,
-        "Not Interested": 0,
         "Lost": 0
     }
 
@@ -114,17 +113,17 @@ def pipeline_stats():
         if not status: continue
         s_norm = status.title() # Ensure Title Case
         
-        # Map disparate statuses to our 8 core buckets
+        # Map statuses to our 7 core buckets
         if s_norm in pipeline_data:
             pipeline_data[s_norm] += count
             
-        # 1. Attempted (Explicitly map common call statuses)
+        # 1. Attempted (map common call statuses)
         elif s_norm in ["Attempted", "Ringing", "Busy", "Not Reachable", "Switch Off", "Call Later", "Callback", "No Answer"]:
             pipeline_data["Attempted"] += count
             
-        # 2. Connected
-        elif s_norm in ["Connected", "Contacted", "In Conversation"]:
-            pipeline_data["Connected"] += count
+        # 2. Converted (map contacted/connected statuses)
+        elif s_norm in ["Converted", "Connected", "Contacted", "In Conversation"]:
+            pipeline_data["Converted"] += count
             
         # 3. Interested
         elif s_norm in ["Interested", "Meeting Scheduled", "Demo Scheduled"]:
@@ -134,20 +133,16 @@ def pipeline_stats():
         elif s_norm in ["Follow-Up", "Follow Up"]:
             pipeline_data["Follow-Up"] += count
             
-        # 5. Won
-        elif s_norm in ["Won", "Converted", "Closed"]: # Map Closed to Won if present
+        # 5. Won (map closed/converted)
+        elif s_norm in ["Won", "Closed"]:
             pipeline_data["Won"] += count
             
-        # 6. Not Interested
-        elif s_norm in ["Not Interested", "Not Intersted"]:
-            pipeline_data["Not Interested"] += count
-            
-        # 7. Lost
-        elif s_norm in ["Lost", "Junk", "Wrong Number", "Invalid", "Not Interested"]: # Remove Not Interested from here if separate
+        # 6. Lost (map junk, not interested, etc.)
+        elif s_norm in ["Lost", "Junk", "Wrong Number", "Invalid", "Not Interested", "Not Intersted"]:
             pipeline_data["Lost"] += count
             
         else:
-            # Fallback
+            # Fallback to Attempted
             pipeline_data["Attempted"] += count
 
     return jsonify({
@@ -238,32 +233,58 @@ def pipeline_leads():
 def pipeline_agents():
     """
     Agent Performance for the pipeline view.
+    Shows current month's data by default, but can view previous months.
+    Query params: month (1-12), year (e.g., 2026)
     """
     if not admin_required():
         return jsonify({"error": "Admin access only"}), 403
 
     admin_id = int(get_jwt_identity())
     
+    # Date filter: Get month and year from query params or use current month
+    now = datetime.utcnow()
+    target_month = request.args.get('month', now.month, type=int)
+    target_year = request.args.get('year', now.year, type=int)
+    
+    # Validate month
+    if target_month < 1 or target_month > 12:
+        return jsonify({"error": "Invalid month. Must be between 1 and 12"}), 400
+    
+    # Calculate month start and end
+    month_start = datetime(target_year, target_month, 1, 0, 0, 0)
+    
+    # Calculate next month for end date
+    if target_month == 12:
+        month_end = datetime(target_year + 1, 1, 1, 0, 0, 0)
+    else:
+        month_end = datetime(target_year, target_month + 1, 1, 0, 0, 0)
+    
     users = User.query.filter_by(admin_id=admin_id).all()
     user_ids = [u.id for u in users]
     
-    # Aggregates
-    # 1. Total Calls per Agent
+    # Aggregates - Selected Month Only
+    # 1. Total Calls per Agent (Selected Month)
     calls_counts = db.session.query(CallHistory.user_id, func.count(CallHistory.id)).filter(
-        CallHistory.user_id.in_(user_ids)
+        CallHistory.user_id.in_(user_ids),
+        CallHistory.timestamp >= month_start,
+        CallHistory.timestamp < month_end
     ).group_by(CallHistory.user_id).all()
     calls_map = {uid: count for uid, count in calls_counts}
 
-    # 2. Leads Assigned per Agent
+    # 2. Leads Assigned per Agent (Selected Month)
     leads_counts = db.session.query(Lead.assigned_to, func.count(Lead.id)).filter(
-        Lead.admin_id == admin_id
+        Lead.admin_id == admin_id,
+        Lead.created_at >= month_start,
+        Lead.created_at < month_end
     ).group_by(Lead.assigned_to).all()
     leads_map = {uid: count for uid, count in leads_counts}
 
-    # 3. Converted/Won Leads per Agent
+    # 3. Converted/Won Leads per Agent (Selected Month)
     won_counts = db.session.query(Lead.assigned_to, func.count(Lead.id)).filter(
         Lead.admin_id == admin_id,
-        Lead.status.in_(["Converted", "Won"])
+        Lead.status.in_(["Converted", "Won"]),
+        Lead.updated_at >= month_start,
+        Lead.updated_at < month_end
     ).group_by(Lead.assigned_to).all()
     won_map = {uid: count for uid, count in won_counts}
 
@@ -280,4 +301,8 @@ def pipeline_agents():
     # Sort by Closed Leads desc
     data.sort(key=lambda x: x['closed_leads'], reverse=True)
 
-    return jsonify({"agents": data}), 200
+    return jsonify({
+        "agents": data,
+        "month": target_month,
+        "year": target_year
+    }), 200

@@ -2,8 +2,9 @@ class LeadsManager {
     constructor() {
         this.tableBody = document.getElementById('leadsTableBody');
         this.paginationContainer = document.getElementById('leadsPagination');
-        this.itemsPerPage = 20;
+        this.itemsPerPage = 10; // Changed to 10 records per page
         this.currentFilter = 'all'; // Default filter
+        this.dateFilter = 'today'; // Default to today's records
     }
 
     async init() {
@@ -48,8 +49,8 @@ class LeadsManager {
         this.tableBody.innerHTML = '<tr><td colspan="8" class="text-center py-4">Loading...</td></tr>';
 
         try {
-            // Include Filter in Request
-            let url = `/api/facebook/leads?page=${page}&per_page=${this.itemsPerPage}`;
+            // Include Filter in Request - now with date filter
+            let url = `/api/facebook/leads?page=${page}&per_page=${this.itemsPerPage}&date_filter=${this.dateFilter}`;
             if (this.currentFilter !== 'all') {
                 url += `&source=${this.currentFilter}`;
             }
@@ -350,11 +351,13 @@ class LeadsManager {
             const dateHtml = `<div class="font-medium text-gray-900">${datePart}</div><div class="text-gray-500 text-[10px]">${timePart}</div>`;
 
             let statusColor = "bg-gray-100 text-gray-800";
-            if (lead.status === 'new') statusColor = "bg-green-100 text-green-800";
-            if (lead.status === 'contacted') statusColor = "bg-blue-100 text-blue-800";
-            if (lead.status === 'qualified') statusColor = "bg-purple-100 text-purple-800";
-            if (lead.status === 'converted') statusColor = "bg-yellow-100 text-yellow-800";
-            if (lead.status === 'junk') statusColor = "bg-red-100 text-red-800";
+            if (lead.status === 'new') statusColor = "bg-blue-100 text-blue-800";
+            if (lead.status === 'attempted') statusColor = "bg-yellow-100 text-yellow-800";
+            if (lead.status === 'converted') statusColor = "bg-indigo-100 text-indigo-800";
+            if (lead.status === 'interested') statusColor = "bg-purple-100 text-purple-800";
+            if (lead.status === 'follow-up') statusColor = "bg-pink-100 text-pink-800";
+            if (lead.status === 'won') statusColor = "bg-green-100 text-green-800";
+            if (lead.status === 'lost') statusColor = "bg-red-100 text-red-800";
 
             let sourceBadge = `<span class="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-800 rounded">${lead.source.toUpperCase()}</span>`;
             if (lead.source === 'facebook') sourceBadge = `<span class="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded">FACEBOOK</span>`;
@@ -382,10 +385,12 @@ class LeadsManager {
                          <select onchange="leadsManager.updateLeadStatus(${lead.id}, this.value)" 
                             class="text-xs rounded border-gray-200 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 ${statusColor}">
                             <option value="new" ${lead.status === 'new' ? 'selected' : ''}>New</option>
-                            <option value="contacted" ${lead.status === 'contacted' ? 'selected' : ''}>Contacted</option>
-                            <option value="qualified" ${lead.status === 'qualified' ? 'selected' : ''}>Qualified</option>
+                            <option value="attempted" ${lead.status === 'attempted' ? 'selected' : ''}>Attempted</option>
                             <option value="converted" ${lead.status === 'converted' ? 'selected' : ''}>Converted</option>
-                            <option value="junk" ${lead.status === 'junk' ? 'selected' : ''}>Junk</option>
+                            <option value="interested" ${lead.status === 'interested' ? 'selected' : ''}>Interested</option>
+                            <option value="follow-up" ${lead.status === 'follow-up' ? 'selected' : ''}>Follow-Up</option>
+                            <option value="won" ${lead.status === 'won' ? 'selected' : ''}>Won</option>
+                            <option value="lost" ${lead.status === 'lost' ? 'selected' : ''}>Lost</option>
                         </select>
                     </td>
                     <td class="px-4 py-3 text-right">
@@ -431,10 +436,13 @@ class LeadsManager {
 
     getStatusColor(status) {
         switch (status) {
-            case 'new': return 'bg-green-50 text-green-700 ring-green-600/20';
-            case 'contacted': return 'bg-yellow-50 text-yellow-800 ring-yellow-600/20';
-            case 'converted': return 'bg-blue-50 text-blue-700 ring-blue-700/10';
-            case 'junk': return 'bg-red-50 text-red-700 ring-red-600/10';
+            case 'new': return 'bg-blue-50 text-blue-700 ring-blue-600/20';
+            case 'attempted': return 'bg-yellow-50 text-yellow-800 ring-yellow-600/20';
+            case 'converted': return 'bg-indigo-50 text-indigo-700 ring-indigo-600/20';
+            case 'interested': return 'bg-purple-50 text-purple-700 ring-purple-600/20';
+            case 'follow-up': return 'bg-pink-50 text-pink-700 ring-pink-600/20';
+            case 'won': return 'bg-green-50 text-green-700 ring-green-600/20';
+            case 'lost': return 'bg-red-50 text-red-700 ring-red-600/10';
             default: return 'bg-gray-50 text-gray-600 ring-gray-500/10';
         }
     }

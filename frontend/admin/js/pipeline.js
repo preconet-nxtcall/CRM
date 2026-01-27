@@ -5,6 +5,11 @@ class PipelineManager {
         this.currentStatusFilter = 'all';
         this.currentPage = 1;
         this.pipelineData = {};
+
+        // Month selector for agent performance
+        const now = new Date();
+        this.currentMonth = now.getMonth() + 1; // 1-12
+        this.currentYear = now.getFullYear();
     }
 
     async init() {
@@ -45,15 +50,14 @@ class PipelineManager {
         const container = document.getElementById('pipeline-container');
         if (!container) return;
 
-        // Force Fixed Order
+        // Force Fixed Order - Match Leads Page Statuses
         const stages = [
             { key: 'New', color: 'blue' },
             { key: 'Attempted', color: 'yellow' },
-            { key: 'Connected', color: 'indigo' },
+            { key: 'Converted', color: 'indigo' },
             { key: 'Interested', color: 'purple' },
             { key: 'Follow-Up', color: 'pink' },
             { key: 'Won', color: 'green' },
-            { key: 'Not Interested', color: 'orange' },
             { key: 'Lost', color: 'red' }
         ];
 
@@ -179,9 +183,14 @@ class PipelineManager {
     /* ------------------------------------------------
        3. Agents Table
     ------------------------------------------------ */
-    async loadAgents() {
+    async loadAgents(month = null, year = null) {
         try {
-            const resp = await auth.makeAuthenticatedRequest('/api/pipeline/agents');
+            // Use provided month/year or current values
+            const targetMonth = month || this.currentMonth;
+            const targetYear = year || this.currentYear;
+
+            const url = `/api/pipeline/agents?month=${targetMonth}&year=${targetYear}`;
+            const resp = await auth.makeAuthenticatedRequest(url);
             if (resp && resp.ok) {
                 const data = await resp.json();
                 const tbody = document.getElementById('pipeline-agent-table-body'); // Updated ID
@@ -194,9 +203,35 @@ class PipelineManager {
                         <td class="px-4 py-2 text-right font-medium text-green-600">${a.closed_leads}</td>
                     </tr>
                 `).join('');
+
+                // Update month selector display if exists
+                this.updateMonthDisplay(data.month, data.year);
             }
         } catch (e) {
             console.error("Agents Error:", e);
+        }
+    }
+
+    changeAgentMonth(direction) {
+        // direction: 1 for next month, -1 for previous month
+        this.currentMonth += direction;
+
+        if (this.currentMonth > 12) {
+            this.currentMonth = 1;
+            this.currentYear++;
+        } else if (this.currentMonth < 1) {
+            this.currentMonth = 12;
+            this.currentYear--;
+        }
+
+        this.loadAgents(this.currentMonth, this.currentYear);
+    }
+
+    updateMonthDisplay(month, year) {
+        const display = document.getElementById('agent-month-display');
+        if (display) {
+            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            display.textContent = `${monthNames[month - 1]} ${year}`;
         }
     }
 
@@ -217,18 +252,18 @@ class PipelineManager {
             pipeline['Attempted'] || 0,
             pipeline['Interested'] || 0,
             pipeline['Follow-Up'] || 0,
+            pipeline['Converted'] || 0,
             pipeline['Won'] || 0,
-            pipeline['Not Interested'] || 0,
             pipeline['Lost'] || 0
         ];
 
         new Chart(ctx, {
             type: 'doughnut',
             data: {
-                labels: ['New', 'Attempted', 'Connected', 'Interested', 'Follow-Up', 'Won', 'Not Interested', 'Lost'],
+                labels: ['New', 'Attempted', 'Interested', 'Follow-Up', 'Converted', 'Won', 'Lost'],
                 datasets: [{
                     data: dataValues,
-                    backgroundColor: ['#3b82f6', '#fbbf24', '#6366f1', '#a855f7', '#ec4899', '#22c55e', '#f97316', '#ef4444'],
+                    backgroundColor: ['#3b82f6', '#fbbf24', '#6366f1', '#a855f7', '#ec4899', '#22c55e', '#ef4444'],
                     borderWidth: 0,
                     hoverOffset: 4
                 }]
