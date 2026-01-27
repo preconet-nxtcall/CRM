@@ -350,14 +350,11 @@ class LeadsManager {
             const dateHtml = `<div class="font-medium text-gray-900">${datePart}</div><div class="text-gray-500 text-[10px]">${timePart}</div>`;
 
             let statusColor = "bg-gray-100 text-gray-800";
-            const ls = (lead.status || '').toLowerCase();
-            if (ls === 'new') statusColor = "bg-blue-50 text-blue-700 ring-blue-600/20";
-            else if (ls === 'attempted') statusColor = "bg-yellow-100 text-yellow-800";
-            else if (ls === 'connected') statusColor = "bg-indigo-100 text-indigo-800";
-            else if (ls === 'converted') statusColor = "bg-teal-100 text-teal-800";
-            else if (ls === 'follow-up') statusColor = "bg-pink-100 text-pink-800";
-            else if (ls === 'won') statusColor = "bg-green-100 text-green-800 ring-2 ring-green-500/20";
-            else if (ls === 'lost') statusColor = "bg-red-100 text-red-800";
+            if (lead.status === 'new') statusColor = "bg-green-100 text-green-800";
+            if (lead.status === 'contacted') statusColor = "bg-blue-100 text-blue-800";
+            if (lead.status === 'qualified') statusColor = "bg-purple-100 text-purple-800";
+            if (lead.status === 'converted') statusColor = "bg-yellow-100 text-yellow-800";
+            if (lead.status === 'junk') statusColor = "bg-red-100 text-red-800";
 
             let sourceBadge = `<span class="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-800 rounded">${lead.source.toUpperCase()}</span>`;
             if (lead.source === 'facebook') sourceBadge = `<span class="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded">FACEBOOK</span>`;
@@ -385,12 +382,10 @@ class LeadsManager {
                          <select onchange="leadsManager.updateLeadStatus(${lead.id}, this.value)" 
                             class="text-xs rounded border-gray-200 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 ${statusColor}">
                             <option value="new" ${lead.status === 'new' ? 'selected' : ''}>New</option>
-                            <option value="attempted" ${lead.status === 'attempted' ? 'selected' : ''}>Attempted</option>
-                            <option value="connected" ${lead.status === 'connected' ? 'selected' : ''}>Connected</option>
+                            <option value="contacted" ${lead.status === 'contacted' ? 'selected' : ''}>Contacted</option>
+                            <option value="qualified" ${lead.status === 'qualified' ? 'selected' : ''}>Qualified</option>
                             <option value="converted" ${lead.status === 'converted' ? 'selected' : ''}>Converted</option>
-                            <option value="follow-up" ${lead.status === 'follow-up' ? 'selected' : ''}>Follow-Up</option>
-                            <option value="won" ${lead.status === 'won' ? 'selected' : ''}>Won</option>
-                            <option value="lost" ${lead.status === 'lost' ? 'selected' : ''}>Lost</option>
+                            <option value="junk" ${lead.status === 'junk' ? 'selected' : ''}>Junk</option>
                         </select>
                     </td>
                     <td class="px-4 py-3 text-right">
@@ -406,7 +401,7 @@ class LeadsManager {
     }
 
     renderStatusOptions(currentStatus) {
-        const statuses = ['new', 'attempted', 'connected', 'converted', 'follow-up', 'won', 'lost'];
+        const statuses = ['new', 'contacted', 'converted', 'junk'];
         return statuses.map(s => `
             <option value="${s}" ${s === currentStatus ? 'selected' : ''}>${s.charAt(0).toUpperCase() + s.slice(1)}</option>
         `).join('');
@@ -436,13 +431,10 @@ class LeadsManager {
 
     getStatusColor(status) {
         switch (status) {
-            case 'new': return 'bg-blue-50 text-blue-700 ring-blue-600/20';
-            case 'attempted': return 'bg-yellow-50 text-yellow-800 ring-yellow-600/20';
-            case 'connected': return 'bg-indigo-50 text-indigo-700 ring-indigo-600/20';
-            case 'converted': return 'bg-teal-50 text-teal-700 ring-teal-600/20';
-            case 'follow-up': return 'bg-pink-50 text-pink-700 ring-pink-600/20';
-            case 'won': return 'bg-green-100 text-green-800 ring-green-600/30 font-bold';
-            case 'lost': return 'bg-red-50 text-red-700 ring-red-600/10';
+            case 'new': return 'bg-green-50 text-green-700 ring-green-600/20';
+            case 'contacted': return 'bg-yellow-50 text-yellow-800 ring-yellow-600/20';
+            case 'converted': return 'bg-blue-50 text-blue-700 ring-blue-700/10';
+            case 'junk': return 'bg-red-50 text-red-700 ring-red-600/10';
             default: return 'bg-gray-50 text-gray-600 ring-gray-500/10';
         }
     }
