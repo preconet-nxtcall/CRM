@@ -27,6 +27,7 @@ class PipelineManager {
                 this.renderKPIs(data.kpis);
                 this.renderPipelineBar(data.pipeline);
                 this.renderChart(data.pipeline);
+                this.renderFunnel(data.pipeline);
             }
         } catch (e) {
             console.error("Stats Error:", e);
@@ -50,10 +51,9 @@ class PipelineManager {
             { key: 'New', color: 'blue' },
             { key: 'Attempted', color: 'yellow' },
             { key: 'Connected', color: 'indigo' },
-            { key: 'Interested', color: 'purple' },
+            { key: 'Converted', color: 'teal' },
             { key: 'Follow-Up', color: 'pink' },
             { key: 'Won', color: 'green' },
-            { key: 'Not Interested', color: 'orange' },
             { key: 'Lost', color: 'red' }
         ];
 
@@ -98,7 +98,8 @@ class PipelineManager {
 
             tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-8 text-center text-gray-400"><i class="fas fa-spinner fa-spin mr-2"></i>Loading...</td></tr>';
 
-            let url = `/api/pipeline/leads?page=${page}&per_page=15`;
+            const offset = new Date().getTimezoneOffset();
+            let url = `/api/pipeline/leads?page=${page}&per_page=10&date_filter=today&timezone_offset=${offset}`;
             if (this.currentStatusFilter !== 'all') {
                 url += `&status=${encodeURIComponent(this.currentStatusFilter)}`;
             }
@@ -128,9 +129,12 @@ class PipelineManager {
             let badgeClass = 'bg-gray-100 text-gray-600';
             const s = (lead.status || '').toLowerCase();
             if (s === 'new') badgeClass = 'bg-blue-50 text-blue-700 border border-blue-100';
-            if (s === 'won') badgeClass = 'bg-green-50 text-green-700 border border-green-100';
-            if (s === 'lost') badgeClass = 'bg-red-50 text-red-700 border border-red-100';
-            if (s.includes('follow')) badgeClass = 'bg-pink-50 text-pink-700 border border-pink-100';
+            else if (s === 'attempted') badgeClass = 'bg-yellow-50 text-yellow-800 border border-yellow-100';
+            else if (s === 'connected') badgeClass = 'bg-indigo-50 text-indigo-700 border border-indigo-100';
+            else if (s === 'converted') badgeClass = 'bg-teal-50 text-teal-700 border border-teal-100';
+            else if (s.includes('follow')) badgeClass = 'bg-pink-50 text-pink-700 border border-pink-100';
+            else if (s === 'won') badgeClass = 'bg-green-50 text-green-700 border border-green-100';
+            else if (s === 'lost') badgeClass = 'bg-red-50 text-red-700 border border-red-100';
 
             // Date Format (Local Time)
             const dateStr = lead.last_activity ? new Date(lead.last_activity).toLocaleString('en-IN', {
@@ -181,7 +185,10 @@ class PipelineManager {
     ------------------------------------------------ */
     async loadAgents() {
         try {
-            const resp = await auth.makeAuthenticatedRequest('/api/pipeline/agents');
+            const filterEl = document.getElementById('pipeline-agent-filter');
+            const dateFilter = filterEl ? filterEl.value : 'month';
+            const offset = new Date().getTimezoneOffset();
+            const resp = await auth.makeAuthenticatedRequest(`/api/pipeline/agents?date_filter=${dateFilter}&timezone_offset=${offset}`);
             if (resp && resp.ok) {
                 const data = await resp.json();
                 const tbody = document.getElementById('pipeline-agent-table-body'); // Updated ID
@@ -215,20 +222,20 @@ class PipelineManager {
         const dataValues = [
             pipeline['New'] || 0,
             pipeline['Attempted'] || 0,
-            pipeline['Interested'] || 0,
+            pipeline['Connected'] || 0,
+            pipeline['Converted'] || 0,
             pipeline['Follow-Up'] || 0,
             pipeline['Won'] || 0,
-            pipeline['Not Interested'] || 0,
             pipeline['Lost'] || 0
         ];
 
         new Chart(ctx, {
             type: 'doughnut',
             data: {
-                labels: ['New', 'Attempted', 'Connected', 'Interested', 'Follow-Up', 'Won', 'Not Interested', 'Lost'],
+                labels: ['New', 'Attempted', 'Connected', 'Converted', 'Follow-Up', 'Won', 'Lost'],
                 datasets: [{
                     data: dataValues,
-                    backgroundColor: ['#3b82f6', '#fbbf24', '#6366f1', '#a855f7', '#ec4899', '#22c55e', '#f97316', '#ef4444'],
+                    backgroundColor: ['#3b82f6', '#fbbf24', '#6366f1', '#14b8a6', '#ec4899', '#22c55e', '#ef4444'],
                     borderWidth: 0,
                     hoverOffset: 4
                 }]
@@ -242,6 +249,42 @@ class PipelineManager {
                 }
             }
         });
+    }
+
+    /* ------------------------------------------------
+       2. Sales Funnel
+    ------------------------------------------------ */
+    renderFunnel(pipeline) {
+        const container = document.getElementById('funnel-container');
+        if (!container) return;
+
+        // Logical Progression
+        const stages = [
+            { key: 'New', color: 'blue-500', bg: 'bg-blue-500' },
+            { key: 'Attempted', color: 'yellow-500', bg: 'bg-yellow-500' },
+            { key: 'Connected', color: 'indigo-500', bg: 'bg-indigo-500' },
+            { key: 'Converted', color: 'teal-500', bg: 'bg-teal-500' },
+            { key: 'Won', color: 'green-500', bg: 'bg-green-500' }
+        ];
+
+        // Ensure "New" is the baseline (100%) or maximum value found
+        const counts = stages.map(s => pipeline[s.key] || 0);
+        const maxVal = Math.max(...counts) || 1;
+
+        container.innerHTML = stages.map(stage => {
+            const count = pipeline[stage.key] || 0;
+            const percent = ((count / maxVal) * 100).toFixed(0);
+
+            return `
+                <div class="flex items-center text-xs">
+                    <div class="w-20 font-medium text-gray-600 truncate">${stage.key}</div>
+                    <div class="flex-1 mx-3 h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div class="h-full ${stage.bg} rounded-full" style="width: ${percent}%"></div>
+                    </div>
+                    <div class="w-12 text-right font-bold text-gray-800">${count}</div>
+                </div>
+            `;
+        }).join('');
     }
 }
 
