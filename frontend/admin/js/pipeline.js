@@ -252,48 +252,88 @@ class PipelineManager {
     }
 
     /* ------------------------------------------------
-       2. Sales Funnel
+       2. Sales Funnel - Premium SaaS Design
     ------------------------------------------------ */
     renderFunnel(pipeline) {
         const container = document.getElementById('funnel-container');
         if (!container) return;
 
-        // Funnel stages with colors and progressive widths
+        // Funnel stages with colors, icons, and descriptions
         const stages = [
-            { key: 'New', gradient: 'from-blue-500 to-blue-400', widthPercent: 100 },
-            { key: 'Attempted', gradient: 'from-yellow-500 to-yellow-400', widthPercent: 85 },
-            { key: 'Connected', gradient: 'from-indigo-500 to-indigo-400', widthPercent: 70 },
-            { key: 'Converted', gradient: 'from-teal-500 to-teal-400', widthPercent: 55 },
-            { key: 'Won', gradient: 'from-green-500 to-green-400', widthPercent: 40 }
+            {
+                key: 'New',
+                gradient: 'from-blue-500 to-blue-400',
+                widthPercent: 100,
+                icon: 'fa-bullhorn',
+                description: 'New Leads Coming In'
+            },
+            {
+                key: 'Attempted',
+                gradient: 'from-yellow-500 to-yellow-400',
+                widthPercent: 85,
+                icon: 'fa-comments',
+                description: 'Showing Interest'
+            },
+            {
+                key: 'Connected',
+                gradient: 'from-indigo-500 to-indigo-400',
+                widthPercent: 70,
+                icon: 'fa-clipboard-check',
+                description: 'Evaluating Options'
+            },
+            {
+                key: 'Converted',
+                gradient: 'from-teal-500 to-teal-400',
+                widthPercent: 55,
+                icon: 'fa-handshake',
+                description: 'Ready to Buy'
+            },
+            {
+                key: 'Won',
+                gradient: 'from-green-500 to-green-400',
+                widthPercent: 40,
+                icon: 'fa-shopping-cart',
+                description: 'Purchase / Closed Deal'
+            }
         ];
 
-        // Generate True Funnel Shape with Trapezoids
+        // Generate Premium SaaS Funnel Layout
         container.innerHTML = `
-            <div class="w-full flex flex-col items-center py-6 px-4">
-                ${stages.map((stage, index) => {
-            const count = pipeline[stage.key] || 0;
-            const currentWidth = stage.widthPercent;
-            const nextWidth = index < stages.length - 1 ? stages[index + 1].widthPercent : stage.widthPercent;
-
-            // Calculate trapezoid clip-path points
-            const topLeft = (100 - currentWidth) / 2;
-            const topRight = 100 - topLeft;
-            const bottomLeft = (100 - nextWidth) / 2;
-            const bottomRight = 100 - bottomLeft;
-
-            return `
-                        <div class="relative w-full mb-1" style="height: 65px;">
-                            <div class="absolute inset-0 bg-gradient-to-r ${stage.gradient} shadow-lg hover:shadow-xl transition-all duration-300 cursor-default group"
-                                 style="clip-path: polygon(${topLeft}% 0%, ${topRight}% 0%, ${bottomRight}% 100%, ${bottomLeft}% 100%);"
-                                 title="${stage.key}: ${count} leads">
-                                <div class="h-full flex items-center justify-between px-8 text-white">
-                                    <span class="font-bold text-base tracking-wide">${stage.key}</span>
-                                    <span class="font-bold text-xl">${count}</span>
+            <div class="w-full px-6 py-8">
+                <div class="flex items-stretch gap-8">
+                    <!-- Left Side: Stage Descriptions -->
+                    <div class="flex flex-col justify-between" style="width: 200px;">
+                        ${stages.map((stage, index) => `
+                            <div class="flex items-center gap-3 py-4" style="height: 70px;">
+                                <div class="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br ${stage.gradient} flex items-center justify-center shadow-md">
+                                    <i class="fas ${stage.icon} text-white text-sm"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <p class="text-xs font-semibold text-gray-700 leading-tight">${stage.description}</p>
                                 </div>
                             </div>
-                        </div>
-                    `;
+                        `).join('')}
+                    </div>
+
+                    <!-- Center: Funnel Visualization -->
+                    <div class="flex-1 flex flex-col justify-between">
+                        ${stages.map((stage, index) => {
+            const count = pipeline[stage.key] || 0;
+            const width = stage.widthPercent;
+
+            return `
+                                <div class="flex justify-center items-center" style="height: 70px;">
+                                    <div class="relative bg-gradient-to-r ${stage.gradient} rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-default flex items-center justify-between px-6 py-4"
+                                         style="width: ${width}%; min-width: 200px;"
+                                         title="${stage.key}: ${count} leads">
+                                        <span class="font-bold text-white text-base tracking-wide">${stage.key}</span>
+                                        <span class="bg-white bg-opacity-30 backdrop-blur-sm text-white font-bold text-sm px-3 py-1 rounded-full">${count}</span>
+                                    </div>
+                                </div>
+                            `;
         }).join('')}
+                    </div>
+                </div>
             </div>
         `;
     }
