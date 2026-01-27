@@ -1,344 +1,162 @@
-/* js/pipeline.js - Neodove Logic */
-
 class PipelineManager {
     constructor() {
-        this.currentStatusFilter = 'all';
-        this.currentPage = 1;
-        this.pipelineData = {};
+        this.chart = null;
     }
 
     async init() {
-        await Promise.all([
-            this.loadStats(),
-            this.loadLeads(),
-            this.loadAgents()
-        ]);
-    }
-
-    /* ------------------------------------------------
-       1. Stats & Pipeline Bar
-    ------------------------------------------------ */
-    async loadStats() {
         try {
-            const offset = new Date().getTimezoneOffset();
-            const resp = await auth.makeAuthenticatedRequest(`/api/pipeline/stats?timezone_offset=${offset}`);
-            if (resp && resp.ok) {
-                const data = await resp.json();
-                this.renderKPIs(data.kpis);
-                this.renderPipelineBar(data.pipeline);
+            const response = await fetch('/api/dashboard/stats');
+            const data = await response.json();
+
+            if (data.pipeline) {
                 this.renderChart(data.pipeline);
                 this.renderFunnel(data.pipeline);
             }
-        } catch (e) {
-            console.error("Stats Error:", e);
-        }
-    }
-
-    renderKPIs(kpis) {
-        document.getElementById('kpi-total-leads').textContent = kpis.total_leads || 0;
-        document.getElementById('kpi-new-today').textContent = kpis.new_leads_today || 0;
-        document.getElementById('kpi-calls-today').textContent = kpis.calls_made_today || 0;
-        document.getElementById('kpi-connected').textContent = kpis.connected_calls_today || 0;
-        document.getElementById('kpi-conversion').textContent = (kpis.conversion_rate || 0) + '%';
-    }
-
-    renderPipelineBar(pipeline) {
-        const container = document.getElementById('pipeline-container');
-        if (!container) return;
-
-        // Force Fixed Order
-        const stages = [
-            { key: 'New', color: 'blue' },
-            { key: 'Attempted', color: 'yellow' },
-            { key: 'Connected', color: 'indigo' },
-            { key: 'Converted', color: 'teal' },
-            { key: 'Follow-Up', color: 'pink' },
-            { key: 'Won', color: 'green' },
-            { key: 'Lost', color: 'red' }
-        ];
-
-        container.innerHTML = stages.map(stage => {
-            const count = pipeline[stage.key] || 0;
-            const isActive = this.currentStatusFilter === stage.key;
-
-            return `
-                <div class="flex-1 min-w-[100px] p-4 text-center border-r border-gray-100 hover:bg-gray-50 cursor-pointer pipeline-segment ${isActive ? 'bg-blue-50 border-b-2 border-blue-500' : ''}"
-                     onclick="pipelineManager.filterByStatus('${stage.key}')">
-                    <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">${stage.key}</p>
-                    <p class="text-2xl font-bold text-${stage.color}-600 leading-none">${count}</p>
-                </div>
-            `;
-        }).join('');
-    }
-
-    filterByStatus(status) {
-        if (this.currentStatusFilter === status) {
-            this.currentStatusFilter = 'all'; // Toggle off
-        } else {
-            this.currentStatusFilter = status;
-        }
-
-        // Update UI Look (Simple Refresh)
-        this.loadStats(); // To refresh highlights
-        this.loadLeads(1); // Reset page
-
-        const label = document.getElementById('current-filter-label');
-        if (label) label.textContent = this.currentStatusFilter === 'all' ? 'All Leads' : `Status: ${status}`;
-    }
-
-    /* ------------------------------------------------
-       2. Leads Table
-    ------------------------------------------------ */
-    // Updated for SPA: IDs must be unique
-    async loadLeads(page = 1) {
-        try {
-            this.currentPage = page;
-            const tbody = document.getElementById('pipeline-leads-table-body'); // Updated ID
-            if (!tbody) return;
-
-            tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-8 text-center text-gray-400"><i class="fas fa-spinner fa-spin mr-2"></i>Loading...</td></tr>';
-
-            const offset = new Date().getTimezoneOffset();
-            let url = `/api/pipeline/leads?page=${page}&per_page=10&date_filter=today&timezone_offset=${offset}`;
-            if (this.currentStatusFilter !== 'all') {
-                url += `&status=${encodeURIComponent(this.currentStatusFilter)}`;
-            }
-
-            const resp = await auth.makeAuthenticatedRequest(url);
-            if (resp && resp.ok) {
-                const data = await resp.json();
-                this.renderLeadsTable(data.leads);
-                this.updatePagination(data.pagination);
-            }
-        } catch (e) {
-            console.error("Leads Error:", e);
-        }
-    }
-
-    renderLeadsTable(leads) {
-        const tbody = document.getElementById('pipeline-leads-table-body'); // Updated ID
-        if (!tbody) return;
-
-        if (!leads || leads.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-8 text-center text-gray-400">No leads found.</td></tr>';
-            return;
-        }
-
-        tbody.innerHTML = leads.map(lead => {
-            // Status Badge Logic
-            let badgeClass = 'bg-gray-100 text-gray-600';
-            const s = (lead.status || '').toLowerCase();
-            if (s === 'new') badgeClass = 'bg-blue-50 text-blue-700 border border-blue-100';
-            else if (s === 'attempted') badgeClass = 'bg-yellow-50 text-yellow-800 border border-yellow-100';
-            else if (s === 'connected') badgeClass = 'bg-indigo-50 text-indigo-700 border border-indigo-100';
-            else if (s === 'converted') badgeClass = 'bg-teal-50 text-teal-700 border border-teal-100';
-            else if (s.includes('follow')) badgeClass = 'bg-pink-50 text-pink-700 border border-pink-100';
-            else if (s === 'won') badgeClass = 'bg-green-50 text-green-700 border border-green-100';
-            else if (s === 'lost') badgeClass = 'bg-red-50 text-red-700 border border-red-100';
-
-            // Date Format (Local Time)
-            const dateStr = lead.last_activity ? new Date(lead.last_activity).toLocaleString('en-IN', {
-                month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true
-            }) : '-';
-
-            return `
-                <tr class="hover:bg-gray-50 transition-colors group">
-                    <td class="px-6 py-3 font-medium text-gray-900">
-                        <div class="flex flex-col">
-                            <span>${lead.name}</span>
-                            <span class="text-xs text-blue-600 font-normal group-hover:underline cursor-pointer">${lead.phone}</span>
-                        </div>
-                    </td>
-                    <td class="px-6 py-3">
-                         <span class="px-2 py-0.5 text-[10px] font-bold uppercase bg-gray-100 text-gray-500 rounded">${lead.source}</span>
-                    </td>
-                    <td class="px-6 py-3 text-gray-600">${lead.agent}</td>
-                    <td class="px-6 py-3">
-                        <span class="px-2.5 py-0.5 text-xs font-medium rounded-full ${badgeClass}">${lead.status}</span>
-                    </td>
-                    <td class="px-6 py-3 text-xs text-gray-500">${dateStr}</td>
-                </tr>
-            `;
-        }).join('');
-    }
-
-    updatePagination(pageData) {
-        const prevBtn = document.getElementById('pl-prev-page-btn'); // Updated ID
-        const nextBtn = document.getElementById('pl-next-page-btn'); // Updated ID
-        const label = document.getElementById('pl-page-info'); // Updated ID
-
-        if (prevBtn) {
-            prevBtn.disabled = pageData.current <= 1;
-            prevBtn.onclick = () => this.loadLeads(pageData.current - 1);
-        }
-        if (nextBtn) {
-            nextBtn.disabled = pageData.current >= pageData.pages;
-            nextBtn.onclick = () => this.loadLeads(pageData.current + 1);
-        }
-        if (label) {
-            label.textContent = `Page ${pageData.current} of ${pageData.pages}`;
+        } catch (error) {
+            console.error('Pipeline Init Error:', error);
         }
     }
 
     /* ------------------------------------------------
-       3. Agents Table
-    ------------------------------------------------ */
-    async loadAgents() {
-        try {
-            const filterEl = document.getElementById('pipeline-agent-filter');
-            const dateFilter = filterEl ? filterEl.value : 'month';
-            const offset = new Date().getTimezoneOffset();
-            const resp = await auth.makeAuthenticatedRequest(`/api/pipeline/agents?date_filter=${dateFilter}&timezone_offset=${offset}`);
-            if (resp && resp.ok) {
-                const data = await resp.json();
-                const tbody = document.getElementById('pipeline-agent-table-body'); // Updated ID
-                if (!tbody) return;
-
-                tbody.innerHTML = (data.agents || []).slice(0, 5).map(a => `
-                    <tr class="border-b border-gray-50 last:border-0 hover:bg-gray-50">
-                        <td class="px-4 py-2 font-medium text-gray-800">${a.name}</td>
-                        <td class="px-4 py-2 text-right text-gray-600">${a.calls_made}</td>
-                        <td class="px-4 py-2 text-right font-medium text-green-600">${a.closed_leads}</td>
-                    </tr>
-                `).join('');
-            }
-        } catch (e) {
-            console.error("Agents Error:", e);
-        }
-    }
-
-    /* ------------------------------------------------
-       4. Chart
+       1. Doughnut Chart
     ------------------------------------------------ */
     renderChart(pipeline) {
         const ctx = document.getElementById('pipelineChart');
         if (!ctx) return;
 
-        // Note: Chart.js might fail if canvas is reused or not destroyed. 
-        // For simple switching, we might want to check if a chart instance exists on the canvas and destroy it.
-        const existingChart = Chart.getChart(ctx);
-        if (existingChart) existingChart.destroy();
+        // Destroy previous instance
+        if (this.chart) {
+            this.chart.destroy();
+        }
 
-        const dataValues = [
-            pipeline['New'] || 0,
-            pipeline['Attempted'] || 0,
-            pipeline['Connected'] || 0,
-            pipeline['Converted'] || 0,
-            pipeline['Follow-Up'] || 0,
-            pipeline['Won'] || 0,
-            pipeline['Lost'] || 0
-        ];
+        const stages = ['New', 'Attempted', 'Connected', 'Converted', 'Won'];
+        const values = stages.map(s => pipeline[s] || 0);
 
-        new Chart(ctx, {
+        this.chart = new Chart(ctx, {
             type: 'doughnut',
             data: {
-                labels: ['New', 'Attempted', 'Connected', 'Converted', 'Follow-Up', 'Won', 'Lost'],
+                labels: stages,
                 datasets: [{
-                    data: dataValues,
-                    backgroundColor: ['#3b82f6', '#fbbf24', '#6366f1', '#14b8a6', '#ec4899', '#22c55e', '#ef4444'],
+                    data: values,
+                    backgroundColor: [
+                        '#3b82f6', // Blue-500
+                        '#f59e0b', // Amber-500
+                        '#6366f1', // Indigo-500
+                        '#14b8a6', // Teal-500
+                        '#10b981'  // Emerald-500
+                    ],
                     borderWidth: 0,
-                    hoverOffset: 4
+                    hoverOffset: 15
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                cutout: '65%',
+                cutout: '75%',
                 plugins: {
-                    legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10 } } }
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 20,
+                            font: { family: 'Inter', size: 12 }
+                        }
+                    }
                 }
             }
         });
     }
 
     /* ------------------------------------------------
-       2. Sales Funnel - Premium SaaS Design
+       2. Sales Funnel - High Fidelity 3D Design
     ------------------------------------------------ */
     renderFunnel(pipeline) {
         const container = document.getElementById('funnel-container');
         if (!container) return;
 
-        // Funnel stages with colors, icons, and descriptions
+        // Stage Configuration (Mockup Alignment)
         const stages = [
             {
                 key: 'New',
-                gradient: 'from-blue-500 to-blue-400',
-                widthPercent: 100,
+                color: 'from-blue-600 to-blue-400',
+                top: 100, bottom: 85,
                 icon: 'fa-bullhorn',
-                description: 'New Leads Coming In'
+                label: 'AWARENESS'
             },
             {
                 key: 'Attempted',
-                gradient: 'from-yellow-500 to-yellow-400',
-                widthPercent: 85,
-                icon: 'fa-comments',
-                description: 'Showing Interest'
+                color: 'from-amber-500 to-amber-400',
+                top: 85, bottom: 72,
+                icon: 'fa-lightbulb',
+                label: 'INTEREST'
             },
             {
                 key: 'Connected',
-                gradient: 'from-indigo-500 to-indigo-400',
-                widthPercent: 70,
-                icon: 'fa-clipboard-check',
-                description: 'Evaluating Options'
+                color: 'from-indigo-600 to-indigo-500',
+                top: 72, bottom: 59,
+                icon: 'fa-handshake',
+                label: 'CONSIDERATION'
             },
             {
                 key: 'Converted',
-                gradient: 'from-teal-500 to-teal-400',
-                widthPercent: 55,
-                icon: 'fa-handshake',
-                description: 'Ready to Buy'
+                color: 'from-teal-500 to-teal-400',
+                top: 59, bottom: 46,
+                icon: 'fa-file-alt',
+                label: 'INTENT'
             },
             {
                 key: 'Won',
-                gradient: 'from-green-500 to-green-400',
-                widthPercent: 40,
+                color: 'from-emerald-500 to-emerald-400',
+                top: 46, bottom: 46,
                 icon: 'fa-shopping-cart',
-                description: 'Purchase / Closed Deal'
+                label: 'PURCHASE'
             }
         ];
 
-        // Generate Premium SaaS Funnel Layout
+        // Generate the 3D Connected Funnel
         container.innerHTML = `
-            <div class="w-full px-3 py-4">
-                <div class="flex items-stretch gap-4">
-                    <!-- Left Side: Stage Descriptions -->
-                    <div class="flex flex-col justify-between flex-shrink-0" style="width: 140px;">
-                        ${stages.map((stage, index) => `
-                            <div class="flex items-center gap-2 py-2" style="height: 60px;">
-                                <div class="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br ${stage.gradient} flex items-center justify-center shadow-md">
-                                    <i class="fas ${stage.icon} text-white text-xs"></i>
-                                </div>
-                                <div class="flex-1">
-                                    <p class="text-[10px] font-semibold text-gray-700 leading-tight">${stage.description}</p>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-
-                    <!-- Center: Funnel Visualization -->
-                    <div class="flex-1 flex flex-col justify-between min-w-0">
-                        ${stages.map((stage, index) => {
+            <div class="w-full flex flex-col items-center py-8">
+                ${stages.map((stage, index) => {
             const count = pipeline[stage.key] || 0;
-            const width = stage.widthPercent;
+
+            // Trapezoid Geometry
+            const t1 = (100 - stage.top) / 2;
+            const t2 = 100 - t1;
+            const b1 = (100 - stage.bottom) / 2;
+            const b2 = 100 - b1;
 
             return `
-                                <div class="flex items-center" style="height: 60px;">
-                                    <div class="bg-gradient-to-r ${stage.gradient} rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-default flex items-center justify-between px-4 py-2.5"
-                                         style="width: ${width}%;"
-                                         title="${stage.key}: ${count} leads">
-                                        <span class="font-bold text-white text-sm tracking-wide">${stage.key}</span>
-                                        <span class="bg-white bg-opacity-30 backdrop-blur-sm text-white font-bold text-xs px-2 py-0.5 rounded-full">${count}</span>
+                        <div class="relative w-full -mb-1 group cursor-default h-[70px]" style="max-width: 500px;">
+                            <!-- The Trapezoid Segment -->
+                            <div class="absolute inset-0 bg-gradient-to-r ${stage.color} shadow-lg transition-transform duration-300 transform group-hover:scale-[1.02] active:scale-[0.98]"
+                                 style="clip-path: polygon(${t1}% 0%, ${t2}% 0%, ${b2}% 100%, ${b1}% 100%); z-index: ${10 - index};">
+                                
+                                <!-- Bevel Effect -->
+                                <div class="absolute inset-0 opacity-20 bg-gradient-to-b from-white to-transparent h-[4px]"></div>
+                                
+                                <!-- Content Layer -->
+                                <div class="h-full flex items-center justify-between px-[18%] text-white">
+                                    <div class="flex items-center gap-3">
+                                        <i class="fas ${stage.icon} text-lg opacity-80"></i>
+                                        <div class="flex flex-col">
+                                            <span class="text-[9px] font-bold opacity-60 tracking-widest leading-none">${stage.label}</span>
+                                            <span class="text-sm font-bold tracking-wide">${stage.key}</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Frosted Glass Badge -->
+                                    <div class="bg-white bg-opacity-20 backdrop-blur-md px-4 py-1.5 rounded-full border border-white border-opacity-30 flex items-center shadow-inner">
+                                        <span class="text-sm font-black">${count.toLocaleString()}</span>
                                     </div>
                                 </div>
-                            `;
+                            </div>
+                        </div>
+                    `;
         }).join('')}
-                    </div>
-                </div>
             </div>
         `;
     }
 }
 
+// Global scope initialization handled by the app
 window.pipelineManager = new PipelineManager();
-// Remove auto-init
-// window.pipelineManager.init();
