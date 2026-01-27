@@ -258,42 +258,44 @@ class PipelineManager {
         const container = document.getElementById('funnel-container');
         if (!container) return;
 
-        // Logical Progression with Gradient Colors
+        // Funnel stages with colors and progressive widths
         const stages = [
-            { key: 'New', gradient: 'bg-gradient-to-r from-blue-500 to-blue-400', shadow: 'shadow-blue-200' },
-            { key: 'Attempted', gradient: 'bg-gradient-to-r from-yellow-500 to-yellow-400', shadow: 'shadow-yellow-200' },
-            { key: 'Connected', gradient: 'bg-gradient-to-r from-indigo-500 to-indigo-400', shadow: 'shadow-indigo-200' },
-            { key: 'Converted', gradient: 'bg-gradient-to-r from-teal-500 to-teal-400', shadow: 'shadow-teal-200' },
-            { key: 'Won', gradient: 'bg-gradient-to-r from-green-500 to-green-400', shadow: 'shadow-green-200' }
+            { key: 'New', gradient: 'from-blue-500 to-blue-400', widthPercent: 100 },
+            { key: 'Attempted', gradient: 'from-yellow-500 to-yellow-400', widthPercent: 85 },
+            { key: 'Connected', gradient: 'from-indigo-500 to-indigo-400', widthPercent: 70 },
+            { key: 'Converted', gradient: 'from-teal-500 to-teal-400', widthPercent: 55 },
+            { key: 'Won', gradient: 'from-green-500 to-green-400', widthPercent: 40 }
         ];
 
-        // Basic stats for max width reference
-        const counts = stages.map(s => pipeline[s.key] || 0);
-        const maxVal = Math.max(...counts) || 1;
-
-        // Generate Centered Inverted Pyramid
-        container.innerHTML = `<div class="w-full flex flex-col items-center py-4 space-y-3">` + stages.map(stage => {
+        // Generate True Funnel Shape with Trapezoids
+        container.innerHTML = `
+            <div class="w-full flex flex-col items-center py-6 px-4">
+                ${stages.map((stage, index) => {
             const count = pipeline[stage.key] || 0;
-            let percent = (count / maxVal) * 100;
+            const currentWidth = stage.widthPercent;
+            const nextWidth = index < stages.length - 1 ? stages[index + 1].widthPercent : stage.widthPercent;
 
-            // Visual tweaks: Ensure at least 25% width so text fits comfortably
-            if (percent < 25) percent = 25;
-
-            // Gradient Classes
-            const bgClass = stage.gradient;
+            // Calculate trapezoid clip-path points
+            const topLeft = (100 - currentWidth) / 2;
+            const topRight = 100 - topLeft;
+            const bottomLeft = (100 - nextWidth) / 2;
+            const bottomRight = 100 - bottomLeft;
 
             return `
-                <div class="w-full flex justify-center mb-1 group cursor-default" title="${stage.key}: ${count}">
-                    <div class="${bgClass} text-white font-bold py-3 px-5 rounded-2xl shadow-md flex items-center justify-between hover:scale-[1.02] hover:shadow-lg transition-all duration-300 transform" 
-                         style="width: ${percent}%; min-width: 140px;">
-                        <div class="flex items-center text-sm">
-                             <span class="mr-2 opacity-90">${stage.key}</span>
+                        <div class="relative w-full mb-1" style="height: 65px;">
+                            <div class="absolute inset-0 bg-gradient-to-r ${stage.gradient} shadow-lg hover:shadow-xl transition-all duration-300 cursor-default group"
+                                 style="clip-path: polygon(${topLeft}% 0%, ${topRight}% 0%, ${bottomRight}% 100%, ${bottomLeft}% 100%);"
+                                 title="${stage.key}: ${count} leads">
+                                <div class="h-full flex items-center justify-between px-8 text-white">
+                                    <span class="font-bold text-base tracking-wide">${stage.key}</span>
+                                    <span class="font-bold text-xl">${count}</span>
+                                </div>
+                            </div>
                         </div>
-                        <span class="text-lg leading-none">${count}</span>
-                    </div>
-                </div>
-            `;
-        }).join('') + `</div>`;
+                    `;
+        }).join('')}
+            </div>
+        `;
     }
 }
 
