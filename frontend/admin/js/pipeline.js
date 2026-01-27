@@ -102,7 +102,7 @@ class PipelineManager {
 
             tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-8 text-center text-gray-400"><i class="fas fa-spinner fa-spin mr-2"></i>Loading...</td></tr>';
 
-            let url = `/api/pipeline/leads?page=${page}&per_page=15`;
+            let url = `/api/facebook/leads?page=${page}&per_page=10&date_filter=today`;
             if (this.currentStatusFilter !== 'all') {
                 url += `&status=${encodeURIComponent(this.currentStatusFilter)}`;
             }
@@ -250,9 +250,9 @@ class PipelineManager {
         const dataValues = [
             pipeline['New'] || 0,
             pipeline['Attempted'] || 0,
+            pipeline['Converted'] || 0,
             pipeline['Interested'] || 0,
             pipeline['Follow-Up'] || 0,
-            pipeline['Converted'] || 0,
             pipeline['Won'] || 0,
             pipeline['Lost'] || 0
         ];
@@ -260,7 +260,7 @@ class PipelineManager {
         new Chart(ctx, {
             type: 'doughnut',
             data: {
-                labels: ['New', 'Attempted', 'Interested', 'Follow-Up', 'Converted', 'Won', 'Lost'],
+                labels: ['New', 'Attempted', 'Converted', 'Interested', 'Follow-Up', 'Won', 'Lost'],
                 datasets: [{
                     data: dataValues,
                     backgroundColor: ['#3b82f6', '#fbbf24', '#6366f1', '#a855f7', '#ec4899', '#22c55e', '#ef4444'],

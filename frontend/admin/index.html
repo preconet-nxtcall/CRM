@@ -1157,6 +1157,15 @@
                 </button>
               </div>
 
+              <!-- Date Filter Dropdown -->
+              <select id="leads-date-filter" onchange="leadsManager.changeDateFilter(this.value)"
+                class="ml-3 px-3 py-1.5 text-xs font-medium border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
+                <option value="today">Today</option>
+                <option value="week">Last 7 Days</option>
+                <option value="month">Last 30 Days</option>
+                <option value="all" selected>All Time</option>
+              </select>
+
               <button onclick="leadsManager.loadLeads()"
                 class="ml-2 text-blue-600 hover:text-blue-800 text-sm font-medium p-2 rounded hover:bg-blue-50 transition-colors">
                 <i class="fas fa-sync-alt"></i>

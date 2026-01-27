@@ -4,7 +4,7 @@ class LeadsManager {
         this.paginationContainer = document.getElementById('leadsPagination');
         this.itemsPerPage = 10; // Changed to 10 records per page
         this.currentFilter = 'all'; // Default filter
-        this.dateFilter = 'today'; // Default to today's records
+        this.dateFilter = 'all'; // Default to all records
     }
 
     async init() {
@@ -15,6 +15,11 @@ class LeadsManager {
     filterLeads(source) {
         this.currentFilter = source;
         this.updateFilterButtons();
+        this.loadLeads(1); // Reset to page 1
+    }
+
+    changeDateFilter(dateFilter) {
+        this.dateFilter = dateFilter;
         this.loadLeads(1); // Reset to page 1
     }
 
