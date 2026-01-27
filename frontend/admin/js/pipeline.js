@@ -299,35 +299,35 @@ class PipelineManager {
 
         // Generate Premium SaaS Funnel Layout
         container.innerHTML = `
-            <div class="w-full px-6 py-8">
-                <div class="flex items-stretch gap-8">
+            <div class="w-full px-3 py-4">
+                <div class="flex items-stretch gap-4">
                     <!-- Left Side: Stage Descriptions -->
-                    <div class="flex flex-col justify-between" style="width: 200px;">
+                    <div class="flex flex-col justify-between flex-shrink-0" style="width: 140px;">
                         ${stages.map((stage, index) => `
-                            <div class="flex items-center gap-3 py-4" style="height: 70px;">
-                                <div class="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br ${stage.gradient} flex items-center justify-center shadow-md">
-                                    <i class="fas ${stage.icon} text-white text-sm"></i>
+                            <div class="flex items-center gap-2 py-2" style="height: 60px;">
+                                <div class="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br ${stage.gradient} flex items-center justify-center shadow-md">
+                                    <i class="fas ${stage.icon} text-white text-xs"></i>
                                 </div>
                                 <div class="flex-1">
-                                    <p class="text-xs font-semibold text-gray-700 leading-tight">${stage.description}</p>
+                                    <p class="text-[10px] font-semibold text-gray-700 leading-tight">${stage.description}</p>
                                 </div>
                             </div>
                         `).join('')}
                     </div>
 
                     <!-- Center: Funnel Visualization -->
-                    <div class="flex-1 flex flex-col justify-between">
+                    <div class="flex-1 flex flex-col justify-between min-w-0">
                         ${stages.map((stage, index) => {
             const count = pipeline[stage.key] || 0;
             const width = stage.widthPercent;
 
             return `
-                                <div class="flex justify-center items-center" style="height: 70px;">
-                                    <div class="relative bg-gradient-to-r ${stage.gradient} rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-default flex items-center justify-between px-6 py-4"
-                                         style="width: ${width}%; min-width: 200px;"
+                                <div class="flex items-center" style="height: 60px;">
+                                    <div class="bg-gradient-to-r ${stage.gradient} rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-default flex items-center justify-between px-4 py-2.5"
+                                         style="width: ${width}%;"
                                          title="${stage.key}: ${count} leads">
-                                        <span class="font-bold text-white text-base tracking-wide">${stage.key}</span>
-                                        <span class="bg-white bg-opacity-30 backdrop-blur-sm text-white font-bold text-sm px-3 py-1 rounded-full">${count}</span>
+                                        <span class="font-bold text-white text-sm tracking-wide">${stage.key}</span>
+                                        <span class="bg-white bg-opacity-30 backdrop-blur-sm text-white font-bold text-xs px-2 py-0.5 rounded-full">${count}</span>
                                     </div>
                                 </div>
                             `;
