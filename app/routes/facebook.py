@@ -252,6 +252,7 @@ def get_leads():
              query = query.filter(Lead.source == source_filter.lower())
         
         # Apply date filter - default to today's records
+        # Apply date filter - default to today's records
         from datetime import datetime, timedelta
         if date_filter == 'today':
             today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
@@ -277,6 +278,54 @@ def get_leads():
             "current_page": page
         })
     except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@bp.route('/api/facebook/leads/<int:lead_id>/status', methods=['PUT'])
+@jwt_required()
+def update_lead_status(lead_id):
+    """
+    Update status for a specific lead.
+    """
+    try:
+        claims = get_jwt()
+        role = claims.get("role")
+        current_identity = int(get_jwt_identity())
+        
+        # Admin or User Check
+        admin_id = None
+        if role == "admin":
+            admin_id = current_identity
+        elif role == "user":
+            user = User.query.get(current_identity)
+            if not user: return jsonify({"error": "User not found"}), 404
+            admin_id = user.admin_id
+
+        lead = Lead.query.get(lead_id)
+        if not lead:
+            return jsonify({"error": "Lead not found"}), 404
+
+        # Verify access rights
+        if lead.admin_id != admin_id:
+             return jsonify({"error": "Unauthorized"}), 403
+
+        data = request.json
+        new_status = data.get('status')
+        if not new_status:
+            return jsonify({"error": "Status required"}), 400
+
+        lead.status = new_status
+        lead.updated_at = now()
+        
+        db.session.commit()
+        
+        return jsonify({
+            "message": "Status updated successfully",
+            "lead": lead.to_dict()
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
 

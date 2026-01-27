@@ -117,12 +117,13 @@ def pipeline_stats():
         if s_norm in pipeline_data:
             pipeline_data[s_norm] += count
             
-        # 1. Attempted (map common call statuses)
-        elif s_norm in ["Attempted", "Ringing", "Busy", "Not Reachable", "Switch Off", "Call Later", "Callback", "No Answer"]:
+        # 1. Attempted (map common call statuses + Connected/Contacted)
+        # Removed "Call Later", "Callback" -> Moved to Follow-Up
+        elif s_norm in ["Attempted", "Ringing", "Busy", "Not Reachable", "Switch Off", "No Answer", "Connected", "Contacted", "In Conversation"]:
             pipeline_data["Attempted"] += count
             
-        # 2. Converted (map contacted/connected statuses)
-        elif s_norm in ["Converted", "Connected", "Contacted", "In Conversation"]:
+        # 2. Converted (Explicit conversions only)
+        elif s_norm in ["Converted"]:
             pipeline_data["Converted"] += count
             
         # 3. Interested
@@ -130,7 +131,7 @@ def pipeline_stats():
             pipeline_data["Interested"] += count
             
         # 4. Follow-Up
-        elif s_norm in ["Follow-Up", "Follow Up"]:
+        elif s_norm in ["Follow-Up", "Follow Up", "Call Later", "Callback"]:
             pipeline_data["Follow-Up"] += count
             
         # 5. Won (map closed/converted)
@@ -176,16 +177,33 @@ def pipeline_leads():
     query = Lead.query.filter_by(admin_id=admin_id)
 
     if status_filter and status_filter != "all":
-        # Handle mapped statuses
-        if status_filter == "Follow-Up":
-             query = query.filter(Lead.status.in_(["Follow-Up", "Follow Up"]))
+        # Handle mapped statuses matching pipeline_stats logic (Case Insensitive)
+        if status_filter == "Attempted":
+             query = query.filter(func.lower(Lead.status).in_([
+                 "attempted", "ringing", "busy", "not reachable", 
+                 "switch off", "no answer",
+                 "connected", "contacted", "in conversation"
+             ]))
+        elif status_filter == "Converted":
+             query = query.filter(func.lower(Lead.status) == "converted")
+        elif status_filter == "Interested":
+             query = query.filter(func.lower(Lead.status).in_([
+                 "interested", "meeting scheduled", "demo scheduled"
+             ]))
+        elif status_filter == "Follow-Up":
+             query = query.filter(func.lower(Lead.status).in_([
+                 "follow-up", "follow up", "call later", "callback"
+             ]))
         elif status_filter == "Won":
-             query = query.filter(Lead.status.in_(["Won", "Converted"]))
+             query = query.filter(func.lower(Lead.status).in_(["won", "closed"]))
         elif status_filter == "Lost":
-             query = query.filter(Lead.status.in_(["Lost", "Junk"]))
-        elif status_filter == "Connected":
-             query = query.filter(Lead.status.in_(["Connected", "Contacted"]))
+             query = query.filter(func.lower(Lead.status).in_([
+                 "lost", "junk", "wrong number", "invalid", "not interested", "not intersted"
+             ]))
+        elif status_filter == "New":
+             query = query.filter(func.lower(Lead.status) == "new")
         else:
+             # Fallback for direct match
              query = query.filter(func.lower(Lead.status) == status_filter.lower())
 
     # Sorting: Recent first
@@ -280,9 +298,10 @@ def pipeline_agents():
     leads_map = {uid: count for uid, count in leads_counts}
 
     # 3. Converted/Won Leads per Agent (Selected Month)
+    # Fix: Case insensitive check
     won_counts = db.session.query(Lead.assigned_to, func.count(Lead.id)).filter(
         Lead.admin_id == admin_id,
-        Lead.status.in_(["Converted", "Won"]),
+        func.lower(Lead.status).in_(["converted", "won", "closed"]),
         Lead.updated_at >= month_start,
         Lead.updated_at < month_end
     ).group_by(Lead.assigned_to).all()

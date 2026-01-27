@@ -391,9 +391,9 @@ class LeadsManager {
                             class="text-xs rounded border-gray-200 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 ${statusColor}">
                             <option value="new" ${lead.status === 'new' ? 'selected' : ''}>New</option>
                             <option value="attempted" ${lead.status === 'attempted' ? 'selected' : ''}>Attempted</option>
-                            <option value="converted" ${lead.status === 'converted' ? 'selected' : ''}>Converted</option>
                             <option value="interested" ${lead.status === 'interested' ? 'selected' : ''}>Interested</option>
                             <option value="follow-up" ${lead.status === 'follow-up' ? 'selected' : ''}>Follow-Up</option>
+                            <option value="converted" ${lead.status === 'converted' ? 'selected' : ''}>Converted</option>
                             <option value="won" ${lead.status === 'won' ? 'selected' : ''}>Won</option>
                             <option value="lost" ${lead.status === 'lost' ? 'selected' : ''}>Lost</option>
                         </select>
@@ -440,16 +440,33 @@ class LeadsManager {
     }
 
     getStatusColor(status) {
-        switch (status) {
-            case 'new': return 'bg-blue-50 text-blue-700 ring-blue-600/20';
-            case 'attempted': return 'bg-yellow-50 text-yellow-800 ring-yellow-600/20';
-            case 'converted': return 'bg-indigo-50 text-indigo-700 ring-indigo-600/20';
-            case 'interested': return 'bg-purple-50 text-purple-700 ring-purple-600/20';
-            case 'follow-up': return 'bg-pink-50 text-pink-700 ring-pink-600/20';
-            case 'won': return 'bg-green-50 text-green-700 ring-green-600/20';
-            case 'lost': return 'bg-red-50 text-red-700 ring-red-600/10';
-            default: return 'bg-gray-50 text-gray-600 ring-gray-500/10';
-        }
+        const s = (status || '').toLowerCase();
+
+        if (s === 'new') return 'bg-blue-50 text-blue-700 ring-blue-600/20';
+
+        // Attempted Group (Yellow) - Now includes Connected/Contacted
+        if (['attempted', 'ringing', 'busy', 'not reachable', 'switch off', 'no answer', 'connected', 'contacted', 'in conversation'].includes(s))
+            return 'bg-yellow-50 text-yellow-800 ring-yellow-600/20';
+
+        // Interested Group (Purple)
+        if (['interested', 'meeting scheduled', 'demo scheduled'].includes(s))
+            return 'bg-purple-50 text-purple-700 ring-purple-600/20';
+
+        // Follow-Up Group (Pink) - Now includes Call Later/Callback
+        if (['follow-up', 'follow up', 'call later', 'callback'].includes(s))
+            return 'bg-pink-50 text-pink-700 ring-pink-600/20';
+
+        // Converted Group (Indigo)
+        if (s === 'converted') return 'bg-indigo-50 text-indigo-700 ring-indigo-600/20';
+
+        // Won Group (Green)
+        if (['won', 'closed'].includes(s)) return 'bg-green-50 text-green-700 ring-green-600/20';
+
+        // Lost Group (Red)
+        if (['lost', 'junk', 'wrong number', 'invalid', 'not interested', 'not intersted'].includes(s))
+            return 'bg-red-50 text-red-700 ring-red-600/10';
+
+        return 'bg-gray-50 text-gray-600 ring-gray-500/10';
     }
 
     renderPagination(currentPage, totalPages) {

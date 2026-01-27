@@ -54,9 +54,9 @@ class PipelineManager {
         const stages = [
             { key: 'New', color: 'blue' },
             { key: 'Attempted', color: 'yellow' },
-            { key: 'Converted', color: 'indigo' },
             { key: 'Interested', color: 'purple' },
             { key: 'Follow-Up', color: 'pink' },
+            { key: 'Converted', color: 'indigo' },
             { key: 'Won', color: 'green' },
             { key: 'Lost', color: 'red' }
         ];
@@ -129,12 +129,29 @@ class PipelineManager {
 
         tbody.innerHTML = leads.map(lead => {
             // Status Badge Logic
+            // Status Badge Logic
             let badgeClass = 'bg-gray-100 text-gray-600';
             const s = (lead.status || '').toLowerCase();
+
             if (s === 'new') badgeClass = 'bg-blue-50 text-blue-700 border border-blue-100';
-            if (s === 'won') badgeClass = 'bg-green-50 text-green-700 border border-green-100';
-            if (s === 'lost') badgeClass = 'bg-red-50 text-red-700 border border-red-100';
-            if (s.includes('follow')) badgeClass = 'bg-pink-50 text-pink-700 border border-pink-100';
+
+            else if (['attempted', 'ringing', 'busy', 'not reachable', 'switch off', 'no answer', 'connected', 'contacted', 'in conversation'].includes(s))
+                badgeClass = 'bg-yellow-50 text-yellow-800 border border-yellow-100';
+
+            else if (['interested', 'meeting scheduled', 'demo scheduled'].includes(s))
+                badgeClass = 'bg-purple-50 text-purple-700 border border-purple-100';
+
+            else if (['follow-up', 'follow up', 'call later', 'callback'].includes(s))
+                badgeClass = 'bg-pink-50 text-pink-700 border border-pink-100';
+
+            else if (s === 'converted')
+                badgeClass = 'bg-indigo-50 text-indigo-700 border border-indigo-100';
+
+            else if (['won', 'closed'].includes(s))
+                badgeClass = 'bg-green-50 text-green-700 border border-green-100';
+
+            else if (['lost', 'junk', 'wrong number', 'invalid', 'not interested', 'not intersted'].includes(s))
+                badgeClass = 'bg-red-50 text-red-700 border border-red-100';
 
             // Date Format (Local Time)
             const dateStr = lead.last_activity ? new Date(lead.last_activity).toLocaleString('en-IN', {
@@ -250,9 +267,9 @@ class PipelineManager {
         const dataValues = [
             pipeline['New'] || 0,
             pipeline['Attempted'] || 0,
-            pipeline['Converted'] || 0,
             pipeline['Interested'] || 0,
             pipeline['Follow-Up'] || 0,
+            pipeline['Converted'] || 0,
             pipeline['Won'] || 0,
             pipeline['Lost'] || 0
         ];
@@ -260,10 +277,10 @@ class PipelineManager {
         new Chart(ctx, {
             type: 'doughnut',
             data: {
-                labels: ['New', 'Attempted', 'Converted', 'Interested', 'Follow-Up', 'Won', 'Lost'],
+                labels: ['New', 'Attempted', 'Interested', 'Follow-Up', 'Converted', 'Won', 'Lost'],
                 datasets: [{
                     data: dataValues,
-                    backgroundColor: ['#3b82f6', '#fbbf24', '#6366f1', '#a855f7', '#ec4899', '#22c55e', '#ef4444'],
+                    backgroundColor: ['#3b82f6', '#fbbf24', '#a855f7', '#ec4899', '#6366f1', '#22c55e', '#ef4444'],
                     borderWidth: 0,
                     hoverOffset: 4
                 }]
