@@ -258,33 +258,38 @@ class PipelineManager {
         const container = document.getElementById('funnel-container');
         if (!container) return;
 
-        // Logical Progression
+        // Logical Progression with Gradient Colors
         const stages = [
-            { key: 'New', color: 'blue-500', bg: 'bg-blue-500' },
-            { key: 'Attempted', color: 'yellow-500', bg: 'bg-yellow-500' },
-            { key: 'Connected', color: 'indigo-500', bg: 'bg-indigo-500' },
-            { key: 'Converted', color: 'teal-500', bg: 'bg-teal-500' },
-            { key: 'Won', color: 'green-500', bg: 'bg-green-500' }
+            { key: 'New', gradient: 'bg-gradient-to-r from-blue-500 to-blue-400', shadow: 'shadow-blue-200' },
+            { key: 'Attempted', gradient: 'bg-gradient-to-r from-yellow-500 to-yellow-400', shadow: 'shadow-yellow-200' },
+            { key: 'Connected', gradient: 'bg-gradient-to-r from-indigo-500 to-indigo-400', shadow: 'shadow-indigo-200' },
+            { key: 'Converted', gradient: 'bg-gradient-to-r from-teal-500 to-teal-400', shadow: 'shadow-teal-200' },
+            { key: 'Won', gradient: 'bg-gradient-to-r from-green-500 to-green-400', shadow: 'shadow-green-200' }
         ];
 
-        // Ensure "New" is the baseline (100%) or maximum value found
+        // Basic stats for max width reference
         const counts = stages.map(s => pipeline[s.key] || 0);
         const maxVal = Math.max(...counts) || 1;
 
         // Generate Centered Inverted Pyramid
-        container.innerHTML = `<div class="w-full flex flex-col items-center py-2 space-y-1">` + stages.map(stage => {
+        container.innerHTML = `<div class="w-full flex flex-col items-center py-4 space-y-3">` + stages.map(stage => {
             const count = pipeline[stage.key] || 0;
             let percent = (count / maxVal) * 100;
 
-            // Visual tweaks: Ensure at least 20% width so text fits
-            if (percent < 20) percent = 20;
+            // Visual tweaks: Ensure at least 25% width so text fits comfortably
+            if (percent < 25) percent = 25;
+
+            // Gradient Classes
+            const bgClass = stage.gradient;
 
             return `
                 <div class="w-full flex justify-center mb-1 group cursor-default" title="${stage.key}: ${count}">
-                    <div class="${stage.bg} text-white text-xs font-bold py-2 px-4 rounded-lg shadow-sm flex items-center justify-between hover:opacity-90 transition-all" 
-                         style="width: ${percent}%; min-width: 120px;">
-                        <span class="truncate mr-2">${stage.key}</span>
-                        <span>${count}</span>
+                    <div class="${bgClass} text-white font-bold py-3 px-5 rounded-2xl shadow-md flex items-center justify-between hover:scale-[1.02] hover:shadow-lg transition-all duration-300 transform" 
+                         style="width: ${percent}%; min-width: 140px;">
+                        <div class="flex items-center text-sm">
+                             <span class="mr-2 opacity-90">${stage.key}</span>
+                        </div>
+                        <span class="text-lg leading-none">${count}</span>
                     </div>
                 </div>
             `;

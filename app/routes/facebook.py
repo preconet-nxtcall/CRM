@@ -400,3 +400,50 @@ def verify_fb_signature(req):
     if not signature or not app_secret: return False
     expected = "sha256=" + hmac.new(app_secret.encode(), msg=req.data, digestmod=hashlib.sha256).hexdigest()
     return hmac.compare_digest(signature, expected)
+@ b p . r o u t e ( ' / a p i / f a c e b o o k / l e a d s / < i n t : l e a d _ i d > / s t a t u s ' ,   m e t h o d s = [ ' P U T ' ] )  
+ @ j w t _ r e q u i r e d ( )  
+ d e f   u p d a t e _ l e a d _ s t a t u s ( l e a d _ i d ) :  
+         " " "  
+         U p d a t e   l e a d   s t a t u s   ( M a n u a l l y   b y   A d m i n / A g e n t )  
+         " " "  
+         t r y :  
+                 c l a i m s   =   g e t _ j w t ( )  
+                 r o l e   =   c l a i m s . g e t ( " r o l e " )  
+                 c u r r e n t _ i d e n t i t y   =   i n t ( g e t _ j w t _ i d e n t i t y ( ) )  
+                  
+                 #   D e t e r m i n e   A d m i n   I D   s c o p e  
+                 a d m i n _ i d   =   N o n e  
+                 i f   r o l e   = =   " a d m i n " :  
+                         a d m i n _ i d   =   c u r r e n t _ i d e n t i t y  
+                 e l i f   r o l e   = =   " u s e r " :  
+                         u s e r   =   U s e r . q u e r y . g e t ( c u r r e n t _ i d e n t i t y )  
+                         i f   n o t   u s e r :   r e t u r n   j s o n i f y ( { " e r r o r " :   " U s e r   n o t   f o u n d " } ) ,   4 0 4  
+                         a d m i n _ i d   =   u s e r . a d m i n _ i d  
+                  
+                 i f   n o t   a d m i n _ i d :  
+                         r e t u r n   j s o n i f y ( { " e r r o r " :   " U n a u t h o r i z e d   c o n t e x t " } ) ,   4 0 3  
+  
+                 #   F e t c h   L e a d  
+                 l e a d   =   L e a d . q u e r y . g e t ( l e a d _ i d )  
+                 i f   n o t   l e a d :  
+                           r e t u r n   j s o n i f y ( { " e r r o r " :   " L e a d   n o t   f o u n d " } ) ,   4 0 4  
+                            
+                 #   S e c u r i t y   C h e c k  
+                 i f   l e a d . a d m i n _ i d   ! =   a d m i n _ i d :  
+                           r e t u r n   j s o n i f y ( { " e r r o r " :   " U n a u t h o r i z e d   t o   a c c e s s   t h i s   l e a d " } ) ,   4 0 3  
+  
+                 d a t a   =   r e q u e s t . j s o n  
+                 n e w _ s t a t u s   =   d a t a . g e t ( ' s t a t u s ' )  
+                  
+                 i f   n e w _ s t a t u s :  
+                           #   A l l o w e d   c h e c k   o p t i o n a l ,   b u t   k e e p i n g   i t   f l e x i b l e   i s   b e t t e r   f o r   n o w  
+                           l e a d . s t a t u s   =   n e w _ s t a t u s . l o w e r ( )    
+                           d b . s e s s i o n . c o m m i t ( )  
+                           r e t u r n   j s o n i f y ( { " m e s s a g e " :   " S t a t u s   u p d a t e d " ,   " s t a t u s " :   l e a d . s t a t u s } ) ,   2 0 0  
+                  
+                 r e t u r n   j s o n i f y ( { " e r r o r " :   " M i s s i n g   s t a t u s   f i e l d " } ) ,   4 0 0  
+  
+         e x c e p t   E x c e p t i o n   a s   e :  
+                 d b . s e s s i o n . r o l l b a c k ( )  
+                 r e t u r n   j s o n i f y ( { " e r r o r " :   s t r ( e ) } ) ,   5 0 0  
+ 
