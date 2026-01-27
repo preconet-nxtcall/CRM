@@ -126,16 +126,29 @@ def all_call_history():
         elif start_time:
             query = query.filter(CallHistory.timestamp >= start_time)
 
-        # Apply phone number search
+        # Apply phone number search (Optimized)
         if search:
-            search_term = f"%{search.lower()}%"
-            query = query.filter(
-                or_(
-                    CallHistory.phone_number.ilike(search_term),
-                    CallHistory.formatted_number.ilike(search_term),
-                    func.lower(CallHistory.contact_name).like(search_term)
+            search_clean = search.strip().lower()
+            
+            # 1. Exact Match Priority (Fastest, uses Index)
+            # If search term looks like a phone number (digits), try exact match first
+            if search_clean.isdigit() and len(search_clean) >= 10:
+                 query = query.filter(
+                     or_(
+                         CallHistory.phone_number == search_clean,
+                         CallHistory.formatted_number == search_clean
+                     )
+                 )
+            else:
+                # 2. Fallback to Partial Search (Slower, but necessary for names/fragments)
+                search_term = f"%{search_clean}%"
+                query = query.filter(
+                    or_(
+                        CallHistory.phone_number.ilike(search_term),
+                        CallHistory.formatted_number.ilike(search_term),
+                        func.lower(CallHistory.contact_name).like(search_term)
+                    )
                 )
-            )
 
         # Apply call type filter
         if call_type:

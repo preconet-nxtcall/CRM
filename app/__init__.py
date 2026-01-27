@@ -150,15 +150,23 @@ def create_app(config_class=Config):
             # Check User Status on EVERY Request
             
             if role == "user":
-                user = User.query.get(int(identity))
-                if not user:
+                # OPTIMIZED: Fetch only status fields (avoid full object load)
+                user_data = db.session.query(
+                    User.status, 
+                    User.is_suspended, 
+                    User.is_active, 
+                    User.subscription_expiry_date, 
+                    User.current_session_id,
+                    User.admin_id
+                ).filter(User.id == int(identity)).first()
+
+                if not user_data:
                     return jsonify({"error": "User not found"}), 401
 
                 # 1. Blocked/Suspended
-                # "Using the word 'blocked' or 'suspended' in the error string is mandatory"
-                if (hasattr(user, 'status') and user.status == 'blocked') or \
-                   (hasattr(user, 'is_suspended') and user.is_suspended) or \
-                   (not user.is_active): # Fallback/Legacy
+                if (user_data.status == 'blocked') or \
+                   (user_data.is_suspended) or \
+                   (not user_data.is_active): 
                     return jsonify({"error": "Your account has been blocked/suspended by Admin."}), 403
 
                 # ---------------------------------------------------------
@@ -168,17 +176,19 @@ def create_app(config_class=Config):
                 today = datetime.utcnow().date()
                 
                 # Check User's Personal Expiry (if exists)
-                if hasattr(user, 'subscription_expiry_date') and user.subscription_expiry_date:
-                    exp = user.subscription_expiry_date
+                if user_data.subscription_expiry_date:
+                    exp = user_data.subscription_expiry_date
                     if isinstance(exp, datetime): exp = exp.date()
                     if exp < today:
                          return jsonify({"error": "Your subscription plan has expired."}), 403
                 
                 # Check Parent Admin's Expiry (Standard Flow)
-                admin = Admin.query.get(user.admin_id)
-                if admin: # Admin might be deleted?
-                    if admin.expiry_date:
-                        exp = admin.expiry_date
+                # OPTIMIZED: Fetch only expiry_date
+                admin_data = db.session.query(Admin.expiry_date).filter(Admin.id == user_data.admin_id).first()
+                
+                if admin_data: 
+                    if admin_data.expiry_date:
+                        exp = admin_data.expiry_date
                         if isinstance(exp, datetime): exp = exp.date()
                         if exp < today:
                              return jsonify({"error": "Your subscription plan has expired."}), 403
@@ -190,22 +200,28 @@ def create_app(config_class=Config):
                     token_session_id = claims.get("session_id")
                     # Strict comparison: If token has ID, it MUST match DB. 
                     # If DB is None (Logged out), valid token ("abc") != None -> FAIL.
-                    if token_session_id != user.current_session_id:
+                    if token_session_id != user_data.current_session_id:
                         return jsonify({"error": "Session invalidated. Logged in on another device."}), 401
 
             elif role == "admin":
-                admin = Admin.query.get(int(identity))
-                if not admin:
+                # OPTIMIZED: Fetch only necessary fields
+                admin_data = db.session.query(
+                    Admin.is_active, 
+                    Admin.expiry_date, 
+                    Admin.current_session_id
+                ).filter(Admin.id == int(identity)).first()
+                
+                if not admin_data:
                     return jsonify({"error": "Admin not found"}), 401
                 
                 # Admin Blocked Check
-                if not admin.is_active:
+                if not admin_data.is_active:
                      return jsonify({"error": "Your account has been blocked/suspended by Admin."}), 403
 
                 # Admin Subscription Check
-                if admin.expiry_date:
+                if admin_data.expiry_date:
                     today = datetime.utcnow().date()
-                    exp = admin.expiry_date
+                    exp = admin_data.expiry_date
                     if isinstance(exp, datetime): exp = exp.date()
                     if exp < today:
                          return jsonify({"error": "Your subscription plan has expired."}), 403
@@ -213,7 +229,7 @@ def create_app(config_class=Config):
                 # Admin Session Check
                 if not is_login_flow:
                     token_session_id = claims.get("session_id")
-                    if token_session_id != admin.current_session_id:
+                    if token_session_id != admin_data.current_session_id:
                         return jsonify({"error": "Session invalidated. Logged in on another device."}), 401
 
         except Exception as e:

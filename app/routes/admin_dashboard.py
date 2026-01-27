@@ -50,72 +50,65 @@ def dashboard_stats():
     avg_perf = round(total_score / total, 2) if total else 0
 
     # Calculate daily call trend (last 7 days)
-    user_ids = [u.id for u in users]
+    # OPTIMIZED: Use SQL Aggregation instead of Python Loop
+    # This prevents loading millions of rows into memory.
     
     daily_counts = []
     day_labels = []
     
-    if user_ids:
-        # Get timezone offset from frontend
-        try:
-            offset_min = int(request.args.get("timezone_offset", 0))
-        except:
-            offset_min = 0
-        
-        # Calculate local time delta
-        # JS getTimezoneOffset() returns -330 for IST (UTC+5:30)
-        # We need to subtract this to convert UTC to local: UTC - (-330) = UTC + 330 minutes
-        local_delta = timedelta(minutes=-offset_min)
-        now_local = datetime.utcnow() + local_delta
-        
-        # Fetch ALL calls for this admin's users (no date filter)
-        # This ensures we don't miss any calls due to timezone edge cases
-        all_calls = (
-            db.session.query(CallHistory)
-            .filter(CallHistory.user_id.in_(user_ids))
-            .all()
-        )
-        
-        print(f"DEBUG: Found {len(all_calls)} total calls for admin's users")
-        print(f"DEBUG: Timezone offset: {offset_min}, Local delta: {local_delta}")
-        print(f"DEBUG: Now local: {now_local}")
-        
-        # Group calls by local date
-        trend_map = {}
-        for c in all_calls:
-            if c.timestamp:
-                # Convert UTC timestamp to local time
-                local_dt = c.timestamp + local_delta
-                date_key = str(local_dt.date())
-                trend_map[date_key] = trend_map.get(date_key, 0) + 1
-        
-        print(f"DEBUG: Trend map (all dates): {trend_map}")
-        
-        # Build last 7 days arrays
-        for i in range(6, -1, -1):
-            d = (now_local - timedelta(days=i)).date()
-            date_key = str(d)
-            count = trend_map.get(date_key, 0)
+    # Get timezone offset
+    try:
+        offset_min = int(request.args.get("timezone_offset", 0))
+    except:
+        offset_min = 0
             
-            daily_counts.append(count)
-            day_labels.append(d.strftime("%a"))
-            
-            print(f"DEBUG: {d.strftime('%a')} {date_key}: {count} calls")
+    # Local Time Calculation
+    # Local = UTC - (offset_min)
+    # If offset_min = -330 (IST), Local = UTC + 330m
+    local_delta = timedelta(minutes=-offset_min)
+    now_local = datetime.utcnow() + local_delta
+    
+    # We want last 7 days including today
+    start_date_local = now_local.date() - timedelta(days=6)
+    
+    # Convert start/end range back to UTC for efficient index usage filter
+    # Range: from start_of_first_day_local -> end_of_today_local
+    start_dt_local = datetime.combine(start_date_local, datetime.min.time())
+    end_dt_local = datetime.combine(now_local.date(), datetime.max.time())
+    
+    start_dt_utc = start_dt_local - local_delta
+    end_dt_utc = end_dt_local - local_delta
 
-    else:
-        # No users - return empty data with correct day labels
-        try:
-            offset_min = int(request.args.get("timezone_offset", 0))
-        except:
-            offset_min = 0
-        local_delta = timedelta(minutes=-offset_min)
-        now_local = datetime.utcnow() + local_delta
+    # Query Aggregation
+    # We group by the effective local date. 
+    # Logic: date(timestamp + local_delta)
+    # Note: SQLAlchemy + Postgres supports timestamp + timedelta = timestamp + interval
+    
+    trend_data = (
+        db.session.query(
+            func.date(CallHistory.timestamp + local_delta).label("day"),
+            func.count(CallHistory.id)
+        )
+        .join(User, CallHistory.user_id == User.id)
+        .filter(User.admin_id == admin_id)
+        .filter(CallHistory.timestamp >= start_dt_utc)
+        .filter(CallHistory.timestamp <= end_dt_utc)
+        .group_by(func.date(CallHistory.timestamp + local_delta))
+        .all()
+    )
+    
+    # Map results
+    # trend_data is list of (date_obj, count)
+    data_map = {str(r[0]): r[1] for r in trend_data if r[0] is not None}
+    
+    # Build result arrays (fill zeros)
+    for i in range(6, -1, -1):
+        d = (now_local - timedelta(days=i)).date()
+        d_str = str(d)
         
-        daily_counts = [0] * 7
-        day_labels = []
-        for i in range(6, -1, -1):
-            d = (now_local - timedelta(days=i)).date()
-            day_labels.append(d.strftime("%a"))
+        count = data_map.get(d_str, 0)
+        daily_counts.append(count)
+        day_labels.append(d.strftime("%a"))
 
     return jsonify({
         "stats": {

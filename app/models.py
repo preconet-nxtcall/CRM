@@ -253,7 +253,14 @@ class CallHistory(db.Model):
     contact_name = db.Column(db.String(150))
     recording_path = db.Column(db.String(1024), nullable=True)
 
-    created_at = db.Column(db.DateTime, default=now)
+    created_at = db.Column(db.DateTime, default=now, index=True)
+
+    # Indexes for frequent filtering/searching
+    __table_args__ = (
+        db.Index('idx_call_history_timestamp', 'timestamp'),
+        db.Index('idx_call_history_phone', 'phone_number'),
+        db.Index('idx_call_history_call_type', 'call_type'),
+    )
 
     user = db.relationship("User", backref=db.backref("call_history_records", lazy="dynamic", cascade="all, delete-orphan"))
 
@@ -327,7 +334,7 @@ class AppUsage(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     
     # Metadata
-    start_time = db.Column(db.DateTime, nullable=False)
+    start_time = db.Column(db.DateTime, nullable=False, index=True)
     end_time = db.Column(db.DateTime, nullable=False)
     total_usage_seconds = db.Column(db.Integer, default=0)
     
@@ -532,8 +539,8 @@ class Lead(db.Model):
     phone = db.Column(db.String(50), nullable=True, index=True)
     
     # Meta
-    source = db.Column(db.String(50), default="facebook")
-    status = db.Column(db.String(50), default="new") # new, contacted, qualified, converted, junk
+    source = db.Column(db.String(50), default="facebook", index=True)
+    status = db.Column(db.String(50), default="new", index=True) # new, contacted, qualified, converted, junk
     
     assigned_to = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
     
@@ -545,7 +552,7 @@ class Lead(db.Model):
 
     custom_fields = db.Column(JSONAuto()) # Store extra fields from FB form
     
-    created_at = db.Column(db.DateTime, default=now)
+    created_at = db.Column(db.DateTime, default=now, index=True)
     updated_at = db.Column(db.DateTime, default=now, onupdate=now)
 
     assignee = db.relationship("User", foreign_keys=[assigned_to], backref=db.backref("assigned_leads", lazy="dynamic"))

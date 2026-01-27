@@ -2,6 +2,15 @@ import os
 
 class Config:
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL", "").replace("postgres://", "postgresql://")
+    
+    # Connection Pooling for High Concurrency (100k users ready)
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_size": 20,
+        "max_overflow": 40,
+        "pool_recycle": 1800,
+        "pool_pre_ping": True,
+    }
+
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SECRET_KEY = os.environ.get("SECRET_KEY", "super-secret-key")
     JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "jwt-secret-key")
