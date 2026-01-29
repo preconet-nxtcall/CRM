@@ -202,7 +202,7 @@ class KanbanManager {
             <div class="px-2 py-2 bg-gray-50 flex-none group">
                 <div class="flex justify-between items-baseline mb-1">
                     <div class="flex items-center gap-2 font-bold text-gray-700 text-[15px]">
-                        <span>${status}</span>
+                        <span>${meta.label}</span>
                         <span class="text-xs font-normal text-gray-500" title="Count">(${leads.length})</span>
                         <button onclick="kanbanManager.openModal(null, '${status.toLowerCase()}')" class="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-800 transition-opacity">
                             <i class="fas fa-plus text-xs"></i>
@@ -218,7 +218,7 @@ class KanbanManager {
                 </div>
             </div>
             
-            <div class="kanban-cards p-2 space-y-2 overflow-y-auto flex-1 custom-scrollbar" id="col-${status}">
+            <div class="kanban-cards p-2 space-y-1 overflow-y-auto flex-1 custom-scrollbar" id="col-${status}">
                  <!-- Cards -->
             </div>
         `;
@@ -244,7 +244,7 @@ class KanbanManager {
 
     createCard(lead) {
         const card = document.createElement('div');
-        card.className = "card bg-white p-3 rounded shadow-sm border border-gray-200 cursor-pointer relative hover:shadow-md transition-shadow select-none";
+        card.className = "card bg-white p-2 rounded shadow-sm border border-gray-200 cursor-pointer relative hover:shadow-md transition-shadow select-none";
         card.dataset.id = lead.id;
         card.dataset.revenue = lead.revenue || 0;
         card.onclick = (e) => {
@@ -294,7 +294,7 @@ class KanbanManager {
             </div>
 
             <!-- Tags (Source / Property) -->
-            <div class="flex flex-wrap gap-1 mb-3 min-h-[18px]">
+            <div class="flex flex-wrap gap-1 mb-2 min-h-[18px]">
                 ${tagsHtml}
             </div>
 
@@ -309,12 +309,13 @@ class KanbanManager {
                 <div class="flex gap-2 mx-auto">
                     ${cleanPhone ? `
                      <a href="${waUrl}" target="_blank" class="quick-action hover:opacity-80 transition-opacity" title="WhatsApp" onclick="event.stopPropagation();">
-                        <img src="images/whatsapp.png" alt="WA" class="w-4 h-4 object-contain">
-                     </a>
+                        <img src="images/whatsapp.png" alt="WA" class="w-5 h-5 object-contain hover:scale-110 transition-transform">
+                     </a>` : ''}
+                    
+                    ${lead.email ? `
                      <a href="mailto:${lead.email}" class="quick-action hover:opacity-80 transition-opacity" title="Email" onclick="event.stopPropagation();">
-                        <img src="images/email.png" alt="Email" class="w-4 h-4 object-contain">
-                     </a>
-                    ` : ''}
+                        <img src="images/email.png" alt="Email" class="w-5 h-5 object-contain hover:scale-110 transition-transform">
+                     </a>` : ''}
                 </div>
                 
                 <!-- Right: Avatar -->
@@ -323,7 +324,6 @@ class KanbanManager {
                 </div>
             </div>
         `;
-
         return card;
     }
 
