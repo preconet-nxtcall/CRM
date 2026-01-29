@@ -143,6 +143,7 @@ document.addEventListener("DOMContentLoaded", () => {
         { id: "menuFollowup", section: "sectionFollowup", title: "Follow-ups", manager: window.followupManager },
         { id: "menuLeads", section: "sectionLeads", title: "Leads Management", manager: window.leadsManager },
         { id: "menuPipeline", section: "sectionPipeline", title: "Lead Pipeline", manager: window.pipelineManager },
+        { id: "menuKanban", section: "sectionKanban", title: "Kanban Dashboard", manager: window.kanbanManager },
         { id: "menuIntegrations", mobileId: null, section: "sectionIntegrations", title: "Lead Integrations", manager: window.integrationsManager }
     ];
 

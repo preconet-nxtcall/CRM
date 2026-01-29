@@ -310,6 +310,7 @@ def pipeline_agents():
     data = []
     for u in users:
         data.append({
+            "id": u.id,
             "name": u.name,
             "assigned_leads": leads_map.get(u.id, 0),
             "calls_made": calls_map.get(u.id, 0),
@@ -325,3 +326,280 @@ def pipeline_agents():
         "month": target_month,
         "year": target_year
     }), 200
+
+
+@pipeline_bp.route("/kanban", methods=["GET"])
+@jwt_required()
+def kanban_leads():
+    """
+    Fetch all leads for the Odoo-style Kanban board.
+    """
+    if not admin_required():
+        return jsonify({"error": "Admin access only"}), 403
+
+    admin_id = int(get_jwt_identity())
+    
+    # Fetch recent leads
+    leads = Lead.query.filter_by(admin_id=admin_id).order_by(Lead.created_at.desc()).limit(500).all()
+    
+    # Bulk Fetch Call Stats (Count & Max Duration) for these leads
+    # Optimization: Filter by phones in the leads list to avoid full table scan
+    lead_phones = [l.phone for l in leads if l.phone] 
+    
+    call_stats = {}
+    if lead_phones:
+        # Group by phone, get count and max duration
+        stats_query = db.session.query(
+            CallHistory.phone_number, 
+            func.count(CallHistory.id), 
+            func.max(CallHistory.duration)
+        ).filter(
+            CallHistory.phone_number.in_(lead_phones)
+        ).group_by(CallHistory.phone_number).all()
+        
+        for phone, count, max_dur in stats_query:
+            call_stats[phone] = {"count": count, "max_dur": (max_dur or 0)}
+
+    # Initialize 6 standard stages per Odoo Design
+    columns = {
+        "New": [],
+        "Attempted": [],
+        "Connected": [],
+        "Converted": [],
+        "Won": [],
+        "Lost": []
+    }
+
+    for lead in leads:
+        # Resolve Assigned Agent Name
+        agent_name = lead.assignee.name if lead.assignee else "Unassigned"
+        
+        # Parse Revenue from Budget (e.g. "50000" or "50k")
+        revenue = 0
+        try:
+            if lead.budget:
+                # Remove common non-numeric chars
+                clean_budget = "".join(filter(str.isdigit, str(lead.budget)))
+                if clean_budget:
+                    revenue = int(clean_budget)
+        except:
+            revenue = 0
+
+        # Determine Tags
+        tags = []
+        if lead.property_type:
+            tags.append({"text": lead.property_type, "color": "purple"})
+        if lead.source:
+             tags.append({"text": lead.source, "color": "blue"})
+
+        # --- RATING LOGIC ---
+        # 1. Check Manual Override first
+        manual_rating = 0
+        if lead.custom_fields and isinstance(lead.custom_fields, dict):
+             manual_rating = int(lead.custom_fields.get('priority', 0))
+
+        if manual_rating > 0:
+            rating = manual_rating
+        else:
+            # 2. Automatic Logic (1-5 Stars)
+            rating = 3 # Default
+            
+            stats = call_stats.get(lead.phone, {"count": 0, "max_dur": 0})
+            call_count = stats["count"]
+            max_duration = stats["max_dur"]
+            
+            s_lower = (lead.status or "").lower()
+
+            # Rule 1: Green (5 Stars)
+            if max_duration > 180 or revenue > 50000 or s_lower in ['won', 'converted', 'closed']:
+                rating = 5
+            # Rule 2: Red (1 Star)
+            elif (call_count >= 3 and max_duration == 0) or s_lower in ['lost', 'junk', 'invalid', 'not interested']:
+                rating = 1
+            # Rule 3: Yellow (3 Stars)
+            else:
+                rating = 3
+
+        item = {
+            "id": lead.id,
+            "name": lead.name or "Unknown",
+            "phone": lead.phone,
+            "email": lead.email,
+            "source": lead.source, 
+            "revenue": revenue,
+            "budget_display": lead.budget or "",
+            "property_type": lead.property_type,
+            "location": lead.location,
+            "requirement": lead.requirement,
+            "tags": tags,
+            "agent": agent_name,
+            "agent_avatar": agent_name[:2].upper(),
+            "priority": rating,
+            "call_stats": f"{call_count} calls, max {max_duration}s", # Debug info
+            "status": lead.status,
+            "created_at": (lead.created_at.isoformat() + "Z") if lead.created_at else None
+        }
+
+        # Normalize Status to Column
+        s_norm = (lead.status or "New").capitalize()
+
+        # Direct Matches
+        if s_norm in columns:
+            columns[s_norm].append(item)
+            continue
+            
+        # Mapped Matches
+        s_lower = s_norm.lower()
+        
+        if s_lower in ["new", "new leads", "new lead"]:
+             columns["New"].append(item)
+        elif s_lower in ["attempted", "ringing", "busy", "not reachable", "switch off", "no answer"]:
+             columns["Attempted"].append(item)
+        elif s_lower in ["connected", "contacted", "in conversation", "follow-up", "follow up", "call later", "callback", "meeting scheduled"]:
+             columns["Connected"].append(item)
+        elif s_lower in ["converted", "interested", "proposition", "qualified", "demo scheduled"]:
+             columns["Converted"].append(item)
+        elif s_lower in ["won", "closed"]:
+             columns["Won"].append(item)
+        elif s_lower in ["lost", "junk", "wrong number", "invalid", "not interested"]:
+             columns["Lost"].append(item)
+        else:
+             # Default fallback
+             columns["New"].append(item)
+
+    return jsonify({"kanban": columns}), 200
+
+
+@pipeline_bp.route("/update_status/<int:lead_id>", methods=["POST"])
+@jwt_required()
+def update_lead_status(lead_id):
+    """
+    Update lead status (drag & drop).
+    """
+    if not admin_required():
+        return jsonify({"error": "Admin access only"}), 403
+
+    admin_id = int(get_jwt_identity())
+    
+    data = request.get_json()
+    new_status = data.get("status")
+
+    if not new_status:
+        return jsonify({"error": "Status is required"}), 400
+
+    lead = Lead.query.filter_by(id=lead_id, admin_id=admin_id).first()
+    if not lead:
+        return jsonify({"error": "Lead not found"}), 404
+
+    # Update
+    lead.status = new_status
+    lead.updated_at = datetime.utcnow()
+    
+    db.session.commit()
+
+    return jsonify({"message": "Status updated successfully"}), 200
+
+
+@pipeline_bp.route("/leads", methods=["POST"])
+@jwt_required()
+def create_lead():
+    """Create a new lead manually."""
+    if not admin_required():
+        return jsonify({"error": "Admin access only"}), 403
+
+    admin_id = int(get_jwt_identity())
+    data = request.get_json()
+
+    if not data.get("name") or not data.get("phone"):
+        return jsonify({"error": "Name and Phone are required"}), 400
+
+    try:
+        custom_fields = {}
+        if "priority" in data:
+             custom_fields['priority'] = int(data["priority"])
+
+        lead = Lead(
+            admin_id=admin_id,
+            name=data.get("name"),
+            phone=data.get("phone"),
+            email=data.get("email"),
+            source=data.get("source", "manual"),
+            status=data.get("status", "new"),
+            budget=data.get("budget"),
+            property_type=data.get("property_type"),
+            location=data.get("location"),
+            requirement=data.get("requirement"),
+            assigned_to=data.get("assigned_to"),
+            custom_fields=custom_fields
+        )
+        db.session.add(lead)
+        db.session.commit()
+        return jsonify({"message": "Lead created", "lead": lead.to_dict()}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@pipeline_bp.route("/leads/<int:lead_id>", methods=["PUT"])
+@jwt_required()
+def update_lead_details(lead_id):
+    """Update lead details."""
+    if not admin_required():
+        return jsonify({"error": "Admin access only"}), 403
+
+    admin_id = int(get_jwt_identity())
+    lead = Lead.query.filter_by(id=lead_id, admin_id=admin_id).first()
+    
+    if not lead:
+        return jsonify({"error": "Lead not found"}), 404
+
+    data = request.get_json()
+    try:
+        if "name" in data: lead.name = data["name"]
+        if "phone" in data: lead.phone = data["phone"]
+        if "email" in data: lead.email = data["email"]
+        if "budget" in data: lead.budget = data["budget"]
+        if "status" in data: lead.status = data["status"]
+        if "source" in data: lead.source = data["source"]
+        if "property_type" in data: lead.property_type = data["property_type"]
+        if "location" in data: lead.location = data["location"]
+        if "requirement" in data: lead.requirement = data["requirement"]
+        if "assigned_to" in data: 
+            val = data["assigned_to"]
+            lead.assigned_to = int(val) if val else None
+
+        # Update Priority in custom_fields
+        if "priority" in data:
+            cf = dict(lead.custom_fields) if lead.custom_fields else {}
+            cf['priority'] = int(data["priority"])
+            lead.custom_fields = cf # Reassign to trigger update
+            # Force mutable tracking if needed, but reassignment works
+
+        lead.updated_at = datetime.utcnow()
+        db.session.commit()
+        return jsonify({"message": "Lead updated", "lead": lead.to_dict()}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@pipeline_bp.route("/leads/<int:lead_id>", methods=["DELETE"])
+@jwt_required()
+def delete_lead(lead_id):
+    """Delete a lead."""
+    if not admin_required():
+        return jsonify({"error": "Admin access only"}), 403
+
+    admin_id = int(get_jwt_identity())
+    lead = Lead.query.filter_by(id=lead_id, admin_id=admin_id).first()
+    
+    if not lead:
+        return jsonify({"error": "Lead not found"}), 404
+
+    try:
+        db.session.delete(lead)
+        db.session.commit()
+        return jsonify({"message": "Lead deleted"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
