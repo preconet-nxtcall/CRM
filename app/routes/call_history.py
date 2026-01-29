@@ -159,21 +159,10 @@ def sync_call_history():
                 saved += 1
                 
                 # -----------------------------------------------------
-                # 🤖 AUTO-CONTACTED LOGIC
+                # 🤖 AUTO-STATUS UPDATE LOGIC REMOVED
                 # -----------------------------------------------------
-                # If valid call (duration > 15s), mark matching Lead as "contacted"
-                if duration > 15:
-                    try:
-                        # Find a NEW lead with this phone number
-                        # (We only touch 'new' leads to avoid overwriting 'converted' or custom statuses)
-                        matched_lead = Lead.query.filter_by(phone=phone_number, status="new").first()
-                        if matched_lead:
-                            matched_lead.status = "contacted"
-                            # No need to commit here, it happens at end of sync
-                            db.session.add(matched_lead)
-                            current_app.logger.info(f"⚡ AUTO-UPDATE: Lead {matched_lead.id} marked as 'contacted' (Call Duration: {duration}s > 15s)")
-                    except Exception as lead_err:
-                        current_app.logger.error(f"Auto-contact update failed: {lead_err}")
+                # Per user request, calls sync but do NOT change lead status.
+
                 
             except Exception as e:
                 errors.append({"entry": entry, "error": str(e)})

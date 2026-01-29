@@ -411,9 +411,18 @@ class LeadsManager {
     }
 
     renderStatusOptions(currentStatus) {
-        const statuses = ['new', 'contacted', 'converted', 'junk'];
+        // Matched with Kanban Columns Key -> Label
+        const statusLabels = {
+            'new': 'Awareness',
+            'attempted': 'Attempted',
+            'converted': 'Converted',
+            'won': 'Purchase',
+            'lost': 'Lost' // "Lost" is usually good as is
+        };
+        const statuses = ['new', 'attempted', 'converted', 'won', 'lost'];
+
         return statuses.map(s => `
-            <option value="${s}" ${s === currentStatus ? 'selected' : ''}>${s.charAt(0).toUpperCase() + s.slice(1)}</option>
+            <option value="${s}" ${s === currentStatus ? 'selected' : ''}>${statusLabels[s] || s}</option>
         `).join('');
     }
 
@@ -428,6 +437,10 @@ class LeadsManager {
                 // Optional: Show toast or just reload
                 // For smoother UX, maybe just leave it as is if successful
                 // But reloading ensures consistency
+                // Dispatch event for other components (Kanban)
+                const event = new CustomEvent('leadStatusUpdated', { detail: { leadId, newStatus } });
+                window.dispatchEvent(event);
+
                 this.loadLeads(this.currentPage || 1);
             } else {
                 alert("Failed to update status");

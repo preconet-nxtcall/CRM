@@ -61,6 +61,9 @@ def create_followup():
 
 
         db.session.add(followup)
+        
+        # Auto-status update logic removed per user request.
+        
         db.session.commit()
 
         return jsonify({

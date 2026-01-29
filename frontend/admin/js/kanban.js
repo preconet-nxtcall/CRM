@@ -4,14 +4,12 @@ class KanbanManager {
     constructor() {
         this.container = document.getElementById('kanban-container');
         // Updated Columns per user request
-        this.statusKeys = ["New", "Attempted", "Connected", "Converted", "Won", "Lost"];
+        this.statusKeys = ["New", "Attempted", "Converted", "Won"];
         this.meta = {
-            "New": { color: "blue", label: "New Leads" },
+            "New": { color: "blue", label: "Awareness" },
             "Attempted": { color: "yellow", label: "Attempted" },
-            "Connected": { color: "indigo", label: "Connected" },
             "Converted": { color: "purple", label: "Converted" },
-            "Won": { color: "green", label: "Won" },
-            "Lost": { color: "red", label: "Lost" }
+            "Won": { color: "green", label: "Purchase" }
         };
         this.allLeads = []; // Store locally for search filtering
         this.agents = [];
@@ -33,6 +31,12 @@ class KanbanManager {
         if (dateFilter) {
             dateFilter.addEventListener('change', () => this.render());
         }
+
+        // Listen for updates from other components (i.e. Leads Table)
+        window.addEventListener('leadStatusUpdated', () => {
+            console.log("Kanban: Syncing external update...");
+            this.refresh();
+        });
 
         await this.load();
     }
@@ -134,16 +138,23 @@ class KanbanManager {
             let dest = "New"; // Default
 
             if (["new", "new leads", "new lead"].includes(status)) dest = "New";
-            else if (["attempted", "ringing", "no answer", "busy"].includes(status)) dest = "Attempted";
-            else if (['connected', 'in conversation', 'meeting scheduled'].includes(status)) dest = "Connected";
-            else if (['converted', 'interested'].includes(status)) dest = "Converted"; // Mapping "Interested" to "Converted" as per user flow? Or separate? 
+            // Merge Attempted & Connected & Follow-Up per user request
+            else if (['attempted', 'ringing', 'no answer', 'busy', 'not reachable', 'switch off',
+                'connected', 'contacted', 'in conversation', 'meeting scheduled',
+                'follow-up', 'follow up', 'call later', 'callback'].includes(status)) {
+                dest = "Attempted";
+            }
+            else if (['converted', 'interested', 'proposition', 'qualified', 'demo scheduled'].includes(status)) dest = "Converted"; // Mapping "Interested" to "Converted" as per user flow? Or separate? 
             // User asked: "Attempted, connected converted".
             // Let's assume Converted is the stage.
             else if (['won', 'closed'].includes(status)) dest = "Won";
-            else if (['lost', 'junk', 'invalid'].includes(status)) dest = "Lost";
-            else if (['follow-up', 'callback'].includes(status)) dest = "Connected"; // Fallback: Map Follow-Up to Connected
+            else if (['lost', 'junk', 'invalid'].includes(status)) dest = "Lost"; // This key is not in tempColumns so will check
 
-            if (status.includes('follow')) dest = "Connected";
+            // "Lost" is not in this.statusKeys, so we can ignore or map to Attempted?
+            // User removed Lost column. Let's just ignore them or put in Attempted if desired, but hiding is safer.
+            if (dest === "Lost") return;
+
+            if (status.includes('follow')) dest = "Attempted";
 
             if (tempColumns[dest]) tempColumns[dest].push(lead);
         });
@@ -297,11 +308,11 @@ class KanbanManager {
                 <!-- Middle: Activity Icons (Call/WA) -->
                 <div class="flex gap-2 mx-auto">
                     ${cleanPhone ? `
-                     <a href="tel:${cleanPhone}" class="quick-action text-gray-400 hover:text-green-600 transition-colors" title="Call" onclick="event.stopPropagation();">
-                        <i class="fas fa-phone-alt text-sm"></i>
+                     <a href="${waUrl}" target="_blank" class="quick-action hover:opacity-80 transition-opacity" title="WhatsApp" onclick="event.stopPropagation();">
+                        <img src="images/whatsapp.png" alt="WA" class="w-4 h-4 object-contain">
                      </a>
-                     <a href="${waUrl}" target="_blank" class="quick-action text-gray-400 hover:text-green-600 transition-colors" title="WhatsApp" onclick="event.stopPropagation();">
-                        <i class="fab fa-whatsapp text-[15px]"></i>
+                     <a href="mailto:${lead.email}" class="quick-action hover:opacity-80 transition-opacity" title="Email" onclick="event.stopPropagation();">
+                        <img src="images/email.png" alt="Email" class="w-4 h-4 object-contain">
                      </a>
                     ` : ''}
                 </div>
@@ -382,7 +393,15 @@ class KanbanManager {
                 method: 'POST',
                 body: JSON.stringify({ status })
             });
-            return resp && resp.ok;
+
+            if (resp && resp.ok) {
+                // Dispatch specific event for other components
+                window.dispatchEvent(new CustomEvent('leadStatusUpdated', {
+                    detail: { leadId: id, newStatus: status }
+                }));
+                return true;
+            }
+            return false;
         } catch (e) { return false; }
     }
 
