@@ -306,15 +306,20 @@ class KanbanManager {
                 </div>
                 
                 <!-- Middle: Activity Icons (Call/WA) -->
-                <div class="flex gap-2 mx-auto">
+                <!-- Middle: Activity Icons (Call/WA) -->
+                <div class="flex gap-3 mx-auto">
                     ${cleanPhone ? `
-                     <a href="${waUrl}" target="_blank" class="quick-action hover:opacity-80 transition-opacity" title="WhatsApp" onclick="event.stopPropagation();">
-                        <img src="images/whatsapp.png" alt="WA" class="w-5 h-5 object-contain hover:scale-110 transition-transform">
+                     <a href="${waUrl}" target="_blank" class="quick-action group relative" title="WhatsApp" onclick="event.stopPropagation();">
+                        <div class="w-7 h-7 bg-green-100 rounded-full flex items-center justify-center hover:bg-green-200 transition-colors shadow-sm">
+                            <img src="images/whatsapp.png" alt="WA" class="w-4 h-4 object-contain group-hover:scale-110 transition-transform">
+                        </div>
                      </a>` : ''}
                     
                     ${lead.email ? `
-                     <a href="mailto:${lead.email}" class="quick-action hover:opacity-80 transition-opacity" title="Email" onclick="event.stopPropagation();">
-                        <img src="images/email.png" alt="Email" class="w-5 h-5 object-contain hover:scale-110 transition-transform">
+                     <a href="mailto:${lead.email}" class="quick-action group relative" title="Email" onclick="event.stopPropagation();">
+                        <div class="w-7 h-7 bg-blue-50 rounded-full flex items-center justify-center hover:bg-blue-100 transition-colors shadow-sm">
+                            <img src="images/email.png" alt="Email" class="w-4 h-4 object-contain group-hover:scale-110 transition-transform">
+                        </div>
                      </a>` : ''}
                 </div>
                 
