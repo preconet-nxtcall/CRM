@@ -3,7 +3,7 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from datetime import datetime, timedelta
-from sqlalchemy import func, case
+from sqlalchemy import func, case, or_
 from app.models import db, Lead, User, CallHistory, CallMetrics, Admin
 
 pipeline_bp = Blueprint("pipeline", __name__, url_prefix="/api/pipeline")
@@ -203,8 +203,42 @@ def pipeline_leads():
         elif status_filter == "New":
              query = query.filter(func.lower(Lead.status) == "new")
         else:
-             # Fallback for direct match
+             # Fallback for direct match (e.g. specific status like "Ringing" if selected directly)
              query = query.filter(func.lower(Lead.status) == status_filter.lower())
+
+    # Source Filter
+    source_filter = request.args.get("source")
+    if source_filter and source_filter.lower() != "all":
+        query = query.filter(func.lower(Lead.source) == source_filter.lower())
+
+    # Search Filter (Name or Phone)
+    search = request.args.get("search")
+    if search:
+        search_term = f"%{search}%"
+        query = query.filter(or_(
+            Lead.name.ilike(search_term),
+            Lead.phone.ilike(search_term)
+        ))
+
+    # Date Filter
+    start_date = request.args.get("start_date")
+    end_date = request.args.get("end_date")
+
+    if start_date:
+        try:
+            # Assume YYYY-MM-DD
+            s_dt = datetime.strptime(start_date, "%Y-%m-%d")
+            query = query.filter(Lead.created_at >= s_dt)
+        except ValueError:
+            pass
+
+    if end_date:
+        try:
+             # End of day
+            e_dt = datetime.strptime(end_date, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
+            query = query.filter(Lead.created_at <= e_dt)
+        except ValueError:
+            pass
 
     # Sorting: Recent first
     query = query.order_by(Lead.created_at.desc())

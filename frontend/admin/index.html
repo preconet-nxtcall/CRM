@@ -55,8 +55,110 @@
       border-radius: 4px;
     }
 
-    ::-webkit-scrollbar-thumb:hover {
-      background: #94a3b8;
+    /* Sales Funnel CSS */
+    .funnel-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .funnel-row {
+      position: relative;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      margin-bottom: 2px;
+      transition: all 0.3s ease;
+    }
+
+    .funnel-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .funnel-row:hover {
+      transform: scale(1.02);
+      z-index: 10;
+    }
+
+    .funnel-segment {
+      position: relative;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 40px;
+      color: white;
+      font-weight: 600;
+      clip-path: polygon(0 0, 100% 0, calc(100% - 20px) 100%, 20px 100%);
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      width: 100%;
+    }
+
+    /* Gradient Palettes */
+    .funnel-new {
+      background: linear-gradient(135deg, #60A5FA, #3B82F6);
+      width: 100%;
+      z-index: 5;
+    }
+
+    .funnel-attempted {
+      background: linear-gradient(135deg, #F59E0B, #D97706);
+      width: 90%;
+      z-index: 4;
+    }
+
+    .funnel-connected {
+      background: linear-gradient(135deg, #818CF8, #6366F1);
+      width: 80%;
+      z-index: 3;
+    }
+
+    .funnel-interested {
+      background: linear-gradient(135deg, #2DD4BF, #14B8A6);
+      width: 70%;
+      z-index: 2;
+    }
+
+    .funnel-won {
+      background: linear-gradient(135deg, #10B981, #059669);
+      width: 60%;
+      z-index: 1;
+    }
+
+    /* Depth Effect Overlay */
+    .funnel-segment::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(to bottom, rgba(255, 255, 255, 0.2) 0%, rgba(0, 0, 0, 0.1) 100%);
+      pointer-events: none;
+    }
+
+    /* Separator Line */
+    .funnel-row:not(:last-child) .funnel-segment {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .funnel-count {
+      background: rgba(255, 255, 255, 0.25);
+      backdrop-filter: blur(4px);
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .funnel-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
     }
 
     .pipeline-segment {
@@ -351,8 +453,8 @@
 
         <a id="menuIntegrations"
           class="menu-item group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-all cursor-pointer">
-          <i class="fab fa-facebook w-6 text-center text-gray-400 group-hover:text-white transition-colors"></i>
-          <span class="ml-2">Leads Management</span>
+          <i class="fas fa-plug w-6 text-center text-gray-400 group-hover:text-white transition-colors"></i>
+          <span class="ml-2">Lead Integrations</span>
         </a>
 
         <p class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mt-6 mb-2">CRM</p>
@@ -360,21 +462,21 @@
         <a id="menuLeads" href="#"
           class="menu-item group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-all cursor-pointer">
           <i class="fas fa-list w-6 text-center text-gray-400 group-hover:text-white transition-colors"></i>
-          <span class="ml-2">All Leads</span>
+          <span class="ml-2">Leads Overview</span>
         </a>
 
         <!-- Item 11: Pipeline -->
         <a id="menuPipeline" href="#"
           class="menu-item group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-all cursor-pointer">
           <i class="fas fa-funnel-dollar w-6 text-center text-gray-400 group-hover:text-white transition-colors"></i>
-          <span class="ml-2">Lead Dashboard</span>
+          <span class="ml-2">Lead Analytics</span>
         </a>
 
         <!-- Item: Kanban Dashboard -->
         <a id="menuKanban" href="#"
           class="menu-item group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-all cursor-pointer">
           <i class="fas fa-columns w-6 text-center text-gray-400 group-hover:text-white transition-colors"></i>
-          <span class="ml-2">Pipeline View</span>
+          <span class="ml-2">Lead Insights</span>
         </a>
       </nav>
 
@@ -762,10 +864,7 @@
               <i class="fas fa-sync-alt"></i>
             </button>
 
-            <button onclick="kanbanManager.openModal()"
-              class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors transform active:scale-95">
-              <i class="fas fa-plus"></i> <span>New Deal</span>
-            </button>
+
           </div>
         </div>
 
@@ -1254,6 +1353,21 @@
 
       <!-- LEADS SECTION -->
       <section id="sectionLeads" class="hidden-section space-y-6">
+
+        <!-- SALES FUNNEL COMPONENT -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <h3 class="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+            <i class="fas fa-filter text-blue-500"></i> Sales Funnel
+          </h3>
+          <div id="funnel-container" class="funnel-container pb-4">
+            <div class="text-center text-gray-400 py-8">Loading funnel...</div>
+          </div>
+          <!-- Conversion Rates Legend -->
+          <div class="flex justify-center flex-wrap gap-4 mt-4 text-xs text-gray-500" id="funnel-metrics">
+            <!-- Metrics injected via JS -->
+          </div>
+        </div>
+
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <div
             class="p-4 sm:px-6 sm:py-5 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -1264,40 +1378,63 @@
             <div class="flex items-center gap-2">
               <!-- Filter Buttons -->
               <div class="inline-flex rounded-md shadow-sm" role="group">
-                <button type="button" onclick="leadsManager.filterLeads('all')" id="btn-filter-all"
-                  class="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 border border-blue-600 rounded-l-lg hover:bg-blue-700 transition-colors">
+                <button onclick="leadsManager.filterLeads('all')" id="btn-filter-all"
+                  class="px-3 py-1.5 text-xs font-medium rounded-l-lg border border-blue-600 bg-blue-600 text-white transition-colors">
                   All
                 </button>
-                <button type="button" onclick="leadsManager.filterLeads('facebook')" id="btn-filter-facebook"
-                  class="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border-t border-b border-r border-gray-200 hover:bg-gray-100 transition-colors">
+                <button onclick="leadsManager.filterLeads('facebook')" id="btn-filter-facebook"
+                  class="px-3 py-1.5 text-xs font-medium border-t border-b border-r border-gray-200 bg-white text-gray-700 hover:bg-gray-100 transition-colors">
                   Facebook
                 </button>
-                <button type="button" onclick="leadsManager.filterLeads('indiamart')" id="btn-filter-indiamart"
-                  class="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border-t border-b border-r border-gray-200 hover:bg-gray-100 transition-colors">
+                <button onclick="leadsManager.filterLeads('indiamart')" id="btn-filter-indiamart"
+                  class="px-3 py-1.5 text-xs font-medium border-t border-b border-r border-gray-200 bg-white text-gray-700 hover:bg-gray-100 transition-colors">
                   IndiaMART
                 </button>
-                <button type="button" onclick="leadsManager.filterLeads('magicbricks')" id="btn-filter-magicbricks"
-                  class="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border-t border-b border-r border-gray-200 hover:bg-gray-100 transition-colors">
+                <button onclick="leadsManager.filterLeads('magicbricks')" id="btn-filter-magicbricks"
+                  class="px-3 py-1.5 text-xs font-medium border-t border-b border-r border-gray-200 bg-white text-gray-700 hover:bg-gray-100 transition-colors">
                   Magicbricks
                 </button>
-
-                <button type="button" onclick="leadsManager.filterLeads('99acres')" id="btn-filter-99acres"
-                  class="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border-t border-b border-r border-gray-200 hover:bg-gray-100 transition-colors">
+                <button onclick="leadsManager.filterLeads('99acres')" id="btn-filter-99acres"
+                  class="px-3 py-1.5 text-xs font-medium border-t border-b border-r border-gray-200 bg-white text-gray-700 hover:bg-gray-100 transition-colors">
                   99acres
                 </button>
-                <button type="button" onclick="leadsManager.filterLeads('justdial')" id="btn-filter-justdial"
-                  class="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border-t border-b border-r border-gray-200 hover:bg-gray-100 transition-colors">
+                <button onclick="leadsManager.filterLeads('justdial')" id="btn-filter-justdial"
+                  class="px-3 py-1.5 text-xs font-medium border-t border-b border-r border-gray-200 bg-white text-gray-700 hover:bg-gray-100 transition-colors">
                   JustDial
                 </button>
-                <button type="button" onclick="leadsManager.filterLeads('housing')" id="btn-filter-housing"
-                  class="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border-t border-b border-r border-gray-200 rounded-r-lg hover:bg-gray-100 transition-colors">
+                <button onclick="leadsManager.filterLeads('housing')" id="btn-filter-housing"
+                  class="px-3 py-1.5 text-xs font-medium rounded-r-lg border-t border-b border-r border-gray-200 bg-white text-gray-700 hover:bg-gray-100 transition-colors">
                   Housing
                 </button>
               </div>
 
+              <!-- DATE FILTERS & SEARCH -->
+              <div class="h-6 w-px bg-gray-200 hidden sm:block"></div>
+
+              <div class="flex items-center gap-2">
+                <!-- Search -->
+                <div class="relative">
+                  <input type="text" id="leadSearchInput" placeholder="Name or Phone..."
+                    class="pl-8 pr-3 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 w-32 sm:w-48">
+                  <div class="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
+                    <i class="fas fa-search text-gray-400 text-xs"></i>
+                  </div>
+                </div>
+
+                <!-- Today Button -->
+                <button onclick="leadsManager.filterToday()" id="btn-leads-today"
+                  class="px-3 py-1.5 text-xs font-medium border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 transition-colors">
+                  Today
+                </button>
+
+                <!-- Date Range (Simplified as Input for now) -->
+                <input type="date" id="leadsDateFilter" onchange="leadsManager.filterCustomDate(this.value)"
+                  class="px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-700">
+              </div>
+
               <!-- Date Filter Dropdown -->
               <select id="leads-date-filter" onchange="leadsManager.changeDateFilter(this.value)"
-                class="ml-3 px-3 py-1.5 text-xs font-medium border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
+                class="px-3 py-1.5 text-xs font-medium border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
                 <option value="today">Today</option>
                 <option value="week">Last 7 Days</option>
                 <option value="month">Last 30 Days</option>
@@ -1308,6 +1445,11 @@
                 class="ml-2 text-blue-600 hover:text-blue-800 text-sm font-medium p-2 rounded hover:bg-blue-50 transition-colors">
                 <i class="fas fa-sync-alt"></i>
               </button>
+
+              <button onclick="kanbanManager.openModal()"
+                class="ml-2 flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium shadow-sm transition-colors transform active:scale-95">
+                <i class="fas fa-plus"></i> <span class="hidden sm:inline">New Deal</span>
+              </button>
             </div>
           </div>
           <div class="overflow-x-auto">
@@ -1316,8 +1458,7 @@
                 class="bg-gray-50 text-gray-500 uppercase tracking-wider font-semibold text-xs border-b border-gray-100">
                 <tr>
                   <th class="px-4 py-3">Date</th>
-                  <th class="px-4 py-3">Name</th>
-                  <th class="px-4 py-3">Phone</th>
+                  <th class="px-4 py-3">Name / Phone</th>
                   <th class="px-4 py-3">Email</th>
                   <th class="px-4 py-3">Source</th>
                   <th class="px-4 py-3">Details</th>
@@ -2139,6 +2280,20 @@
           </div>
         </div>
 
+        <!-- 2. Sales Funnel (New) -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+          <h3 class="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+            <i class="fas fa-filter text-blue-500"></i> Sales Funnel
+          </h3>
+          <div id="pipeline-funnel-container" class="funnel-container pb-4">
+            <div class="text-center text-gray-400 py-8">Loading funnel...</div>
+          </div>
+          <!-- Conversion Rates Legend -->
+          <div class="flex justify-center flex-wrap gap-4 mt-4 text-xs text-gray-500" id="pipeline-funnel-metrics">
+            <!-- Metrics injected via JS -->
+          </div>
+        </div>
+
         <!-- 2. Core Pipeline Section -->
         <div class="bg-white rounded-xl border border-gray-200 shadow-sm mb-6 p-1 overflow-x-auto">
           <div class="flex min-w-max" id="pipeline-container">
@@ -2817,6 +2972,80 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+  <!-- LEAD HISTORY MODAL -->
+  <div id="leadHistoryModal" class="fixed inset-0 z-50 hidden" aria-labelledby="modal-title" role="dialog"
+    aria-modal="true">
+    <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+      <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+        onclick="document.getElementById('leadHistoryModal').classList.add('hidden')"></div>
+      <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+      <div
+        class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full flex flex-col max-h-[90vh]">
+
+        <!-- Header -->
+        <div class="bg-gray-50 px-4 py-3 border-b border-gray-200 flex justify-between items-center flex-shrink-0">
+          <div>
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Lead History</h3>
+            <p class="text-sm text-gray-500" id="histModalSub">Details for <span id="histModalName"
+                class="font-bold"></span></p>
+          </div>
+          <button onclick="document.getElementById('leadHistoryModal').classList.add('hidden')"
+            class="text-gray-400 hover:text-gray-500 focus:outline-none">
+            <i class="fas fa-times text-xl"></i>
+          </button>
+        </div>
+
+        <!-- Tabs -->
+        <div class="border-b border-gray-200 px-4">
+          <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+            <button onclick="leadsManager.switchHistTab('followup')" id="tab-hist-followup"
+              class="border-blue-500 text-blue-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+              Follow-ups
+            </button>
+            <button onclick="leadsManager.switchHistTab('calls')" id="tab-hist-calls"
+              class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+              Call Logs
+            </button>
+            <button onclick="leadsManager.switchHistTab('status')" id="tab-hist-status"
+              class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+              Status History
+            </button>
+          </nav>
+        </div>
+
+        <!-- Content -->
+        <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 flex-1 overflow-y-auto min-h-[300px]">
+          <!-- Followups Tab -->
+          <div id="content-hist-followup" class="space-y-4">
+            <div class="text-center py-8 text-gray-400">Loading follow-ups...</div>
+          </div>
+
+          <!-- Call Logs Tab -->
+          <div id="content-hist-calls" class="hidden space-y-4">
+            <div class="text-center py-8 text-gray-400">Loading call logs...</div>
+          </div>
+
+          <!-- Status History Tab -->
+          <div id="content-hist-status" class="hidden space-y-4">
+            <div class="text-center py-12 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+              <i class="fas fa-clock text-4xl text-gray-300 mb-3"></i>
+              <p class="text-gray-500 font-medium">Status history tracking will be active soon.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse flex-shrink-0">
+          <button type="button"
+            class="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+            onclick="document.getElementById('leadHistoryModal').classList.add('hidden')">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 
 </html>

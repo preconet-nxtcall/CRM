@@ -32,6 +32,7 @@ class PipelineManager {
                 this.renderKPIs(data.kpis);
                 this.renderPipelineBar(data.pipeline);
                 this.renderChart(data.pipeline);
+                this.renderFunnel(data.pipeline);
             }
         } catch (e) {
             console.error("Stats Error:", e);
@@ -294,6 +295,59 @@ class PipelineManager {
                 }
             }
         });
+    }
+    /* ------------------------------------------------
+       2.5 Funnel Graph
+    ------------------------------------------------ */
+    renderFunnel(pipe) {
+        const container = document.getElementById('pipeline-funnel-container');
+        const metrics = document.getElementById('pipeline-funnel-metrics');
+        if (!container) return;
+
+        if (!pipe) {
+            container.innerHTML = '<div class="text-center text-red-400">No data available.</div>';
+            return;
+        }
+
+        try {
+            // Map API keys to our Funnel Stages
+            const stages = [
+                { id: 'new', label: 'New Leads', icon: 'fa-star', count: pipe['New'] || 0, color: 'funnel-new' },
+                { id: 'attempted', label: 'Attempted', icon: 'fa-phone', count: pipe['Attempted'] || 0, color: 'funnel-attempted' },
+                { id: 'connected', label: 'Connected', icon: 'fa-comments', count: (pipe['Connected'] || 0) + (pipe['Follow-Up'] || 0), color: 'funnel-connected' },
+                { id: 'interested', label: 'Interested', icon: 'fa-thumbs-up', count: pipe['Interested'] || 0, color: 'funnel-interested' },
+                { id: 'won', label: 'Won / Closed', icon: 'fa-trophy', count: pipe['Won'] || 0, color: 'funnel-won' }
+            ];
+
+            // Render Funnel
+            container.innerHTML = stages.map(stage => `
+                 <div class="funnel-row">
+                     <div class="funnel-segment ${stage.color}">
+                         <div class="funnel-label">
+                             <i class="fas ${stage.icon}"></i> ${stage.label}
+                         </div>
+                         <div class="funnel-count">${stage.count}</div>
+                     </div>
+                 </div>
+             `).join('');
+
+            // Calculate Conversion Metrics
+            const total = stages[0].count;
+            const won = stages[4].count;
+            const conversionRate = total > 0 ? ((won / total) * 100).toFixed(1) : 0;
+
+            metrics.innerHTML = `
+                 <div class="px-3 py-1 bg-green-50 text-green-700 rounded-full border border-green-100 flex items-center gap-2">
+                     <i class="fas fa-chart-line"></i> Overall Conversion: <strong>${conversionRate}%</strong>
+                 </div>
+                 <div class="px-3 py-1 bg-blue-50 text-blue-700 rounded-full border border-blue-100 flex items-center gap-2">
+                     <i class="fas fa-users"></i> Total Leads: <strong>${total}</strong>
+                 </div>
+             `;
+        } catch (e) {
+            console.error("Funnel Render Error:", e);
+            container.innerHTML = '<div class="text-center text-red-400">Error rendering funnel.</div>';
+        }
     }
 }
 

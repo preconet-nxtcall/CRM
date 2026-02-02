@@ -5,10 +5,17 @@ class LeadsManager {
         this.itemsPerPage = 10; // Changed to 10 records per page
         this.currentFilter = 'all'; // Default filter
         this.dateFilter = 'all'; // Default to all records
+
+        // New Filters
+        this.searchQuery = '';
+        this.start_date = null;
+        this.end_date = null;
     }
 
     async init() {
         // Called when view switches to 'sectionLeads'
+        this.initSearch();
+        this.loadFunnelStats(); // Load Funnel
         await this.loadLeads();
     }
 
@@ -18,8 +25,36 @@ class LeadsManager {
         this.loadLeads(1); // Reset to page 1
     }
 
-    changeDateFilter(dateFilter) {
-        this.dateFilter = dateFilter;
+    changeDateFilter(val) {
+        // Map legacy dropdown to new date range params
+        this.dateFilter = val;
+
+        const today = new Date();
+        const formatDate = (d) => d.toISOString().split('T')[0];
+
+        if (val === 'today') {
+            this.start_date = formatDate(today);
+            this.end_date = formatDate(today);
+        } else if (val === 'week') {
+            const lastWeek = new Date(today);
+            lastWeek.setDate(today.getDate() - 7);
+            this.start_date = formatDate(lastWeek);
+            this.end_date = formatDate(today);
+        } else if (val === 'month') {
+            const lastMonth = new Date(today);
+            lastMonth.setDate(today.getDate() - 30);
+            this.start_date = formatDate(lastMonth);
+            this.end_date = formatDate(today);
+        } else {
+            // All
+            this.start_date = null;
+            this.end_date = null;
+        }
+
+        // Reset Custom Inputs UI if needed
+        document.getElementById('leadsDateFilter').value = '';
+        document.getElementById('btn-leads-today').classList.remove('bg-blue-50', 'text-blue-600', 'border-blue-300');
+
         this.loadLeads(1); // Reset to page 1
     }
 
@@ -55,10 +90,22 @@ class LeadsManager {
 
         try {
             // Include Filter in Request - now with date filter
-            let url = `/api/facebook/leads?page=${page}&per_page=${this.itemsPerPage}&date_filter=${this.dateFilter}`;
+            // let url = `/api/facebook/leads?page=${page}&per_page=${this.itemsPerPage}&date_filter=${this.dateFilter}`;
+            // Switched to pipeline endpoint for search support
+            let url = `/api/pipeline/leads?page=${page}&per_page=${this.itemsPerPage}`;
+
             if (this.currentFilter !== 'all') {
                 url += `&source=${this.currentFilter}`;
             }
+
+            // Add Search
+            if (this.searchQuery) {
+                url += `&search=${encodeURIComponent(this.searchQuery)}`;
+            }
+
+            // Add Date Filters
+            if (this.start_date) url += `&start_date=${this.start_date}`;
+            if (this.end_date) url += `&end_date=${this.end_date}`;
 
             const resp = await auth.makeAuthenticatedRequest(url);
             if (resp && resp.ok) {
@@ -72,11 +119,11 @@ class LeadsManager {
                     const errData = await resp.json();
                     if (errData.error) errorMsg = errData.error;
                 } catch (e) { }
-                this.tableBody.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-red-500">${errorMsg}</td></tr>`;
+                this.tableBody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-red-500">${errorMsg}</td></tr>`;
             }
         } catch (e) {
             console.error("Error loading leads", e);
-            this.tableBody.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-red-500">Error: ${e.message}</td></tr>`;
+            this.tableBody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-red-500">Error: ${e.message}</td></tr>`;
         }
     }
 
@@ -333,7 +380,7 @@ class LeadsManager {
 
     renderTable(leads) {
         if (!leads || leads.length === 0) {
-            this.tableBody.innerHTML = `<tr><td colspan="9" class="text-center py-8 text-gray-500">No leads found.</td></tr>`;
+            this.tableBody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-gray-500">No leads found.</td></tr>`;
             return;
         }
 
@@ -376,11 +423,13 @@ class LeadsManager {
             return `
                 <tr class="hover:bg-gray-50 transition-colors">
                     <td class="px-4 py-3 whitespace-nowrap text-xs">${dateHtml}</td>
-                    <td class="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">${lead.name || '-'}</td>
-                    <td class="px-4 py-3 text-blue-600 whitespace-nowrap custom-copy-text cursor-pointer hover:underline" 
-                        onclick="leadsManager.showCallHistory('${lead.phone}')" 
-                        title="Click to view call history">
-                        ${lead.phone || '-'}
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        <div class="font-medium text-gray-900">${lead.name || '-'}</div>
+                        <div class="text-xs text-blue-600 custom-copy-text cursor-pointer hover:underline mt-0.5" 
+                             onclick="leadsManager.showCallHistory('${lead.phone}')" 
+                             title="Click to view call history">
+                             ${lead.phone || '-'}
+                        </div>
                     </td>
                     <td class="px-4 py-3 text-gray-500 whitespace-nowrap">${lead.email || '-'}</td>
                     <td class="px-4 py-3">${sourceBadge}</td>
@@ -398,11 +447,18 @@ class LeadsManager {
                             <option value="lost" ${lead.status === 'lost' ? 'selected' : ''}>Lost</option>
                         </select>
                     </td>
-                    <td class="px-4 py-3 text-right">
-                        <button onclick="leadsManager.openLeadModal(${lead.id})" 
-                                class="text-gray-500 hover:text-blue-600 transition-colors p-2 rounded-full hover:bg-blue-50"
-                                title="View Details">
-                            <i class="fas fa-eye"></i>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium">
+                        <button onclick="kanbanManager.openModal(null, ${lead.id})" 
+                                class="text-blue-600 hover:text-blue-900 mr-3" title="Edit">
+                                <i class="fas fa-edit"></i>
+                        </button>
+                        <button onclick="leadsManager.showHistory(${lead.id})" 
+                                class="text-purple-600 hover:text-purple-900 mr-3" title="History">
+                                <i class="fas fa-history"></i>
+                        </button>
+                        <button onclick="leadsManager.deleteLead(${lead.id})" 
+                                class="text-red-600 hover:text-red-900" title="Delete">
+                                <i class="fas fa-trash"></i>
                         </button>
                     </td>
                 </tr>
@@ -503,7 +559,199 @@ class LeadsManager {
     }
 
     /* ------------------------------
-       SHOW CALL HISTORY MODAL
+       SEARCH & DATE FILTERS
+    ------------------------------ */
+    initSearch() {
+        // Debounce search input
+        const searchInput = document.getElementById('leadSearchInput');
+        if (searchInput) {
+            let timeout = null;
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => {
+                    this.searchQuery = e.target.value.trim();
+                    this.loadLeads(1);
+                }, 500);
+            });
+        }
+    }
+
+    filterToday() {
+        const today = new Date().toISOString().split('T')[0];
+        this.start_date = today;
+        this.end_date = today;
+
+        // Update UI
+        document.getElementById('leadsDateFilter').value = today;
+
+        // Highlight button (optional)
+        const btn = document.getElementById('btn-leads-today');
+        if (btn) btn.classList.add('bg-blue-50', 'text-blue-600', 'border-blue-300');
+
+        this.loadLeads(1);
+    }
+
+    filterCustomDate(val) {
+        if (!val) {
+            this.start_date = null;
+            this.end_date = null;
+        } else {
+            this.start_date = val;
+            this.end_date = val; // Single day pick for now
+        }
+
+        // Reset Today button style
+        const btn = document.getElementById('btn-leads-today');
+        if (btn) btn.classList.remove('bg-blue-50', 'text-blue-600', 'border-blue-300');
+
+        this.loadLeads(1);
+    }
+
+    /* ------------------------------
+       HISTORY MODAL
+    ------------------------------ */
+    showHistory(leadId) {
+        const lead = this.leads.find(l => l.id === leadId);
+        if (!lead) return;
+
+        this.histLead = lead; // Store for tab switching
+
+        // UI Setup
+        document.getElementById('leadHistoryModal').classList.remove('hidden');
+        document.getElementById('histModalName').textContent = lead.name || lead.phone;
+
+        // Default Tab
+        this.switchHistTab('followup');
+    }
+
+    async switchHistTab(tabName) {
+        // Update Tabs UI
+        ['followup', 'calls', 'status'].forEach(t => {
+            const btn = document.getElementById(`tab-hist-${t}`);
+            const content = document.getElementById(`content-hist-${t}`);
+
+            if (t === tabName) {
+                btn.classList.add('border-blue-500', 'text-blue-600');
+                btn.classList.remove('border-transparent', 'text-gray-500');
+                content.classList.remove('hidden');
+            } else {
+                btn.classList.remove('border-blue-500', 'text-blue-600');
+                btn.classList.add('border-transparent', 'text-gray-500');
+                content.classList.add('hidden');
+            }
+        });
+
+        // Load Data
+        if (tabName === 'followup') await this.loadHistFollowups();
+        if (tabName === 'calls') await this.loadHistCalls();
+        // status is static placeholder
+    }
+
+    async loadHistFollowups() {
+        const container = document.getElementById('content-hist-followup');
+        container.innerHTML = '<div class="text-center py-4 text-gray-400">Loading...</div>';
+
+        try {
+            const resp = await auth.makeAuthenticatedRequest(`/api/admin/followups?phone=${this.histLead.phone}`);
+            if (resp && resp.ok) {
+                const data = await resp.json();
+                const items = data.followups || [];
+
+                if (items.length === 0) {
+                    container.innerHTML = '<div class="text-center py-8 text-gray-400">No follow-up history found.</div>';
+                    return;
+                }
+
+                container.innerHTML = items.map(item => `
+                    <div class="flex gap-4">
+                        <div class="flex flex-col items-center">
+                            <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-xs font-bold">
+                                <i class="fas fa-bell"></i>
+                            </div>
+                            <div class="h-full w-0.5 bg-gray-200 my-1"></div>
+                        </div>
+                        <div class="pb-6">
+                            <p class="text-sm font-medium text-gray-900">Follow-up Scheduled</p>
+                            <p class="text-xs text-gray-500 mb-1">${new Date(item.date_time).toLocaleString()}</p>
+                            <div class="bg-gray-50 p-3 rounded-lg border border-gray-100 text-sm text-gray-700">
+                                ${item.message || '(No notes)'}
+                            </div>
+                            <p class="text-xs text-gray-400 mt-1">Created by: ${item.user_name || 'System'}</p>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                container.innerHTML = '<div class="text-center py-4 text-red-400">Failed to load data.</div>';
+            }
+        } catch (e) {
+            container.innerHTML = `<div class="text-center py-4 text-red-400">Error: ${e.message}</div>`;
+        }
+    }
+
+    async loadHistCalls() {
+        const container = document.getElementById('content-hist-calls');
+        container.innerHTML = '<div class="text-center py-4 text-gray-400">Loading...</div>';
+
+        try {
+            // Using search endpoint for phone
+            const url = `/api/admin/all-call-history?search=${encodeURIComponent(this.histLead.phone)}&page=1&per_page=20`;
+            const resp = await auth.makeAuthenticatedRequest(url);
+
+            if (resp && resp.ok) {
+                const data = await resp.json();
+                const calls = data.call_history || [];
+
+                if (calls.length === 0) {
+                    container.innerHTML = '<div class="text-center py-8 text-gray-400">No call logs found.</div>';
+                    return;
+                }
+
+                container.innerHTML = calls.map(call => {
+                    // Determine icon
+                    let icon = 'fa-phone';
+                    let color = 'bg-gray-100 text-gray-600';
+                    const cType = (call.call_type || '').toLowerCase();
+
+                    if (cType === 'incoming') { icon = 'fa-arrow-down'; color = 'bg-green-100 text-green-600'; }
+                    if (cType === 'outgoing') { icon = 'fa-arrow-up'; color = 'bg-blue-100 text-blue-600'; }
+                    if (cType === 'missed') { icon = 'fa-times'; color = 'bg-red-100 text-red-600'; }
+
+                    return `
+                    <div class="flex items-start gap-3 p-3 hover:bg-gray-50 rounded-lg transition-colors border border-gray-100">
+                        <div class="w-8 h-8 rounded-full ${color} flex items-center justify-center shrink-0">
+                            <i class="fas ${icon} text-xs"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-start">
+                                <p class="text-sm font-medium text-gray-900 capitalize">${cType} Call</p>
+                                <span class="text-xs text-gray-500">${new Date(call.timestamp).toLocaleString()}</span>
+                            </div>
+                            <div class="flex items-center gap-4 mt-1">
+                                <span class="text-xs text-gray-500"><i class="fas fa-stopwatch mr-1"></i>${Math.floor(call.duration / 60)}m ${call.duration % 60}s</span>
+                                <span class="text-xs text-gray-500"><i class="fas fa-user mr-1"></i>${call.user_name || 'Unknown'}</span>
+                            </div>
+                            ${call.recording_path ? `
+                                <div class="mt-2">
+                                    <audio controls class="h-6 w-full max-w-[200px]" preload="none">
+                                        <source src="/${call.recording_path}" type="audio/mpeg">
+                                    </audio>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                    `;
+                }).join('');
+
+            } else {
+                container.innerHTML = '<div class="text-center py-4 text-red-400">Failed to load calls.</div>';
+            }
+        } catch (e) {
+            container.innerHTML = `<div class="text-center py-4 text-red-400">Error: ${e.message}</div>`;
+        }
+    }
+
+    /* ------------------------------
+       SHOW CALL HISTORY MODAL (Legacy)
     ------------------------------ */
     async showCallHistory(phone) {
         if (!phone || phone === '-') return;
@@ -580,6 +828,67 @@ class LeadsManager {
             tbody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-red-500">Error: ${e.message}</td></tr>`;
         }
     }
+    /* ------------------------------
+       SALES FUNNEL LOGIC
+    ------------------------------ */
+    async loadFunnelStats() {
+        const container = document.getElementById('funnel-container');
+        const metrics = document.getElementById('funnel-metrics');
+        if (!container) return;
+
+        try {
+            // Re-use pipeline stats endpoint which aggregates by status
+            // Note: Stats endpoint respects admin_id
+            const resp = await auth.makeAuthenticatedRequest('/api/pipeline/stats');
+            if (resp && resp.ok) {
+                const data = await resp.json();
+                const pipe = data.pipeline || {};
+
+                // Map API keys to our Funnel Stages
+                // Stages: New -> Attempted -> Connected -> Interested -> Won
+                const stages = [
+                    { id: 'new', label: 'New Leads', icon: 'fa-star', count: pipe['New'] || 0, color: 'funnel-new' },
+                    { id: 'attempted', label: 'Attempted', icon: 'fa-phone', count: pipe['Attempted'] || 0, color: 'funnel-attempted' },
+                    { id: 'connected', label: 'Connected', icon: 'fa-comments', count: (pipe['Connected'] || 0) + (pipe['Follow-Up'] || 0), color: 'funnel-connected' },
+                    { id: 'interested', label: 'Interested', icon: 'fa-thumbs-up', count: pipe['Interested'] || 0, color: 'funnel-interested' },
+                    { id: 'won', label: 'Won / Closed', icon: 'fa-trophy', count: pipe['Won'] || 0, color: 'funnel-won' }
+                ];
+
+                // Render Funnel
+                container.innerHTML = stages.map(stage => `
+                    <div class="funnel-row">
+                        <div class="funnel-segment ${stage.color}">
+                            <div class="funnel-label">
+                                <i class="fas ${stage.icon}"></i> ${stage.label}
+                            </div>
+                            <div class="funnel-count">${stage.count}</div>
+                        </div>
+                    </div>
+                `).join('');
+
+                // Calculate Conversion Metrics
+                const total = stages[0].count;
+                const won = stages[4].count;
+                const conversionRate = total > 0 ? ((won / total) * 100).toFixed(1) : 0;
+
+                metrics.innerHTML = `
+                    <div class="px-3 py-1 bg-green-50 text-green-700 rounded-full border border-green-100 flex items-center gap-2">
+                        <i class="fas fa-chart-line"></i> Overall Conversion: <strong>${conversionRate}%</strong>
+                    </div>
+                    <div class="px-3 py-1 bg-blue-50 text-blue-700 rounded-full border border-blue-100 flex items-center gap-2">
+                        <i class="fas fa-users"></i> Total Leads: <strong>${total}</strong>
+                    </div>
+                `;
+
+            } else {
+                container.innerHTML = '<div class="text-center text-red-400">Failed to load funnel data.</div>';
+            }
+        } catch (e) {
+            console.error(e);
+            container.innerHTML = '<div class="text-center text-red-400">Error loading funnel.</div>';
+        }
+    }
+
 }
 
 window.leadsManager = new LeadsManager();
