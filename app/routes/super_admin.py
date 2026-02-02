@@ -251,9 +251,9 @@ def get_admins():
                 "user_count": user_count,
                 "is_active": a.is_active,
                 "is_expired": a.is_expired(),
-                "created_at": a.created_at.isoformat(),
+                "created_at": a.created_at.isoformat() if a.created_at else None,
                 "last_login": a.last_login.isoformat() if a.last_login else None,
-                "expiry_date": a.expiry_date.isoformat(),
+                "expiry_date": a.expiry_date.isoformat() if a.expiry_date else None,
             })
 
         return jsonify({"admins": result}), 200
@@ -330,7 +330,7 @@ def activity_logs():
                 "id": log.id,
                 "admin_name": display_name, 
                 "action_type": log.action,
-                "timestamp": log.timestamp.isoformat(),
+                "timestamp": log.timestamp.isoformat() if log.timestamp else None,
                 "role": log.actor_role.value if hasattr(log.actor_role, 'value') else str(log.actor_role)
             })
 
@@ -559,8 +559,8 @@ def get_expired_admins():
                 "user_count": user_count,
                 "is_active": a.is_active,
                 "is_expired": True,
-                "created_at": a.created_at.isoformat(),
-                "expiry_date": a.expiry_date.isoformat(),
+                "created_at": a.created_at.isoformat() if a.created_at else None,
+                "expiry_date": a.expiry_date.isoformat() if a.expiry_date else None,
             })
 
         return jsonify({"admins": result}), 200
