@@ -15,7 +15,7 @@ class LeadsManager {
     async init() {
         // Called when view switches to 'sectionLeads'
         this.initSearch();
-        this.loadFunnelStats(); // Load Funnel
+        this.loadAgents(); // Load Agents for dropdown
         await this.loadLeads();
     }
 
@@ -61,22 +61,19 @@ class LeadsManager {
 
     updateFilterButtons() {
         // Reset all buttons
-
         const types = ['all', 'facebook', 'indiamart', 'magicbricks', '99acres', 'justdial', 'housing'];
         types.forEach(type => {
             const btn = document.getElementById(`btn-filter-${type}`);
             if (btn) {
-                let baseClass = "px-3 py-1.5 text-xs font-medium transition-colors ";
-
-                // Determine rounded corners based on position
-                if (type === 'all') baseClass += "rounded-l-lg ";
-                else if (type === 'housing') baseClass += "rounded-r-lg "; // changed last element
-                else baseClass += ""; // Middle buttons
+                // Base classes for both states (pill structure)
+                const baseClass = "px-4 py-1.5 text-sm font-medium rounded-full transition-all border ";
 
                 if (type === this.currentFilter) {
-                    btn.className = baseClass + "text-white bg-blue-600 border border-blue-600 hover:bg-blue-700";
+                    // Active State: Blue Pill
+                    btn.className = baseClass + "bg-blue-50 text-blue-700 border-blue-100 shadow-sm";
                 } else {
-                    btn.className = baseClass + "text-gray-700 bg-white border-t border-b border-r border-gray-200 hover:bg-gray-100" + (type === 'all' ? " border-l" : "");
+                    // Inactive State: Gray Text, Transparent Border
+                    btn.className = baseClass + "text-gray-600 bg-white border-transparent hover:bg-gray-50 hover:border-gray-200";
                 }
             }
         });
@@ -112,7 +109,9 @@ class LeadsManager {
                 const data = await resp.json();
                 this.leads = data.leads; // STORE LEADS LOCALLY
                 this.renderTable(data.leads);
-                this.renderPagination(data.current_page, data.pages);
+                // Backend now returns flat pagination structure or nested
+                // We standardized on flattened keys in pipeline.py: current_page, pages, total_leads
+                this.renderPagination(data.current_page || data.pagination?.current, data.pages || data.pagination?.pages);
             } else {
                 let errorMsg = "Failed to load leads";
                 try {
@@ -434,7 +433,13 @@ class LeadsManager {
                     <td class="px-4 py-3 text-gray-500 whitespace-nowrap">${lead.email || '-'}</td>
                     <td class="px-4 py-3">${sourceBadge}</td>
                     <td class="px-4 py-3 leading-tight">${this.renderLeadDetails(lead)}</td>
-                    <td class="px-4 py-3 text-gray-600">${lead.assigned_agent_name || 'Unassigned'}</td>
+                    <td class="px-4 py-3 text-gray-600">
+                         <select onchange="leadsManager.updateLeadAgent(${lead.id}, this.value)" 
+                            class="text-xs rounded border-gray-200 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 bg-white">
+                            <option value="">Unassigned</option>
+                            ${this.renderAgentOptions(lead.assigned_agent_id)}
+                        </select>
+                    </td>
                     <td class="px-4 py-3">
                          <select onchange="leadsManager.updateLeadStatus(${lead.id}, this.value)" 
                             class="text-xs rounded border-gray-200 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 ${statusColor}">
@@ -449,16 +454,12 @@ class LeadsManager {
                     </td>
                     <td class="px-4 py-3 whitespace-nowrap text-sm font-medium">
                         <button onclick="kanbanManager.openModal(null, ${lead.id})" 
-                                class="text-blue-600 hover:text-blue-900 mr-3" title="Edit">
-                                <i class="fas fa-edit"></i>
+                                class="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors mr-2" title="View Details">
+                                <i class="fas fa-eye"></i>
                         </button>
                         <button onclick="leadsManager.showHistory(${lead.id})" 
-                                class="text-purple-600 hover:text-purple-900 mr-3" title="History">
+                                class="p-1.5 text-purple-600 hover:text-purple-800 hover:bg-purple-50 rounded transition-colors" title="History & Status">
                                 <i class="fas fa-history"></i>
-                        </button>
-                        <button onclick="leadsManager.deleteLead(${lead.id})" 
-                                class="text-red-600 hover:text-red-900" title="Delete">
-                                <i class="fas fa-trash"></i>
                         </button>
                     </td>
                 </tr>
@@ -591,6 +592,49 @@ class LeadsManager {
         this.loadLeads(1);
     }
 
+
+    /* ------------------------------
+       AGENT ASSIGNMENT
+    ------------------------------ */
+    async loadAgents() {
+        try {
+            const resp = await auth.makeAuthenticatedRequest('/api/pipeline/agents');
+            if (resp && resp.ok) {
+                const data = await resp.json();
+                this.agents = data.agents || [];
+            }
+        } catch (e) {
+            console.error("Error loading agents:", e);
+        }
+    }
+
+    renderAgentOptions(currentAgentId) {
+        return this.agents.map(agent => `
+            <option value="${agent.id}" ${agent.id == currentAgentId ? 'selected' : ''}>${agent.name}</option>
+        `).join('');
+    }
+
+    async updateLeadAgent(leadId, agentId) {
+        try {
+            const resp = await auth.makeAuthenticatedRequest(`/api/leads/${leadId}/assign`, {
+                method: 'PUT',
+                body: JSON.stringify({ agent_id: agentId || null })
+            });
+
+            if (resp && resp.ok) {
+                // Success: Dispatch update
+                const event = new CustomEvent('leadAssigned', { detail: { leadId, agentId } });
+                window.dispatchEvent(event);
+            } else {
+                alert("Failed to assign agent");
+                this.loadLeads(this.currentPage || 1); // Revert
+            }
+        } catch (e) {
+            console.error("Error signing agent:", e);
+            alert("Error assigning agent");
+        }
+    }
+
     filterCustomDate(val) {
         if (!val) {
             this.start_date = null;
@@ -620,135 +664,94 @@ class LeadsManager {
         document.getElementById('leadHistoryModal').classList.remove('hidden');
         document.getElementById('histModalName').textContent = lead.name || lead.phone;
 
-        // Default Tab
-        this.switchHistTab('followup');
+        // Load Unified Timeline
+        this.loadUnifiedTimeline();
     }
 
-    async switchHistTab(tabName) {
-        // Update Tabs UI
-        ['followup', 'calls', 'status'].forEach(t => {
-            const btn = document.getElementById(`tab-hist-${t}`);
-            const content = document.getElementById(`content-hist-${t}`);
-
-            if (t === tabName) {
-                btn.classList.add('border-blue-500', 'text-blue-600');
-                btn.classList.remove('border-transparent', 'text-gray-500');
-                content.classList.remove('hidden');
-            } else {
-                btn.classList.remove('border-blue-500', 'text-blue-600');
-                btn.classList.add('border-transparent', 'text-gray-500');
-                content.classList.add('hidden');
-            }
-        });
-
-        // Load Data
-        if (tabName === 'followup') await this.loadHistFollowups();
-        if (tabName === 'calls') await this.loadHistCalls();
-        // status is static placeholder
-    }
-
-    async loadHistFollowups() {
-        const container = document.getElementById('content-hist-followup');
-        container.innerHTML = '<div class="text-center py-4 text-gray-400">Loading...</div>';
+    async loadUnifiedTimeline() {
+        const container = document.getElementById('leadHistoryModalContent');
+        container.innerHTML = '<div class="text-gray-500 text-sm p-4">Loading complete history...</div>';
 
         try {
-            const resp = await auth.makeAuthenticatedRequest(`/api/admin/followups?phone=${this.histLead.phone}`);
-            if (resp && resp.ok) {
-                const data = await resp.json();
-                const items = data.followups || [];
+            // Fetch Both in Parallel
+            const [statusResp, followResp] = await Promise.all([
+                auth.makeAuthenticatedRequest(`/api/leads/${this.histLead.id}/history/status`),
+                auth.makeAuthenticatedRequest(`/api/admin/followups?lead_id=${this.histLead.id}`)
+            ]);
 
-                if (items.length === 0) {
-                    container.innerHTML = '<div class="text-center py-8 text-gray-400">No follow-up history found.</div>';
-                    return;
-                }
+            let timelineItems = [];
 
-                container.innerHTML = items.map(item => `
-                    <div class="flex gap-4">
-                        <div class="flex flex-col items-center">
-                            <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-xs font-bold">
-                                <i class="fas fa-bell"></i>
-                            </div>
-                            <div class="h-full w-0.5 bg-gray-200 my-1"></div>
+            // Process Status History
+            if (statusResp && statusResp.ok) {
+                const sData = await statusResp.json();
+                (sData.history || []).forEach(h => {
+                    timelineItems.push({
+                        type: 'status',
+                        date: new Date(h.created_at),
+                        title: `Status Changed to ${h.new_status.toUpperCase()}`,
+                        desc: `Previous: ${h.old_status || 'N/A'}`,
+                        icon: 'fa-exchange-alt',
+                        color: 'bg-blue-100 text-blue-600'
+                    });
+                });
+            }
+
+            // Process Follow-ups
+            if (followResp && followResp.ok) {
+                const fData = await followResp.json();
+                (fData.followups || []).forEach(f => {
+                    timelineItems.push({
+                        type: 'followup',
+                        date: new Date(f.scheduled_at),
+                        title: `Follow-up: ${f.status.toUpperCase()}`, // assigned to? 
+                        desc: f.notes || 'No notes',
+                        icon: 'fa-calendar-check',
+                        color: 'bg-green-100 text-green-600'
+                    });
+                });
+            }
+
+            // Sort: Newest First
+            timelineItems.sort((a, b) => b.date - a.date);
+
+            if (timelineItems.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-6 text-gray-500 text-sm">
+                        <p>No history found.</p>
+                        <p class="text-xs text-gray-400 mt-1">Current Status: <span class="capitalize font-bold text-blue-600">${this.histLead.status}</span></p>
+                    </div>
+                 `;
+                return;
+            }
+
+            // Render Unified Timeline
+            const html = timelineItems.map((item, index) => {
+                return `
+                    <div class="relative pl-8 pb-6 border-l border-gray-200 last:border-0 last:pb-0">
+                        <div class="absolute -left-3 top-0 w-6 h-6 rounded-full flex items-center justify-center ${item.color} text-xs border border-white shadow-sm">
+                            <i class="fas ${item.icon}"></i>
                         </div>
-                        <div class="pb-6">
-                            <p class="text-sm font-medium text-gray-900">Follow-up Scheduled</p>
-                            <p class="text-xs text-gray-500 mb-1">${new Date(item.date_time).toLocaleString()}</p>
-                            <div class="bg-gray-50 p-3 rounded-lg border border-gray-100 text-sm text-gray-700">
-                                ${item.message || '(No notes)'}
-                            </div>
-                            <p class="text-xs text-gray-400 mt-1">Created by: ${item.user_name || 'System'}</p>
+                        <div class="mb-1 text-sm font-bold text-gray-900">
+                            ${item.title}
+                        </div>
+                         <div class="text-xs text-gray-400 mb-1">
+                            ${item.date.toLocaleDateString()} at ${item.date.toLocaleTimeString()}
+                        </div>
+                        <div class="bg-gray-50 rounded p-2 text-xs text-gray-600">
+                           ${item.desc}
                         </div>
                     </div>
-                `).join('');
-            } else {
-                container.innerHTML = '<div class="text-center py-4 text-red-400">Failed to load data.</div>';
-            }
+                 `;
+            }).join('');
+
+            container.innerHTML = `<div class="p-4">${html}</div>`;
+
         } catch (e) {
-            container.innerHTML = `<div class="text-center py-4 text-red-400">Error: ${e.message}</div>`;
+            console.error("Unified History Error:", e);
+            container.innerHTML = `<div class="text-red-500 text-sm p-4">Error loading history: ${e.message}</div>`;
         }
     }
 
-    async loadHistCalls() {
-        const container = document.getElementById('content-hist-calls');
-        container.innerHTML = '<div class="text-center py-4 text-gray-400">Loading...</div>';
-
-        try {
-            // Using search endpoint for phone
-            const url = `/api/admin/all-call-history?search=${encodeURIComponent(this.histLead.phone)}&page=1&per_page=20`;
-            const resp = await auth.makeAuthenticatedRequest(url);
-
-            if (resp && resp.ok) {
-                const data = await resp.json();
-                const calls = data.call_history || [];
-
-                if (calls.length === 0) {
-                    container.innerHTML = '<div class="text-center py-8 text-gray-400">No call logs found.</div>';
-                    return;
-                }
-
-                container.innerHTML = calls.map(call => {
-                    // Determine icon
-                    let icon = 'fa-phone';
-                    let color = 'bg-gray-100 text-gray-600';
-                    const cType = (call.call_type || '').toLowerCase();
-
-                    if (cType === 'incoming') { icon = 'fa-arrow-down'; color = 'bg-green-100 text-green-600'; }
-                    if (cType === 'outgoing') { icon = 'fa-arrow-up'; color = 'bg-blue-100 text-blue-600'; }
-                    if (cType === 'missed') { icon = 'fa-times'; color = 'bg-red-100 text-red-600'; }
-
-                    return `
-                    <div class="flex items-start gap-3 p-3 hover:bg-gray-50 rounded-lg transition-colors border border-gray-100">
-                        <div class="w-8 h-8 rounded-full ${color} flex items-center justify-center shrink-0">
-                            <i class="fas ${icon} text-xs"></i>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <div class="flex justify-between items-start">
-                                <p class="text-sm font-medium text-gray-900 capitalize">${cType} Call</p>
-                                <span class="text-xs text-gray-500">${new Date(call.timestamp).toLocaleString()}</span>
-                            </div>
-                            <div class="flex items-center gap-4 mt-1">
-                                <span class="text-xs text-gray-500"><i class="fas fa-stopwatch mr-1"></i>${Math.floor(call.duration / 60)}m ${call.duration % 60}s</span>
-                                <span class="text-xs text-gray-500"><i class="fas fa-user mr-1"></i>${call.user_name || 'Unknown'}</span>
-                            </div>
-                            ${call.recording_path ? `
-                                <div class="mt-2">
-                                    <audio controls class="h-6 w-full max-w-[200px]" preload="none">
-                                        <source src="/${call.recording_path}" type="audio/mpeg">
-                                    </audio>
-                                </div>
-                            ` : ''}
-                        </div>
-                    </div>
-                    `;
-                }).join('');
-
-            } else {
-                container.innerHTML = '<div class="text-center py-4 text-red-400">Failed to load calls.</div>';
-            }
-        } catch (e) {
-            container.innerHTML = `<div class="text-center py-4 text-red-400">Error: ${e.message}</div>`;
-        }
-    }
 
     /* ------------------------------
        SHOW CALL HISTORY MODAL (Legacy)
@@ -828,66 +831,7 @@ class LeadsManager {
             tbody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-red-500">Error: ${e.message}</td></tr>`;
         }
     }
-    /* ------------------------------
-       SALES FUNNEL LOGIC
-    ------------------------------ */
-    async loadFunnelStats() {
-        const container = document.getElementById('funnel-container');
-        const metrics = document.getElementById('funnel-metrics');
-        if (!container) return;
 
-        try {
-            // Re-use pipeline stats endpoint which aggregates by status
-            // Note: Stats endpoint respects admin_id
-            const resp = await auth.makeAuthenticatedRequest('/api/pipeline/stats');
-            if (resp && resp.ok) {
-                const data = await resp.json();
-                const pipe = data.pipeline || {};
-
-                // Map API keys to our Funnel Stages
-                // Stages: New -> Attempted -> Connected -> Interested -> Won
-                const stages = [
-                    { id: 'new', label: 'New Leads', icon: 'fa-star', count: pipe['New'] || 0, color: 'funnel-new' },
-                    { id: 'attempted', label: 'Attempted', icon: 'fa-phone', count: pipe['Attempted'] || 0, color: 'funnel-attempted' },
-                    { id: 'connected', label: 'Connected', icon: 'fa-comments', count: (pipe['Connected'] || 0) + (pipe['Follow-Up'] || 0), color: 'funnel-connected' },
-                    { id: 'interested', label: 'Interested', icon: 'fa-thumbs-up', count: pipe['Interested'] || 0, color: 'funnel-interested' },
-                    { id: 'won', label: 'Won / Closed', icon: 'fa-trophy', count: pipe['Won'] || 0, color: 'funnel-won' }
-                ];
-
-                // Render Funnel
-                container.innerHTML = stages.map(stage => `
-                    <div class="funnel-row">
-                        <div class="funnel-segment ${stage.color}">
-                            <div class="funnel-label">
-                                <i class="fas ${stage.icon}"></i> ${stage.label}
-                            </div>
-                            <div class="funnel-count">${stage.count}</div>
-                        </div>
-                    </div>
-                `).join('');
-
-                // Calculate Conversion Metrics
-                const total = stages[0].count;
-                const won = stages[4].count;
-                const conversionRate = total > 0 ? ((won / total) * 100).toFixed(1) : 0;
-
-                metrics.innerHTML = `
-                    <div class="px-3 py-1 bg-green-50 text-green-700 rounded-full border border-green-100 flex items-center gap-2">
-                        <i class="fas fa-chart-line"></i> Overall Conversion: <strong>${conversionRate}%</strong>
-                    </div>
-                    <div class="px-3 py-1 bg-blue-50 text-blue-700 rounded-full border border-blue-100 flex items-center gap-2">
-                        <i class="fas fa-users"></i> Total Leads: <strong>${total}</strong>
-                    </div>
-                `;
-
-            } else {
-                container.innerHTML = '<div class="text-center text-red-400">Failed to load funnel data.</div>';
-            }
-        } catch (e) {
-            console.error(e);
-            container.innerHTML = '<div class="text-center text-red-400">Error loading funnel.</div>';
-        }
-    }
 
 }
 

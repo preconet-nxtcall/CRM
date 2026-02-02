@@ -320,30 +320,40 @@ class PipelineManager {
             ];
 
             // Render Funnel
+            container.className = "funnel-container flex-1 w-full h-full relative flex flex-col justify-between gap-2";
             container.innerHTML = stages.map(stage => `
-                 <div class="funnel-row">
-                     <div class="funnel-segment ${stage.color}">
-                         <div class="funnel-label">
-                             <i class="fas ${stage.icon}"></i> ${stage.label}
+                 <div class="funnel-row flex-1 flex items-center justify-center w-full">
+                     <div class="funnel-segment ${stage.color} w-3/4 max-w-md shadow-sm flex justify-between items-center px-4 py-3 rounded-lg relative">
+                         <div class="funnel-label font-bold text-white text-sm">
+                             <i class="fas ${stage.icon} mr-2"></i> ${stage.label}
                          </div>
-                         <div class="funnel-count">${stage.count}</div>
+                         <div class="funnel-count bg-white/20 px-2 py-1 rounded text-white font-bold text-xs">${stage.count}</div>
                      </div>
                  </div>
              `).join('');
 
             // Calculate Conversion Metrics
-            const total = stages[0].count;
-            const won = stages[4].count;
-            const conversionRate = total > 0 ? ((won / total) * 100).toFixed(1) : 0;
+            // Total Volume = Sum of all active leads across stages + Lost/Won
+            // We sum up the counts from the stages array + 'Lost' from pipe if not in stages
+            const lostCount = pipe['Lost'] || 0;
+            const totalVolume = stages.reduce((acc, stage) => acc + stage.count, 0) + lostCount;
 
-            metrics.innerHTML = `
-                 <div class="px-3 py-1 bg-green-50 text-green-700 rounded-full border border-green-100 flex items-center gap-2">
-                     <i class="fas fa-chart-line"></i> Overall Conversion: <strong>${conversionRate}%</strong>
-                 </div>
-                 <div class="px-3 py-1 bg-blue-50 text-blue-700 rounded-full border border-blue-100 flex items-center gap-2">
-                     <i class="fas fa-users"></i> Total Leads: <strong>${total}</strong>
-                 </div>
-             `;
+            const won = stages[4].count;
+            const conversionRate = totalVolume > 0 ? ((won / totalVolume) * 100).toFixed(1) : 0;
+
+            // Only show if we have data
+            if (totalVolume > 0) {
+                metrics.innerHTML = `
+                     <div class="px-3 py-1 bg-green-50 text-green-700 rounded-full border border-green-100 flex items-center gap-2">
+                         <i class="fas fa-chart-line"></i> Overall Conversion: <strong>${conversionRate}%</strong>
+                     </div>
+                     <div class="px-3 py-1 bg-blue-50 text-blue-700 rounded-full border border-blue-100 flex items-center gap-2">
+                         <i class="fas fa-users"></i> Total Volume: <strong>${totalVolume}</strong>
+                     </div>
+                 `;
+            } else {
+                metrics.innerHTML = '';
+            }
         } catch (e) {
             console.error("Funnel Render Error:", e);
             container.innerHTML = '<div class="text-center text-red-400">Error rendering funnel.</div>';

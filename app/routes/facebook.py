@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify, current_app, session, redirect
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
-from app.models import db, FacebookConnection, FacebookPage, Lead, Admin, User, now
+from app.models import db, FacebookConnection, FacebookPage, Lead, Admin, User, now, LeadStatusHistory
 import requests
 import hmac
 import hashlib
@@ -314,6 +314,16 @@ def update_lead_status(lead_id):
         if not new_status:
             return jsonify({"error": "Status required"}), 400
 
+        if lead.status != new_status:
+            # Save History
+            history = LeadStatusHistory(
+                lead_id=lead.id,
+                old_status=lead.status,
+                new_status=new_status,
+                changed_by=claims.get("id") if role == "user" else None # Track user if available, Admin ID handling is complex here so skipping for simplicity or needs robust logic
+            )
+            db.session.add(history)
+
         lead.status = new_status
         lead.updated_at = now()
         
@@ -326,6 +336,43 @@ def update_lead_status(lead_id):
 
     except Exception as e:
         db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@bp.route('/api/leads/<int:lead_id>/history/status', methods=['GET'])
+@jwt_required()
+def get_status_history(lead_id):
+    """
+    Get full status history for a lead.
+    """
+    try:
+        claims = get_jwt()
+        role = claims.get("role")
+        current_identity = int(get_jwt_identity())
+        
+        # Verify Access
+        lead = Lead.query.get(lead_id)
+        if not lead:
+            return jsonify({"error": "Lead not found"}), 404
+            
+        # Admin or User Check
+        admin_id = None
+        if role == "admin":
+            admin_id = current_identity
+        elif role == "user":
+            user = User.query.get(current_identity)
+            if not user: return jsonify({"error": "User not found"}), 404
+            admin_id = user.admin_id
+            
+        if lead.admin_id != admin_id:
+             return jsonify({"error": "Unauthorized"}), 403
+
+        history = LeadStatusHistory.query.filter_by(lead_id=lead_id).order_by(LeadStatusHistory.created_at.desc()).all()
+        
+        return jsonify({
+            "history": [h.to_dict() for h in history]
+        }), 200
+    except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 

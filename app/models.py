@@ -791,3 +791,30 @@ class HousingSettings(db.Model):
             "is_active": self.is_active,
             "is_connected": bool(self.app_password)
         }
+
+
+# =========================================================
+# LEAD STATUS HISTORY
+# =========================================================
+class LeadStatusHistory(db.Model):
+    __tablename__ = "lead_status_history"
+
+    id = db.Column(db.Integer, primary_key=True)
+    lead_id = db.Column(db.Integer, db.ForeignKey("leads.id", ondelete="CASCADE"), nullable=False, index=True)
+    
+    old_status = db.Column(db.String(50), nullable=True)
+    new_status = db.Column(db.String(50), nullable=False)
+    
+    # Optional: Track who changed it (Admin or User)
+    changed_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    
+    created_at = db.Column(db.DateTime, default=now)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "lead_id": self.lead_id,
+            "old_status": self.old_status,
+            "new_status": self.new_status,
+            "created_at": self.created_at.isoformat()
+        }

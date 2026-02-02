@@ -268,16 +268,16 @@ def pipeline_leads():
             "status": lead.status,
             "last_activity": (lead.updated_at.isoformat() + "Z") if lead.updated_at else None,
             # Next Followup would need a Join with Followup table.
-            "created_at": (lead.created_at.isoformat() + "Z") if lead.created_at else None
+            "created_at": (lead.created_at.isoformat() + "Z") if lead.created_at else None,
+            "assigned_agent_id": lead.assigned_agent_id,
+            "assigned_agent_name": agent_name
         })
 
     return jsonify({
         "leads": data,
-        "pagination": {
-            "total": paginated.total,
-            "pages": paginated.pages,
-            "current": page
-        }
+        "current_page": page,
+        "pages": paginated.pages,
+        "total_leads": paginated.total
     }), 200
 
 @pipeline_bp.route("/agents", methods=["GET"])
