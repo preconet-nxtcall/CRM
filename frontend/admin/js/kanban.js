@@ -286,12 +286,8 @@ class KanbanManager {
 
         // Update "Load More" Button state
         // Find existing button div
-        const parent = colContainer.parentElement; // .kanban-col
-        // The button is appended after card container in createColumn
-        // We have to restart logic for button? 
-        // Actually, createColumn puts button inside cardContainer? No, createColumn appends it to cardContainer.
-
-        // Remove old button if exists inside cardContainer
+        // Update "Load More" Button state
+        // Find existing button div
         const oldBtn = colContainer.querySelector('.load-more-btn-container');
         if (oldBtn) oldBtn.remove();
 

@@ -428,101 +428,105 @@ def kanban_leads():
     }
 
     for lead in leads:
-        # Resolve Assigned Agent Name
-        agent_name = lead.assignee.name if lead.assignee else "Unassigned"
-        
-        # Parse Revenue from Budget (e.g. "50000" or "50k")
-        revenue = 0
         try:
-            if lead.budget:
-                # Remove common non-numeric chars
-                clean_budget = "".join(filter(str.isdigit, str(lead.budget)))
-                if clean_budget:
-                    revenue = int(clean_budget)
-        except:
+            # Resolve Assigned Agent Name
+            agent_name = (lead.assignee.name if lead.assignee and lead.assignee.name else "Unassigned")
+            
+            # Parse Revenue from Budget (e.g. "50000" or "50k")
             revenue = 0
+            try:
+                if lead.budget:
+                    # Remove common non-numeric chars
+                    clean_budget = "".join(filter(str.isdigit, str(lead.budget)))
+                    if clean_budget:
+                        revenue = int(clean_budget)
+            except:
+                revenue = 0
 
-        # Determine Tags
-        tags = []
-        if lead.property_type:
-            tags.append({"text": lead.property_type, "color": "purple"})
-        if lead.source:
-             tags.append({"text": lead.source, "color": "blue"})
+            # Determine Tags
+            tags = []
+            if lead.property_type:
+                tags.append({"text": lead.property_type, "color": "purple"})
+            if lead.source:
+                 tags.append({"text": lead.source, "color": "blue"})
 
-        # --- RATING LOGIC ---
-        # 1. Check Manual Override first
-        manual_rating = 0
-        if lead.custom_fields and isinstance(lead.custom_fields, dict):
-             manual_rating = int(lead.custom_fields.get('priority', 0))
+            # --- RATING LOGIC ---
+            # 1. Check Manual Override first
+            manual_rating = 0
+            if lead.custom_fields and isinstance(lead.custom_fields, dict):
+                 manual_rating = int(lead.custom_fields.get('priority', 0))
 
-        if manual_rating > 0:
-            rating = manual_rating
-        else:
-            # 2. Automatic Logic (1-5 Stars)
-            rating = 3 # Default
-            
-            stats = call_stats.get(lead.phone, {"count": 0, "max_dur": 0})
-            call_count = stats["count"]
-            max_duration = stats["max_dur"]
-            
-            s_lower = (lead.status or "").lower()
-
-            # Rule 1: Green (5 Stars)
-            if max_duration > 180 or revenue > 50000 or s_lower in ['won', 'converted', 'closed']:
-                rating = 5
-            # Rule 2: Red (1 Star)
-            elif (call_count >= 3 and max_duration == 0) or s_lower in ['lost', 'junk', 'invalid', 'not interested']:
-                rating = 1
-            # Rule 3: Yellow (3 Stars)
+            if manual_rating > 0:
+                rating = manual_rating
             else:
-                rating = 3
+                # 2. Automatic Logic (1-5 Stars)
+                rating = 3 # Default
+                
+                stats = call_stats.get(lead.phone, {"count": 0, "max_dur": 0})
+                call_count = stats["count"]
+                max_duration = stats["max_dur"] or 0 # Handle NoneType for max_dur
+                
+                s_lower = (lead.status or "").lower()
 
-        item = {
-            "id": lead.id,
-            "name": lead.name or "Unknown",
-            "phone": lead.phone,
-            "email": lead.email,
-            "source": lead.source, 
-            "revenue": revenue,
-            "budget_display": lead.budget or "",
-            "property_type": lead.property_type,
-            "location": lead.location,
-            "requirement": lead.requirement,
-            "tags": tags,
-            "agent": agent_name,
-            "agent_avatar": agent_name[:2].upper(),
-            "priority": rating,
-            "call_stats": f"{call_count} calls, max {max_duration}s", # Debug info
-            "status": lead.status,
-            "created_at": (lead.created_at.isoformat() + "Z") if lead.created_at else None
-        }
+                # Rule 1: Green (5 Stars)
+                if max_duration > 180 or revenue > 50000 or s_lower in ['won', 'converted', 'closed']:
+                    rating = 5
+                # Rule 2: Red (1 Star)
+                elif (call_count >= 3 and max_duration == 0) or s_lower in ['lost', 'junk', 'invalid', 'not interested']:
+                    rating = 1
+                # Rule 3: Yellow (3 Stars)
+                else:
+                    rating = 3
 
-        # Normalize Status to Column
-        s_norm = (lead.status or "New").capitalize()
+            item = {
+                "id": lead.id,
+                "name": lead.name or "Unknown",
+                "phone": lead.phone,
+                "email": lead.email,
+                "source": lead.source, 
+                "revenue": revenue,
+                "budget_display": lead.budget or "",
+                "property_type": lead.property_type,
+                "location": lead.location,
+                "requirement": lead.requirement,
+                "tags": tags,
+                "agent": agent_name,
+                "agent_avatar": (agent_name[:2].upper() if agent_name else "NA"),
+                "priority": rating,
+                "call_stats": f"{call_count} calls, max {max_duration}s" if 'call_count' in locals() else "", 
+                "status": lead.status,
+                "created_at": (lead.created_at.isoformat() + "Z") if lead.created_at else None
+            }
 
-        # Direct Matches
-        if s_norm in columns:
-            columns[s_norm].append(item)
-            continue
+            # Normalize Status to Column
+            s_norm = (lead.status or "New").capitalize()
+
+            # Direct Matches
+            if s_norm in columns:
+                columns[s_norm].append(item)
+                continue
+                
+            # Mapped Matches
+            s_lower = s_norm.lower()
             
-        # Mapped Matches
-        s_lower = s_norm.lower()
-        
-        if s_lower in ["new", "new leads", "new lead"]:
-             columns["New"].append(item)
-        elif s_lower in ["attempted", "ringing", "busy", "not reachable", "switch off", "no answer"]:
-             columns["Attempted"].append(item)
-        elif s_lower in ["connected", "contacted", "in conversation", "follow-up", "follow up", "call later", "callback", "meeting scheduled"]:
-             columns["Connected"].append(item)
-        elif s_lower in ["converted", "interested", "proposition", "qualified", "demo scheduled"]:
-             columns["Converted"].append(item)
-        elif s_lower in ["won", "closed"]:
-             columns["Won"].append(item)
-        elif s_lower in ["lost", "junk", "wrong number", "invalid", "not interested"]:
-             columns["Lost"].append(item)
-        else:
-             # Default fallback
-             columns["New"].append(item)
+            if s_lower in ["new", "new leads", "new lead"]:
+                 columns["New"].append(item)
+            elif s_lower in ["attempted", "ringing", "busy", "not reachable", "switch off", "no answer"]:
+                 columns["Attempted"].append(item)
+            elif s_lower in ["connected", "contacted", "in conversation", "follow-up", "follow up", "call later", "callback", "meeting scheduled"]:
+                 columns["Connected"].append(item)
+            elif s_lower in ["converted", "interested", "proposition", "qualified", "demo scheduled"]:
+                 columns["Converted"].append(item)
+            elif s_lower in ["won", "closed"]:
+                 columns["Won"].append(item)
+            elif s_lower in ["lost", "junk", "wrong number", "invalid", "not interested"]:
+                 columns["Lost"].append(item)
+            else:
+                 # Default fallback
+                 columns["New"].append(item)
+        except Exception as e:
+            print(f"Skipping bad lead {lead.id}: {str(e)}")
+            continue
 
     return jsonify({"kanban": columns}), 200
 
