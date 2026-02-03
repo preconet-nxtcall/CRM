@@ -42,7 +42,7 @@ class KanbanManager {
         style.innerHTML = `
             #kanban-container {
                 display: flex;
-                gap: 12px; /* Reduced from 20px */
+                gap: 10px; /* Reduced to 10px */
                 overflow-x: auto;
                 padding-bottom: 20px;
                 background-color: #F8FAFC; /* Very light gray */
