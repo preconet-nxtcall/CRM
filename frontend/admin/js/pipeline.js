@@ -316,11 +316,11 @@ class PipelineManager {
                 { id: 'attempted', label: 'Attempted', icon: 'fa-phone', count: pipe['Attempted'] || 0, color: 'funnel-attempted' },
                 { id: 'connected', label: 'Connected', icon: 'fa-comments', count: (pipe['Connected'] || 0) + (pipe['Follow-Up'] || 0), color: 'funnel-connected' },
                 { id: 'interested', label: 'Interested', icon: 'fa-thumbs-up', count: pipe['Interested'] || 0, color: 'funnel-interested' },
-                { id: 'won', label: 'Won / Closed', icon: 'fa-trophy', count: pipe['Won'] || 0, color: 'funnel-won' }
+                { id: 'won', label: 'Won / Closed', icon: 'fa-trophy', count: (pipe['Won'] || 0) + (pipe['Converted'] || 0), color: 'funnel-won' }
             ];
 
             // Render Funnel
-            container.className = "funnel-container flex-1 w-full h-full relative flex flex-col justify-center gap-1"; // Centered vertically, tight gap
+            // container.className = "funnel-container flex-1 w-full h-full relative flex flex-col justify-center gap-1"; // Centered vertically, tight gap
             container.innerHTML = stages.map(stage => `
                  <div class="funnel-row flex items-center justify-center w-full">
                      <div class="funnel-segment ${stage.color}">

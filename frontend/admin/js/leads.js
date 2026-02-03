@@ -30,7 +30,12 @@ class LeadsManager {
         this.dateFilter = val;
 
         const today = new Date();
-        const formatDate = (d) => d.toISOString().split('T')[0];
+        const formatDate = (d) => {
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
 
         if (val === 'today') {
             this.start_date = formatDate(today);
@@ -410,14 +415,37 @@ class LeadsManager {
             if (lead.status === 'won') statusColor = "bg-green-100 text-green-800";
             if (lead.status === 'lost') statusColor = "bg-red-100 text-red-800";
 
-            let sourceBadge = `<span class="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-800 rounded">${lead.source.toUpperCase()}</span>`;
-            if (lead.source === 'facebook') sourceBadge = `<span class="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded">FACEBOOK</span>`;
+            const source = (lead.source || '').toLowerCase();
+            let sourceBadge = `<span class="px-2 py-0.5 text-xs font-bold rounded bg-gray-100 text-gray-700 border border-gray-200">${lead.source ? lead.source.toUpperCase() : 'UNKNOWN'}</span>`;
 
-            if (lead.source === 'indiamart') sourceBadge = `<span class="px-2 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-800 rounded">INDIAMART</span>`;
-            if (lead.source === 'magicbricks') sourceBadge = `<span class="px-2 py-0.5 text-xs font-medium bg-red-100 text-red-800 rounded">MAGICBRICKS</span>`;
-            if (lead.source === '99acres') sourceBadge = `<span class="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded">99ACRES</span>`;
-            if (lead.source === 'justdial') sourceBadge = `<span class="px-2 py-0.5 text-xs font-medium bg-orange-100 text-orange-800 rounded">JUSTDIAL</span>`;
-            if (lead.source === 'housing') sourceBadge = `<span class="px-2 py-0.5 text-xs font-medium bg-purple-100 text-purple-800 rounded">HOUSING</span>`;
+            // MagicBricks (Red)
+            if (source === 'magicbricks') {
+                sourceBadge = `<span class="px-2 py-0.5 text-xs font-bold rounded bg-[#FFF0F0] text-[#D8232A] border border-[#ffdbdb]">MAGICBRICKS</span>`;
+            }
+            // 99Acres (Blue) - Branding is Blue/Green usually, sticking to Blue
+            else if (source === '99acres') {
+                sourceBadge = `<span class="px-2 py-0.5 text-xs font-bold rounded bg-[#F0F8FF] text-[#005CA8] border border-[#dceeff]">99ACRES</span>`;
+            }
+            // Housing (Purple) - #800080
+            else if (source === 'housing') {
+                sourceBadge = `<span class="px-2 py-0.5 text-xs font-bold rounded bg-[#FAF0FA] text-[#800080] border border-[#f5d6f5]">HOUSING</span>`;
+            }
+            // IndiaMART (Teal/Indigo) - Branding uses Red/Blue, but typically distinguished by Indigo/Purple in CRMs or #E6E6FA
+            else if (source === 'indiamart') {
+                sourceBadge = `<span class="px-2 py-0.5 text-xs font-bold rounded bg-[#EEF2FF] text-[#4338CA] border border-[#e0e7ff]">INDIAMART</span>`;
+            }
+            // JustDial (Orange)
+            else if (source === 'justdial') {
+                sourceBadge = `<span class="px-2 py-0.5 text-xs font-bold rounded bg-[#FFF7ED] text-[#EA580C] border border-[#ffedd5]">JUSTDIAL</span>`;
+            }
+            // Facebook (Blue)
+            else if (source === 'facebook') {
+                sourceBadge = `<span class="px-2 py-0.5 text-xs font-bold rounded bg-[#EFF6FF] text-[#1877F2] border border-[#dbeafe]">FACEBOOK</span>`;
+            }
+            // Call History (Database/Gray)
+            else if (source === 'call_history') {
+                sourceBadge = `<span class="px-2 py-0.5 text-xs font-bold rounded bg-gray-100 text-gray-700 border border-gray-200">CALL HISTORY</span>`;
+            }
 
             return `
                 <tr class="hover:bg-gray-50 transition-colors">
@@ -453,7 +481,7 @@ class LeadsManager {
                         </select>
                     </td>
                     <td class="px-4 py-3 whitespace-nowrap text-sm font-medium">
-                        <button onclick="kanbanManager.openModal(null, ${lead.id})" 
+                        <button onclick="leadsManager.openLeadModal(${lead.id})" 
                                 class="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors mr-2" title="View Details">
                                 <i class="fas fa-eye"></i>
                         </button>
@@ -578,7 +606,11 @@ class LeadsManager {
     }
 
     filterToday() {
-        const today = new Date().toISOString().split('T')[0];
+        const d = new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const today = `${year}-${month}-${day}`;
         this.start_date = today;
         this.end_date = today;
 

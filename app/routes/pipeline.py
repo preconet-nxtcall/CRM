@@ -270,7 +270,9 @@ def pipeline_leads():
             # Next Followup would need a Join with Followup table.
             "created_at": (lead.created_at.isoformat() + "Z") if lead.created_at else None,
             "assigned_agent_id": lead.assigned_to,
-            "assigned_agent_name": agent_name
+            "assigned_agent_name": agent_name,
+            "email": lead.email,
+            "custom_fields": lead.custom_fields
         })
 
     return jsonify({
