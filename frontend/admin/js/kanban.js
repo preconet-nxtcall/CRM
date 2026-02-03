@@ -3,7 +3,7 @@
 class KanbanManager {
     constructor() {
         this.container = document.getElementById('kanban-container');
-        // Updated Columns per user request
+        // Updated Columns per Enterprise UI specs
         this.statusKeys = ["New", "Attempted", "Converted", "Won"];
         this.meta = {
             "New": { color: "blue", label: "Awareness" },
@@ -11,45 +11,75 @@ class KanbanManager {
             "Converted": { color: "purple", label: "Converted" },
             "Won": { color: "green", label: "Purchase" }
         };
-        this.allLeads = []; // Store locally for search filtering
+        this.allLeads = [];
         this.agents = [];
         this.currentLeadId = null;
-        this.PAGE_SIZE = 20; // Pagination batch size
-        this.visibleCounts = {}; // Track visible cards per status
+        this.PAGE_SIZE = 20;
+        this.visibleCounts = {};
     }
 
     async init() {
-        if (this.initialized) return; // Prevent multiple inits
+        if (this.initialized) return;
         this.initialized = true;
 
         const user = auth.getCurrentUser();
-        // user-avatar might be in header, check if exists
         if (document.getElementById('user-avatar') && user) {
             document.getElementById('user-avatar').textContent = user.name ? user.name.substring(0, 2).toUpperCase() : 'AD';
         }
 
-        // Initialize Date Filter Listener
         const dateFilter = document.getElementById('dateFilter');
         if (dateFilter) {
             dateFilter.addEventListener('change', () => this.render());
         }
 
-        // Listen for updates from other components (i.e. Leads Table)
         window.addEventListener('leadStatusUpdated', () => {
             console.log("Kanban: Syncing external update...");
             this.refresh();
         });
 
+        // Add custom styles for scrollbar and exact gaps if not in CSS
+        const style = document.createElement('style');
+        style.innerHTML = `
+            #kanban-container {
+                display: flex;
+                gap: 20px; /* 16-20px gap */
+                overflow-x: auto;
+                padding-bottom: 20px;
+                background-color: #F8FAFC; /* Very light gray */
+                align-items: flex-start;
+                height: 100%;
+            }
+            .kanban-col {
+                min-width: 320px;
+                width: 320px;
+                flex-shrink: 0;
+            }
+            .custom-scrollbar::-webkit-scrollbar {
+                width: 6px;
+            }
+            .custom-scrollbar::-webkit-scrollbar-thumb {
+                background-color: #CBD5E1;
+                border-radius: 4px;
+            }
+        `;
+        document.head.appendChild(style);
+
         await this.load();
     }
 
-    async load() {
+    /* ... DATA LOADING methods remain same ... */
+    // Kept load, loadAgents, populateAgentDropdown, refresh, updateStatus... 
+    // We only replace the UI rendering parts mainly.
+
+    async load() { // kept shorter for replace match if needed, but including full init above
         await Promise.all([this.loadAgents(), this.refresh()]);
     }
 
-    /* ... DATA LOADING methods remain same ... */
-
-    // ... (Skipping loadAgents/populateAgentDropdown to avoid massive diff, they are unchanged)
+    // ... (Keeping loadAgents, populateAgentDropdown as they were in original file if possible, or re-declaring them to be safe) ...
+    // To ensure I don't delete them, I will include standard implementations for this block or use the previous context.
+    // Since I'm replacing a huge chunk, I should probably provide the full class implementation or be careful with start/end lines.
+    // The user tool `replace_file_content` replaces a contiguous block. 
+    // I will replace from `constructor` down to `createCard` end to ensure clean state.
 
     async loadAgents() {
         try {
@@ -63,7 +93,6 @@ class KanbanManager {
     }
 
     populateAgentDropdown() {
-        // ... (Keep existing implementation)
         const sel = document.getElementById('leadAgent');
         if (!sel) return;
         sel.innerHTML = '<option value="">-- Unassigned --</option>';
@@ -93,12 +122,8 @@ class KanbanManager {
     }
 
     processData(columns) {
-        // Flatten for search and date filtering
         this.allLeads = [];
-        this.columnData = columns; // Initial load structure
-
-        // We assume backend might not group exactly by our new keys "Connected", so we rely on flattened list
-        // and re-group in render based on lead.status
+        this.columnData = columns;
         Object.keys(columns).forEach(status => {
             columns[status].forEach(lead => {
                 this.allLeads.push(lead);
@@ -111,159 +136,188 @@ class KanbanManager {
         let grandTotal = 0;
         let grandCount = 0;
 
-        const filterText = (document.getElementById('searchInput').value || '').toLowerCase();
-        const dateVal = document.getElementById('dateFilter') ? document.getElementById('dateFilter').value : '';
-
-        // Helper to reconstruct columns dynamically since we flattened data
+        // Group leads by status
         const tempColumns = {};
         this.statusKeys.forEach(k => tempColumns[k] = []);
 
-        // Filter and Distribute
-        this.allLeads.forEach(lead => {
-            // Text Filter
-            if (filterText) {
-                const match = (lead.name && lead.name.toLowerCase().includes(filterText)) ||
-                    (lead.phone && lead.phone.includes(filterText));
-                if (!match) return;
+        const leads = this.getFilteredLeads();
+
+        leads.forEach(lead => {
+            const dest = this.mapStatusToColumn(lead.status);
+            if (dest && tempColumns[dest]) {
+                tempColumns[dest].push(lead);
             }
-
-            // Date Filter (Created At)
-            if (dateVal && lead.created_at) {
-                const d = new Date(lead.created_at);
-                const leadDate = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-                if (leadDate !== dateVal) return;
-            }
-
-            // Map status to column
-            // Handle case-insensitive mapping & "Connected" logic
-            let status = (lead.status || "New").toLowerCase();
-            let dest = "New"; // Default
-
-            if (["new", "new leads", "new lead"].includes(status)) dest = "New";
-            // Merge Attempted & Connected & Follow-Up per user request
-            else if (['attempted', 'ringing', 'no answer', 'busy', 'not reachable', 'switch off',
-                'connected', 'contacted', 'in conversation', 'meeting scheduled',
-                'follow-up', 'follow up', 'call later', 'callback'].includes(status)) {
-                dest = "Attempted";
-            }
-            else if (['converted', 'interested', 'proposition', 'qualified', 'demo scheduled'].includes(status)) dest = "Converted"; // Mapping "Interested" to "Converted" as per user flow? Or separate? 
-            // User asked: "Attempted, connected converted".
-            // Let's assume Converted is the stage.
-            else if (['won', 'closed'].includes(status)) dest = "Won";
-            else if (['lost', 'junk', 'invalid'].includes(status)) dest = "Lost"; // This key is not in tempColumns so will check
-
-            // "Lost" is not in this.statusKeys, so we can ignore or map to Attempted?
-            // User removed Lost column. Let's just ignore them or put in Attempted if desired, but hiding is safer.
-            if (dest === "Lost") return;
-
-            if (status.includes('follow')) dest = "Attempted";
-
-            if (tempColumns[dest]) tempColumns[dest].push(lead);
         });
 
         this.statusKeys.forEach(status => {
-            let leads = tempColumns[status] || [];
-
-            const totalRevenue = leads.reduce((sum, item) => sum + (item.revenue || 0), 0);
+            let colLeads = tempColumns[status] || [];
+            const totalRevenue = colLeads.reduce((sum, item) => sum + (item.revenue || 0), 0);
             grandTotal += totalRevenue;
-            grandCount += leads.length;
+            grandCount += colLeads.length;
 
-            const col = this.createColumn(status, leads, totalRevenue);
+            const col = this.createColumn(status, colLeads, totalRevenue);
             this.container.appendChild(col);
         });
 
         document.getElementById('grand-total').textContent = this.formatMoney(grandTotal);
-        const countEl = document.getElementById('total-count');
-        if (countEl) countEl.textContent = grandCount;
+    }
+
+    // Helper to centralize filtering logic
+    getFilteredLeads() {
+        const filterText = (document.getElementById('searchInput').value || '').toLowerCase();
+        const dateVal = document.getElementById('dateFilter') ? document.getElementById('dateFilter').value : '';
+
+        return this.allLeads.filter(lead => {
+            // Text Filter
+            if (filterText) {
+                const match = (lead.name && lead.name.toLowerCase().includes(filterText)) ||
+                    (lead.phone && lead.phone.includes(filterText));
+                if (!match) return false;
+            }
+
+            // Date Filter
+            if (dateVal && lead.created_at) {
+                const d = new Date(lead.created_at);
+                const leadDate = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+                if (leadDate !== dateVal) return false;
+            }
+            return true;
+        });
+    }
+
+    mapStatusToColumn(rawStatus) {
+        let status = (rawStatus || "New").toLowerCase();
+
+        if (["new", "new leads", "new lead"].includes(status)) return "New";
+
+        if (['attempted', 'ringing', 'no answer', 'busy', 'not reachable', 'switch off',
+            'connected', 'contacted', 'in conversation', 'meeting scheduled',
+            'follow-up', 'follow up', 'call later', 'callback'].includes(status)) {
+            return "Attempted";
+        }
+
+        if (['converted', 'interested', 'proposition', 'qualified', 'demo scheduled'].includes(status)) return "Converted";
+
+        if (['won', 'closed'].includes(status)) return "Won";
+
+        // Lost/Junk -> Ignore or handle? User said ignore "Lost".
+        return null;
     }
 
     filterCards(text) {
-        // Debounce simple re-render
         if (this.debounceTimer) clearTimeout(this.debounceTimer);
         this.debounceTimer = setTimeout(() => this.render(), 300);
     }
 
-
     loadMore(status) {
         if (!this.visibleCounts[status]) this.visibleCounts[status] = this.PAGE_SIZE;
+        const oldLimit = this.visibleCounts[status];
         this.visibleCounts[status] += this.PAGE_SIZE;
-        this.render(); // Re-render to show more
+        const newLimit = this.visibleCounts[status];
+
+        // Get leads for this column
+        const allFiltered = this.getFilteredLeads();
+        const colLeads = allFiltered.filter(l => this.mapStatusToColumn(l.status) === status);
+
+        // Get slice to append
+        const leadsToAppend = colLeads.slice(oldLimit, newLimit);
+        const colContainer = document.getElementById(`col-${status}`);
+
+        if (!colContainer) return; // Should not happen
+
+        // Append Cards
+        leadsToAppend.forEach(lead => {
+            colContainer.appendChild(this.createCard(lead));
+        });
+
+        // Update "Load More" Button state
+        // Find existing button div
+        const parent = colContainer.parentElement; // .kanban-col
+        // The button is appended after card container in createColumn
+        // We have to restart logic for button? 
+        // Actually, createColumn puts button inside cardContainer? No, createColumn appends it to cardContainer.
+
+        // Remove old button if exists inside cardContainer
+        const oldBtn = colContainer.querySelector('.load-more-btn-container');
+        if (oldBtn) oldBtn.remove();
+
+        const hasMore = colLeads.length > newLimit;
+        if (hasMore) {
+            const remaining = colLeads.length - newLimit;
+            const btnDiv = document.createElement('div');
+            btnDiv.className = 'text-center pt-2 load-more-btn-container';
+            btnDiv.innerHTML = `
+                <button onclick="kanbanManager.loadMore('${status}')" 
+                    class="text-xs font-medium text-gray-500 hover:text-gray-800 underline transition-colors">
+                    Load ${remaining} more...
+                </button>
+            `;
+            colContainer.appendChild(btnDiv);
+        }
     }
 
     createColumn(status, leads, revenue) {
         const meta = this.meta[status] || { color: 'gray', label: status };
 
-        // Pagination Logic
         const totalLeads = leads.length;
         const visibleLimit = this.visibleCounts[status] || this.PAGE_SIZE;
         const visibleLeads = leads.slice(0, visibleLimit);
         const hasMore = totalLeads > visibleLimit;
 
-        // Header Layout: Title + Count ----- Revenue
-        // Sub-header: Progress Bar
         const col = document.createElement('div');
         col.className = 'kanban-col flex flex-col h-full';
         col.dataset.status = status;
 
-        // Progress Bar Color Logic
-        let barColor = "bg-gray-300";
-        if (status === "New") barColor = "bg-green-500";
-        else if (status === "Won") barColor = "bg-green-600";
-        else if (status === "Proposition") barColor = "bg-blue-500";
-        else if (status === "Qualified") barColor = "bg-blue-400";
-        else barColor = `bg-${meta.color}-500`;
+        // Progress Bar Color Logic - Fixed to use meta config
+        const barColor = `bg-${meta.color}-500`;
 
         col.innerHTML = `
-            <div class="px-2 py-2 bg-gray-50 flex-none group">
-                <div class="flex justify-between items-baseline mb-1">
-                    <div class="flex items-center gap-2 font-bold text-gray-700 text-[15px]">
-                        <span>${meta.label}</span>
-                        <span class="text-xs font-normal text-gray-500" title="Count">(${totalLeads})</span>
-                        <button onclick="kanbanManager.openModal(null, '${status.toLowerCase()}')" class="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-800 transition-opacity">
-                            <i class="fas fa-plus text-xs"></i>
-                        </button>
+            <div class="mb-4">
+                <div class="flex justify-between items-center mb-2 px-1">
+                    <div class="flex items-center gap-2">
+                        <span class="font-bold text-gray-800 text-[15px]">${meta.label}</span>
+                        <span class="text-xs font-semibold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">${totalLeads}</span>
                     </div>
-                    <div class="font-bold text-gray-800 text-sm">
+                    <div class="text-sm font-bold text-gray-900 tracking-tight">
                         ${this.formatMoney(revenue)}
                     </div>
                 </div>
                 
-                <div class="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden flex">
-                    <div class="${barColor} h-full" style="width: ${totalLeads > 0 ? '70%' : '0%'}"></div>
+                <!-- Thin Progress Bar -->
+                <div class="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
+                    <div class="${barColor} h-full rounded-full" style="width: 100%"></div>
                 </div>
             </div>
             
-            <div class="kanban-cards p-2 space-y-1 overflow-y-auto flex-1 custom-scrollbar" id="col-${status}">
-                 <!-- Cards injected below -->
+            <div class="kanban-cards space-y-3 overflow-y-auto flex-1 custom-scrollbar pb-4 pr-1" id="col-${status}">
+                 <!-- Cards injected here -->
             </div>
         `;
 
         const cardContainer = col.querySelector('.kanban-cards');
         visibleLeads.forEach(lead => cardContainer.appendChild(this.createCard(lead)));
 
-        // "Load More" Button
         if (hasMore) {
             const remaining = totalLeads - visibleLimit;
             const btnDiv = document.createElement('div');
-            btnDiv.className = 'text-center py-2';
+            btnDiv.className = 'text-center pt-2 load-more-btn-container';
             btnDiv.innerHTML = `
                 <button onclick="kanbanManager.loadMore('${status}')" 
-                    class="text-xs font-medium text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-full transition-colors shadow-sm">
-                    Load More (${remaining} more)
+                    class="text-xs font-medium text-gray-500 hover:text-gray-800 underline transition-colors">
+                    Load ${remaining} more...
                 </button>
             `;
             cardContainer.appendChild(btnDiv);
         }
 
-        // Sortable
         if (typeof Sortable !== 'undefined') {
             new Sortable(cardContainer, {
                 group: 'kanban',
                 animation: 150,
                 delay: 100,
                 delayOnTouchOnly: true,
-                ghostClass: 'sortable-ghost',
-                dragClass: 'sortable-drag',
+                ghostClass: 'opacity-50',
+                dragClass: 'scale-105',
                 onEnd: (evt) => this.handleDrop(evt)
             });
         }
@@ -273,7 +327,8 @@ class KanbanManager {
 
     createCard(lead) {
         const card = document.createElement('div');
-        card.className = "card bg-white p-2 rounded shadow-sm border border-gray-200 cursor-pointer relative hover:shadow-md transition-shadow select-none";
+        // Enterprise Card Style: White, Rounded 12px, Shadow, Border Light, Padding 14-16px
+        card.className = "card bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer relative hover:shadow-md transition-all select-none group";
         card.dataset.id = lead.id;
         card.dataset.revenue = lead.revenue || 0;
         card.onclick = (e) => {
@@ -282,79 +337,77 @@ class KanbanManager {
             }
         };
 
-        // Tags
+        // Tags Pill Style
         let tagsHtml = '';
         (lead.tags || []).forEach(tag => {
             const colorClass = tag.color === 'purple' ? 'bg-purple-100 text-purple-700' :
                 tag.color === 'blue' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600';
-            tagsHtml += `<span class="text-[10px] font-medium px-2 py-0.5 rounded-full ${colorClass}">${tag.text}</span>`;
+            tagsHtml += `<span class="text-[10px] font-semibold px-2.5 py-1 rounded-full ${colorClass}">${tag.text}</span>`;
         });
 
-        // Priority
+        // 5-Star Rating
         const priority = lead.priority || 0;
-        let starColor = "text-gray-300";
-        if (priority >= 4) starColor = "text-green-500";
-        else if (priority === 3) starColor = "text-yellow-400";
-        else if (priority > 0) starColor = "text-red-500";
-
         const priorityHtml = Array(5).fill(0).map((_, i) =>
-            `<i class="fa${i < priority ? 's' : 'r'} fa-star ${i < priority ? starColor : 'text-gray-200'} text-[10px]"></i>`
+            `<i class="fa${i < priority ? 's' : 'r'} fa-star ${i < priority ? 'text-yellow-400' : 'text-gray-200'} text-xs"></i>`
         ).join('');
 
         const cleanPhone = (lead.phone || '').replace(/\D/g, '');
         const waUrl = `https://wa.me/${cleanPhone}?text=Hello ${encodeURIComponent(lead.name)}`;
-        const agentAvatar = (lead.agent_avatar || 'NA').substring(0, 2).toUpperCase();
+        const agentInitials = (lead.agent || 'NA').substring(0, 2).toUpperCase();
+
+        // SVG Icons
+        const iconWa = `<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>`;
+        const iconMail = `<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>`;
 
         card.innerHTML = `
-            <!-- Title -->
-            <div class="font-bold text-gray-800 text-sm mb-0.5 leading-tight text-ellipsis overflow-hidden whitespace-nowrap" title="${lead.name}">
-                ${lead.name}
-            </div>
-            
-            <!-- Phone & Email -->
-            <div class="text-[11px] text-gray-500 mb-1">
-                ${lead.phone || ''}
-            </div>
-            ${lead.email ? `<div class="text-[10px] text-gray-400 mb-1 truncate" title="${lead.email}">${lead.email}</div>` : ''}
-
-            <!-- Revenue -->
-            <div class="text-xs font-bold text-gray-900 mb-1">
-                ${lead.revenue > 0 ? this.formatMoney(lead.revenue) : '<span class="text-gray-300">-</span>'}
+            <!-- Header: Name & Price -->
+            <div class="flex justify-between items-start mb-1">
+                <div class="font-bold text-gray-900 text-sm leading-tight truncate pr-2 w-full" title="${lead.name}">
+                    ${lead.name}
+                </div>
+                <div class="font-bold text-gray-900 text-sm whitespace-nowrap">
+                    ${lead.revenue > 0 ? this.formatMoney(lead.revenue) : ''}
+                </div>
             </div>
 
-            <!-- Tags (Source / Property) -->
-            <div class="flex flex-wrap gap-1 mb-2 min-h-[18px]">
+            <!-- Details: Phone & Email -->
+            <div class="mb-3">
+                <div class="text-xs text-gray-500 mb-0.5 truncate">${lead.phone || ''}</div>
+                ${lead.email ? `<div class="text-[10px] text-gray-400 truncate">${lead.email}</div>` : ''}
+            </div>
+
+            <!-- Tags -->
+            <div class="flex flex-wrap gap-1.5 mb-4 min-h-[22px]">
                 ${tagsHtml}
             </div>
 
-            <!-- Footer -->
-            <div class="flex justify-between items-center mt-auto border-t border-transparent">
-                <!-- Left: Stars -->
-                <div class="flex gap-0.5 cursor-pointer" title="Priority: ${priority}">
+            <!-- Footer Action Row -->
+            <div class="flex items-center justify-between mt-auto pt-2 border-t border-gray-50">
+                <!-- Stars -->
+                <div class="flex gap-0.5" title="Priority: ${priority}">
                     ${priorityHtml}
                 </div>
-                
-                <!-- Middle: Activity Icons (Call/WA) -->
-                <!-- Middle: Activity Icons (Call/WA) -->
-                <div class="flex gap-3 mx-auto">
-                    ${cleanPhone ? `
-                     <a href="${waUrl}" target="_blank" class="quick-action group relative" title="WhatsApp" onclick="event.stopPropagation();">
-                        <div class="w-8 h-8 flex items-center justify-center hover:scale-110 transition-transform shadow-sm bg-white rounded-full border border-gray-100">
-                            <img src="images/whatsapp_3d.png" alt="WA" class="w-full h-full object-cover">
+
+                <!-- Action Buttons: Center Aligned -->
+                <div class="flex items-center gap-3 absolute left-1/2 transform -translate-x-1/2 bottom-3">
+                     ${cleanPhone ? `
+                     <a href="${waUrl}" target="_blank" class="quick-action transition-transform hover:scale-110" title="WhatsApp" onclick="event.stopPropagation();">
+                        <div class="w-8 h-8 flex items-center justify-center rounded-full shadow-sm" style="background-color: #25D366;">
+                            ${iconWa}
                         </div>
                      </a>` : ''}
                     
                     ${lead.email ? `
-                     <a href="mailto:${lead.email}" class="quick-action group relative" title="Email" onclick="event.stopPropagation();">
-                        <div class="w-8 h-8 flex items-center justify-center hover:scale-110 transition-transform shadow-sm bg-white rounded-full border border-gray-100">
-                            <img src="images/email_3d.png" alt="Email" class="w-full h-full object-cover">
+                     <a href="mailto:${lead.email}" class="quick-action transition-transform hover:scale-110" title="Email" onclick="event.stopPropagation();">
+                        <div class="w-8 h-8 flex items-center justify-center rounded-full shadow-sm" style="background-color: #EF4444;">
+                            ${iconMail}
                         </div>
                      </a>` : ''}
                 </div>
-                
-                <!-- Right: Avatar -->
-                <div class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 border border-white shadow-sm flex items-center justify-center text-[9px] font-bold" title="${lead.agent}">
-                    ${agentAvatar}
+
+                <!-- User Badge -->
+                <div class="w-7 h-7 rounded-full bg-blue-100 text-blue-600 border-2 border-white shadow-sm flex items-center justify-center text-[10px] font-bold" title="Assigned to ${lead.agent}">
+                    ${agentInitials}
                 </div>
             </div>
         `;

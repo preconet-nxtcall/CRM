@@ -28,7 +28,7 @@ class LeadsManager {
     }
 
     changeDateFilter(val) {
-        // Map legacy dropdown to new date range params
+        console.log("Changing Date Filter:", val);
         this.dateFilter = val;
 
         const today = new Date();
@@ -53,16 +53,21 @@ class LeadsManager {
             this.start_date = formatDate(lastMonth);
             this.end_date = formatDate(today);
         } else {
-            // All
+            // All Time
             this.start_date = null;
             this.end_date = null;
         }
 
-        // Reset Custom Inputs UI if needed
-        document.getElementById('leadsDateFilter').value = '';
-        document.getElementById('btn-leads-today').classList.remove('bg-blue-50', 'text-blue-600', 'border-blue-300');
+        console.log(`New Date Range: ${this.start_date} to ${this.end_date}`);
 
-        this.loadLeads(1); // Reset to page 1
+        // Reset Custom Inputs UI
+        const customInput = document.getElementById('leadsDateFilter');
+        if (customInput) customInput.value = '';
+
+        const todayBtn = document.getElementById('btn-leads-today');
+        if (todayBtn) todayBtn.classList.remove('bg-blue-50', 'text-blue-600', 'border-blue-300');
+
+        this.loadLeads(1);
     }
 
 
@@ -809,13 +814,22 @@ class LeadsManager {
 
             let timelineItems = [];
 
+            const parseAsUTC = (dateStr) => {
+                if (!dateStr) return new Date();
+                // Ensure 'Z' is present for UTC parsing
+                if (dateStr.indexOf('Z') === -1 && dateStr.indexOf('+') === -1) {
+                    return new Date(dateStr + 'Z');
+                }
+                return new Date(dateStr);
+            };
+
             // Process Status History
             if (statusResp && statusResp.ok) {
                 const sData = await statusResp.json();
                 (sData.history || []).forEach(h => {
                     timelineItems.push({
                         type: 'status',
-                        date: new Date(h.created_at),
+                        date: parseAsUTC(h.created_at),
                         title: `Status Changed to ${h.new_status.toUpperCase()}`,
                         desc: `Previous: ${h.old_status || 'N/A'}`,
                         icon: 'fa-exchange-alt',
@@ -830,7 +844,7 @@ class LeadsManager {
                 (fData.followups || []).forEach(f => {
                     timelineItems.push({
                         type: 'followup',
-                        date: new Date(f.scheduled_at),
+                        date: parseAsUTC(f.scheduled_at),
                         title: `Follow-up: ${f.status.toUpperCase()}`, // assigned to? 
                         desc: f.notes || 'No notes',
                         icon: 'fa-calendar-check',
