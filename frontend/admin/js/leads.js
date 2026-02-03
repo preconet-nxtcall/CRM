@@ -91,60 +91,29 @@ class LeadsManager {
         });
     }
 
+    async loadAgents() {
+        try {
+            const resp = await auth.makeAuthenticatedRequest('/api/pipeline/agents');
+            if (resp && resp.ok) {
+                const data = await resp.json();
+                this.agents = data.agents || [];
+            }
+        } catch (e) { console.warn("Agents load warning", e); }
+    }
+
+    renderAgentOptions(assignedId) {
+        if (!this.agents || this.agents.length === 0) return '';
+        return this.agents.map(agent =>
+            `<option value="${agent.id}" ${parseInt(assignedId) === parseInt(agent.id) ? 'selected' : ''}>${agent.name}</option>`
+        ).join('');
+    }
+
     async loadLeads(page = 1) {
         if (!this.tableBody) return;
 
         this.currentPage = page;
         this.showLoading(); // Use Skeleton Loader
 
-    }
-
-    showLoading() {
-        // Table Skeleton Row
-        const skeletonRow = `
-            <tr class="animate-pulse border-b border-gray-50 last:border-0">
-                <td class="px-6 py-4 whitespace-nowrap">
-                     <div class="h-3 bg-gray-200 rounded w-16 mb-1"></div>
-                     <div class="h-2 bg-gray-100 rounded w-12"></div>
-                </td>
-                <td class="px-6 py-4">
-                     <div class="h-3 bg-gray-200 rounded w-24 mb-1"></div>
-                     <div class="h-3 bg-gray-100 rounded w-20"></div>
-                </td>
-                <td class="px-6 py-4">
-                     <div class="h-3 bg-gray-100 rounded w-32"></div>
-                </td>
-                <td class="px-6 py-4">
-                     <div class="h-5 w-20 bg-gray-100 rounded-lg"></div>
-                </td>
-                <td class="px-6 py-4">
-                     <div class="h-3 bg-gray-200 rounded w-24 mb-1"></div>
-                     <div class="h-2 bg-gray-100 rounded w-16"></div>
-                </td>
-                <td class="px-6 py-4">
-                    <div class="h-4 bg-gray-100 rounded w-20"></div>
-                </td>
-                <td class="px-6 py-4">
-                     <div class="h-5 w-20 bg-gray-100 rounded-full"></div>
-                </td>
-                 <td class="px-6 py-4 text-right">
-                    <div class="flex justify-end gap-2">
-                         <div class="h-8 w-8 bg-gray-100 rounded-full"></div>
-                         <div class="h-8 w-8 bg-gray-100 rounded-full"></div>
-                    </div>
-                </td>
-            </tr>
-        `;
-
-        if (this.tableBody) {
-            this.tableBody.innerHTML = skeletonRow.repeat(5);
-        }
-
-        if (this.mobileContainer) {
-            this.mobileContainer.innerHTML = '<div class="p-4 space-y-4 animate-pulse">' +
-                '<div class="h-24 bg-gray-100 rounded-lg"></div>'.repeat(3) +
-                '</div>';
-        }
 
         try {
             // Include Filter in Request - now with date filter
@@ -191,6 +160,55 @@ class LeadsManager {
             console.error("Error loading leads", e);
             if (this.tableBody) this.tableBody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-red-500">Error: ${e.message}</td></tr>`;
             if (this.mobileContainer) this.mobileContainer.innerHTML = `<div class="text-center py-8 text-red-500">Error: ${e.message}</div>`;
+        }
+    }
+
+
+    showLoading() {
+        // Table Skeleton Row
+        const skeletonRow = `
+            <tr class="animate-pulse border-b border-gray-50 last:border-0">
+                <td class="px-6 py-4 whitespace-nowrap">
+                     <div class="h-3 bg-gray-200 rounded w-16 mb-1"></div>
+                     <div class="h-2 bg-gray-100 rounded w-12"></div>
+                </td>
+                <td class="px-6 py-4">
+                     <div class="h-3 bg-gray-200 rounded w-24 mb-1"></div>
+                     <div class="h-3 bg-gray-100 rounded w-20"></div>
+                </td>
+                <td class="px-6 py-4">
+                     <div class="h-3 bg-gray-100 rounded w-32"></div>
+                </td>
+                <td class="px-6 py-4">
+                     <div class="h-5 w-20 bg-gray-100 rounded-lg"></div>
+                </td>
+                <td class="px-6 py-4">
+                     <div class="h-3 bg-gray-200 rounded w-24 mb-1"></div>
+                     <div class="h-2 bg-gray-100 rounded w-16"></div>
+                </td>
+                <td class="px-6 py-4">
+                    <div class="h-4 bg-gray-100 rounded w-20"></div>
+                </td>
+                <td class="px-6 py-4">
+                     <div class="h-5 w-20 bg-gray-100 rounded-full"></div>
+                </td>
+                 <td class="px-6 py-4 text-right">
+                    <div class="flex justify-end gap-2">
+                         <div class="h-8 w-8 bg-gray-100 rounded-full"></div>
+                         <div class="h-8 w-8 bg-gray-100 rounded-full"></div>
+                    </div>
+                </td>
+            </tr>
+        `;
+
+        if (this.tableBody) {
+            this.tableBody.innerHTML = skeletonRow.repeat(5);
+        }
+
+        if (this.mobileContainer) {
+            this.mobileContainer.innerHTML = '<div class="p-4 space-y-4 animate-pulse">' +
+                '<div class="h-24 bg-gray-100 rounded-lg"></div>'.repeat(3) +
+                '</div>';
         }
     }
 
