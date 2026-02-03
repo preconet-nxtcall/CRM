@@ -94,10 +94,57 @@ class LeadsManager {
     async loadLeads(page = 1) {
         if (!this.tableBody) return;
 
-        this.currentPage = page; // Store current page
-        this.currentPage = page; // Store current page
-        if (this.tableBody) this.tableBody.innerHTML = '<tr><td colspan="8" class="text-center py-4">Loading...</td></tr>';
-        if (this.mobileContainer) this.mobileContainer.innerHTML = '<div class="text-center py-8 text-gray-500">Loading leads...</div>';
+        this.currentPage = page;
+        this.showLoading(); // Use Skeleton Loader
+
+    }
+
+    showLoading() {
+        // Table Skeleton Row
+        const skeletonRow = `
+            <tr class="animate-pulse border-b border-gray-50 last:border-0">
+                <td class="px-6 py-4 whitespace-nowrap">
+                     <div class="h-3 bg-gray-200 rounded w-16 mb-1"></div>
+                     <div class="h-2 bg-gray-100 rounded w-12"></div>
+                </td>
+                <td class="px-6 py-4">
+                     <div class="h-3 bg-gray-200 rounded w-24 mb-1"></div>
+                     <div class="h-3 bg-gray-100 rounded w-20"></div>
+                </td>
+                <td class="px-6 py-4">
+                     <div class="h-3 bg-gray-100 rounded w-32"></div>
+                </td>
+                <td class="px-6 py-4">
+                     <div class="h-5 w-20 bg-gray-100 rounded-lg"></div>
+                </td>
+                <td class="px-6 py-4">
+                     <div class="h-3 bg-gray-200 rounded w-24 mb-1"></div>
+                     <div class="h-2 bg-gray-100 rounded w-16"></div>
+                </td>
+                <td class="px-6 py-4">
+                    <div class="h-4 bg-gray-100 rounded w-20"></div>
+                </td>
+                <td class="px-6 py-4">
+                     <div class="h-5 w-20 bg-gray-100 rounded-full"></div>
+                </td>
+                 <td class="px-6 py-4 text-right">
+                    <div class="flex justify-end gap-2">
+                         <div class="h-8 w-8 bg-gray-100 rounded-full"></div>
+                         <div class="h-8 w-8 bg-gray-100 rounded-full"></div>
+                    </div>
+                </td>
+            </tr>
+        `;
+
+        if (this.tableBody) {
+            this.tableBody.innerHTML = skeletonRow.repeat(5);
+        }
+
+        if (this.mobileContainer) {
+            this.mobileContainer.innerHTML = '<div class="p-4 space-y-4 animate-pulse">' +
+                '<div class="h-24 bg-gray-100 rounded-lg"></div>'.repeat(3) +
+                '</div>';
+        }
 
         try {
             // Include Filter in Request - now with date filter
@@ -877,7 +924,7 @@ class LeadsManager {
                             ${item.title}
                         </div>
                          <div class="text-xs text-gray-400 mb-1">
-                            ${item.date.toLocaleDateString()} at ${item.date.toLocaleTimeString()}
+                            ${item.date.toLocaleDateString()} at ${item.date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true })}
                         </div>
                         <div class="bg-gray-50 rounded p-2 text-xs text-gray-600">
                            ${item.desc}

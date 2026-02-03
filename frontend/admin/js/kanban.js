@@ -109,6 +109,7 @@ class KanbanManager {
     }
 
     async refresh() {
+        this.showLoading(); // Show Skeleton
         try {
             const resp = await auth.makeAuthenticatedRequest('/api/pipeline/kanban');
             if (resp && resp.ok) {
@@ -118,7 +119,54 @@ class KanbanManager {
             }
         } catch (e) {
             console.error("Kanban Error", e);
+            this.container.innerHTML = `<div class="p-8 text-center text-red-500">Failed to load board. <button onclick="kanbanManager.refresh()" class="underline font-bold">Retry</button></div>`;
         }
+    }
+
+    showLoading() {
+        // Skeleton Column
+        const cardSkeleton = `
+            <div class="bg-white p-3 rounded-xl border border-gray-100 mb-3 animate-pulse">
+                <div class="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                <div class="h-3 bg-gray-100 rounded w-1/2 mb-3"></div>
+                <div class="flex gap-2 mb-3">
+                    <div class="h-5 w-12 bg-gray-100 rounded-full"></div>
+                    <div class="h-5 w-16 bg-gray-100 rounded-full"></div>
+                </div>
+                <div class="border-t border-gray-50 pt-2 flex justify-between">
+                    <div class="flex gap-1">
+                         <div class="w-3 h-3 bg-gray-200 rounded-full"></div>
+                         <div class="w-3 h-3 bg-gray-200 rounded-full"></div>
+                    </div>
+                    <div class="w-6 h-6 bg-gray-200 rounded-full"></div>
+                </div>
+            </div>
+        `;
+
+        // Generate Columns
+        let html = '';
+        this.statusKeys.forEach(status => {
+            const meta = this.meta[status];
+            html += `
+                <div class="kanban-col flex flex-col h-full" style="min-width: 320px;">
+                    <div class="mb-4 animate-pulse">
+                        <div class="flex justify-between items-center mb-2 px-1">
+                             <div class="h-5 bg-gray-200 rounded w-1/3"></div>
+                             <div class="h-4 bg-gray-200 rounded w-1/4"></div>
+                        </div>
+                        <div class="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
+                             <div class="bg-gray-300 h-full rounded-full" style="width: 40%"></div>
+                        </div>
+                    </div>
+                    <div class="space-y-3 overflow-y-hidden pr-1">
+                        ${cardSkeleton.repeat(3)}
+                    </div>
+                </div>
+            `;
+        });
+
+        this.container.innerHTML = html;
+        document.getElementById('grand-total').textContent = '...';
     }
 
     processData(columns) {
@@ -327,8 +375,8 @@ class KanbanManager {
 
     createCard(lead) {
         const card = document.createElement('div');
-        // Enterprise Card Style: White, Rounded 12px, Shadow, Border Light, Padding 14-16px
-        card.className = "card bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer relative hover:shadow-md transition-all select-none group";
+        // Compact Enterprise Style: White, Rounded 12px, Shadow, Border Light, Padding 12px (p-3)
+        card.className = "card bg-white p-3 rounded-xl shadow-sm border border-gray-100 cursor-pointer relative hover:shadow-md transition-all select-none group";
         card.dataset.id = lead.id;
         card.dataset.revenue = lead.revenue || 0;
         card.onclick = (e) => {
@@ -342,7 +390,7 @@ class KanbanManager {
         (lead.tags || []).forEach(tag => {
             const colorClass = tag.color === 'purple' ? 'bg-purple-100 text-purple-700' :
                 tag.color === 'blue' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600';
-            tagsHtml += `<span class="text-[10px] font-semibold px-2.5 py-1 rounded-full ${colorClass}">${tag.text}</span>`;
+            tagsHtml += `<span class="text-[10px] font-semibold px-2 py-0.5 rounded-full ${colorClass}">${tag.text}</span>`;
         });
 
         // 5-Star Rating
@@ -361,7 +409,7 @@ class KanbanManager {
 
         card.innerHTML = `
             <!-- Header: Name & Price -->
-            <div class="flex justify-between items-start mb-1">
+            <div class="flex justify-between items-start mb-0.5">
                 <div class="font-bold text-gray-900 text-sm leading-tight truncate pr-2 w-full" title="${lead.name}">
                     ${lead.name}
                 </div>
@@ -371,42 +419,42 @@ class KanbanManager {
             </div>
 
             <!-- Details: Phone & Email -->
-            <div class="mb-3">
-                <div class="text-xs text-gray-500 mb-0.5 truncate">${lead.phone || ''}</div>
+            <div class="mb-2">
+                <div class="text-[11px] text-gray-500 mb-0.5 truncate">${lead.phone || ''}</div>
                 ${lead.email ? `<div class="text-[10px] text-gray-400 truncate">${lead.email}</div>` : ''}
             </div>
 
             <!-- Tags -->
-            <div class="flex flex-wrap gap-1.5 mb-4 min-h-[22px]">
+            <div class="flex flex-wrap gap-1.5 mb-2 min-h-[20px]">
                 ${tagsHtml}
             </div>
 
             <!-- Footer Action Row -->
-            <div class="flex items-center justify-between mt-auto pt-2 border-t border-gray-50">
-                <!-- Stars -->
+            <div class="flex items-center justify-between mt-auto pt-1.5 border-t border-gray-50 relative">
+                <!-- Left: Stars -->
                 <div class="flex gap-0.5" title="Priority: ${priority}">
                     ${priorityHtml}
                 </div>
 
-                <!-- Action Buttons: Center Aligned -->
-                <div class="flex items-center gap-3 absolute left-1/2 transform -translate-x-1/2 bottom-3">
+                <!-- Action Buttons: Center Aligned - Adjusted Position -->
+                <div class="flex items-center gap-2 absolute left-1/2 transform -translate-x-1/2 top-1.5">
                      ${cleanPhone ? `
                      <a href="${waUrl}" target="_blank" class="quick-action transition-transform hover:scale-110" title="WhatsApp" onclick="event.stopPropagation();">
-                        <div class="w-8 h-8 flex items-center justify-center rounded-full shadow-sm" style="background-color: #25D366;">
+                        <div class="w-7 h-7 flex items-center justify-center rounded-full shadow-sm" style="background-color: #25D366;">
                             ${iconWa}
                         </div>
                      </a>` : ''}
                     
                     ${lead.email ? `
                      <a href="mailto:${lead.email}" class="quick-action transition-transform hover:scale-110" title="Email" onclick="event.stopPropagation();">
-                        <div class="w-8 h-8 flex items-center justify-center rounded-full shadow-sm" style="background-color: #EF4444;">
+                        <div class="w-7 h-7 flex items-center justify-center rounded-full shadow-sm" style="background-color: #EF4444;">
                             ${iconMail}
                         </div>
                      </a>` : ''}
                 </div>
 
                 <!-- User Badge -->
-                <div class="w-7 h-7 rounded-full bg-blue-100 text-blue-600 border-2 border-white shadow-sm flex items-center justify-center text-[10px] font-bold" title="Assigned to ${lead.agent}">
+                <div class="w-6 h-6 rounded-full bg-blue-100 text-blue-600 border-2 border-white shadow-sm flex items-center justify-center text-[9px] font-bold" title="Assigned to ${lead.agent}">
                     ${agentInitials}
                 </div>
             </div>

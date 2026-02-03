@@ -586,7 +586,7 @@ def create_lead():
             property_type=data.get("property_type"),
             location=data.get("location"),
             requirement=data.get("requirement"),
-            assigned_to=data.get("assigned_to"),
+            assigned_to=int(data.get("assigned_to")) if data.get("assigned_to") else None,
             custom_fields=custom_fields
         )
         db.session.add(lead)
