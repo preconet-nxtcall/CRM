@@ -116,10 +116,16 @@ class KanbanManager {
                 const data = await resp.json();
                 this.processData(data.kanban);
                 this.render();
+            } else {
+                throw new Error("API Error: " + (resp ? resp.status : "Unknown"));
             }
         } catch (e) {
             console.error("Kanban Error", e);
-            this.container.innerHTML = `<div class="p-8 text-center text-red-500">Failed to load board. <button onclick="kanbanManager.refresh()" class="underline font-bold">Retry</button></div>`;
+            this.container.innerHTML = `<div class="p-8 text-center text-red-500">
+                <i class="fas fa-exclamation-triangle mb-2 text-2xl"></i><br>
+                Failed to load board. <button onclick="kanbanManager.refresh()" class="underline font-bold text-blue-600 hover:text-blue-800">Retry</button>
+            </div>`;
+            document.getElementById('grand-total').textContent = 'Error';
         }
     }
 
