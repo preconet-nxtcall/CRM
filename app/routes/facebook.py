@@ -434,26 +434,49 @@ def process_lead_strict(conn, lead_id, form_id):
     # 2. Fetch from Graph API using Permanent System Token
     try:
         sys_token = conn.get_token() # Decrypts automatically
+        
+        # Enhanced Params with Proof
+        params = {"access_token": sys_token}
+        proof = FacebookService.get_app_secret_proof(sys_token)
+        if proof:
+            params["appsecret_proof"] = proof
+            
         url = f"https://graph.facebook.com/v24.0/{lead_id}"
-        resp = requests.get(url, params={"access_token": sys_token})
+        resp = requests.get(url, params=params)
         
         if resp.status_code != 200:
-            current_app.logger.error(f"Lead Fetch Failed: {resp.text}")
+            current_app.logger.error(f"Lead Fetch Failed for {lead_id}: {resp.text}")
             return
             
         lead_data = resp.json()
         
-        # 3. Parse Data (Simplified for brevity, similar map logic as before)
-        # ... (Parsing logic same as previous, just adapting to new context if needed)
-        # For strict compliance, using basic field extraction:
+        # 3. Dynamic Field Parsing
         name = "Unknown"
         email = None
         phone = None
         
+        # Log field data for debugging new forms
+        current_app.logger.info(f"Parsing Lead Data: {lead_data.get('field_data', [])}")
+        
+        custom_fields = {}
+
         for f in lead_data.get("field_data", []):
-            if "name" in f.get("name"): name = f.get("values")[0]
-            if "email" in f.get("name"): email = f.get("values")[0]
-            if "phone" in f.get("name"): phone = f.get("values")[0]
+            field_name = f.get("name", "").lower()
+            field_values = f.get("values", [])
+            val = field_values[0] if field_values else None
+            
+            if not val: continue
+
+            # Smart Matching
+            if "name" in field_name and "company" not in field_name:
+                name = val
+            elif "email" in field_name:
+                email = val
+            elif "phone" in field_name or "mobile" in field_name or "contact" in field_name:
+                phone = val
+            else:
+                # Store other fields
+                custom_fields[field_name] = val
 
         # 4. Assignment (Round Robin)
         assigned_to = None
@@ -499,10 +522,12 @@ def process_lead_strict(conn, lead_id, form_id):
             phone=phone,
             source="facebook",
             status="new",
-            assigned_to=assigned_to
+            assigned_to=assigned_to,
+            custom_fields=custom_fields
         )
         db.session.add(lead)
         db.session.commit()
+        current_app.logger.info(f"Lead Saved Successfully: {lead.id}")
         
     except Exception as e:
         current_app.logger.error(f"Process Lead Strict Error: {e}")
