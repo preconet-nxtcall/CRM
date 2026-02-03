@@ -256,6 +256,12 @@ class LeadsManager {
                 <div class="font-bold text-gray-900 truncate max-w-[200px]" title="${lead.requirement}">${lead.requirement || 'Residential Property'}</div>
                 <div class="text-gray-500 truncate max-w-[200px]" title="${lead.budget || '-'}">${lead.budget || '-'}</div>
             `;
+        } else if (source === 'manual') {
+            // Manual Entry Format
+            return `
+                <div class="font-bold text-gray-900 truncate max-w-[200px]" title="${lead.requirement}">${lead.requirement || lead.property_type || 'Manual Entry'}</div>
+                <div class="text-gray-500 truncate max-w-[200px]" title="${lead.location}">${lead.location || '-'}</div>
+            `;
         } else {
             // Facebook / Default Format
             const campaign = lead.custom_fields.campaign_name;
@@ -449,6 +455,40 @@ class LeadsManager {
                      <div>
                         <span class="block text-gray-500 text-xs">Budget</span>
                         <span class="font-medium text-gray-900">${lead.budget || '-'}</span>
+                    </div>
+                </div>
+            `;
+        } else if (source === 'manual') {
+            // Manual Entry Format
+            detailsHtml = `
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <span class="block text-gray-500 text-xs">Lead Name</span>
+                        <span class="font-medium text-gray-900">${lead.name || '-'}</span>
+                    </div>
+                    <div>
+                        <span class="block text-gray-500 text-xs">Phone</span>
+                        <span class="font-medium text-gray-900">${lead.phone || '-'}</span>
+                    </div>
+                    <div>
+                        <span class="block text-gray-500 text-xs">Email</span>
+                        <span class="font-medium text-gray-900">${lead.email || '-'}</span>
+                    </div>
+                     <div>
+                        <span class="block text-gray-500 text-xs">Property Type</span>
+                        <span class="font-medium text-blue-600">${lead.property_type || '-'}</span>
+                    </div>
+                     <div>
+                        <span class="block text-gray-500 text-xs">Location</span>
+                        <span class="font-medium text-gray-900">${lead.location || '-'}</span>
+                    </div>
+                     <div>
+                        <span class="block text-gray-500 text-xs">Budget</span>
+                        <span class="font-medium text-gray-900">${lead.budget || '-'}</span>
+                    </div>
+                    <div class="col-span-2 bg-gray-50 p-3 rounded max-h-60 overflow-y-auto">
+                        <span class="block text-gray-500 text-xs mb-1">Requirement</span>
+                        <p class="text-gray-700 whitespace-pre-wrap leading-relaxed">${lead.requirement || '-'}</p>
                     </div>
                 </div>
             `;

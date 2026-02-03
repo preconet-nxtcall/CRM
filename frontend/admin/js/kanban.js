@@ -42,7 +42,7 @@ class KanbanManager {
         style.innerHTML = `
             #kanban-container {
                 display: flex;
-                gap: 20px; /* 16-20px gap */
+                gap: 12px; /* Reduced from 20px */
                 overflow-x: auto;
                 padding-bottom: 20px;
                 background-color: #F8FAFC; /* Very light gray */
@@ -164,7 +164,7 @@ class KanbanManager {
                              <div class="bg-gray-300 h-full rounded-full" style="width: 40%"></div>
                         </div>
                     </div>
-                    <div class="space-y-3 overflow-y-hidden pr-1">
+                    <div class="space-y-2 overflow-y-hidden pr-1">
                         ${cardSkeleton.repeat(3)}
                     </div>
                 </div>
@@ -339,7 +339,7 @@ class KanbanManager {
                 </div>
             </div>
             
-            <div class="kanban-cards space-y-3 overflow-y-auto flex-1 custom-scrollbar pb-4 pr-1" id="col-${status}">
+            <div class="kanban-cards space-y-2 overflow-y-auto flex-1 custom-scrollbar pb-4 pr-1" id="col-${status}">
                  <!-- Cards injected here -->
             </div>
         `;
