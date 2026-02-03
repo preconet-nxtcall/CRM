@@ -85,7 +85,10 @@ def pipeline_stats():
     connected_calls_today = calls_today_query.filter(CallHistory.duration > 0).count()
 
     # 5. Conversion Rate (Converted Leads / Total Leads in Filter) * 100
-    converted_query = Lead.query.filter_by(admin_id=admin_id, status="Converted")
+    converted_query = Lead.query.filter(
+        Lead.admin_id == admin_id, 
+        Lead.status.in_(["Converted", "Won", "Closed"])
+    )
     if filter_start_utc:
         converted_query = converted_query.filter(Lead.created_at >= filter_start_utc)
     
@@ -293,6 +296,10 @@ def pipeline_leads():
             "assigned_agent_id": lead.assigned_to,
             "assigned_agent_name": agent_name,
             "email": lead.email,
+            "property_type": lead.property_type,
+            "location": lead.location,
+            "budget": lead.budget,
+            "requirement": lead.requirement,
             "custom_fields": lead.custom_fields
         })
 
