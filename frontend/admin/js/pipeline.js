@@ -320,14 +320,14 @@ class PipelineManager {
             ];
 
             // Render Funnel
-            container.className = "funnel-container flex-1 w-full h-full relative flex flex-col justify-between gap-2";
+            container.className = "funnel-container flex-1 w-full h-full relative flex flex-col justify-center gap-1"; // Centered vertically, tight gap
             container.innerHTML = stages.map(stage => `
-                 <div class="funnel-row flex-1 flex items-center justify-center w-full">
-                     <div class="funnel-segment ${stage.color} w-3/4 max-w-md shadow-sm flex justify-between items-center px-4 py-3 rounded-lg relative">
+                 <div class="funnel-row flex items-center justify-center w-full">
+                     <div class="funnel-segment ${stage.color}">
                          <div class="funnel-label font-bold text-white text-sm">
                              <i class="fas ${stage.icon} mr-2"></i> ${stage.label}
                          </div>
-                         <div class="funnel-count bg-white/20 px-2 py-1 rounded text-white font-bold text-xs">${stage.count}</div>
+                         <div class="funnel-count bg-white/20 px-2 py-0.5 rounded text-white font-bold text-xs">${stage.count}</div>
                      </div>
                  </div>
              `).join('');

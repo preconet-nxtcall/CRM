@@ -85,50 +85,55 @@
 
     .funnel-segment {
       position: relative;
-      height: 60px;
+      height: 48px;
+      /* Slightly more compact */
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 40px;
+      padding: 0 16px;
       color: white;
       font-weight: 600;
-      clip-path: polygon(0 0, 100% 0, calc(100% - 20px) 100%, 20px 100%);
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-      width: 100%;
+      border-radius: 10px;
+      /* Modern Rounded Corners */
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+      /* Subtle shadow */
+      margin: 0 auto;
+      /* Center alignment */
+      transition: all 0.3s ease;
     }
 
-    /* Gradient Palettes */
+    /* Gradient Palettes & Widths */
     .funnel-new {
-      background: linear-gradient(135deg, #60A5FA, #3B82F6);
+      background: linear-gradient(135deg, #3B82F6, #2563EB);
       width: 100%;
       z-index: 5;
     }
 
     .funnel-attempted {
       background: linear-gradient(135deg, #F59E0B, #D97706);
-      width: 90%;
+      width: 92%;
       z-index: 4;
     }
 
     .funnel-connected {
-      background: linear-gradient(135deg, #818CF8, #6366F1);
-      width: 80%;
+      background: linear-gradient(135deg, #8B5CF6, #7C3AED);
+      width: 84%;
       z-index: 3;
     }
 
     .funnel-interested {
-      background: linear-gradient(135deg, #2DD4BF, #14B8A6);
-      width: 70%;
+      background: linear-gradient(135deg, #10B981, #059669);
+      width: 76%;
       z-index: 2;
     }
 
     .funnel-won {
-      background: linear-gradient(135deg, #10B981, #059669);
-      width: 60%;
+      background: linear-gradient(135deg, #EC4899, #DB2777);
+      width: 68%;
       z-index: 1;
     }
 
-    /* Depth Effect Overlay */
+    /* Shine Effect Overlay */
     .funnel-segment::after {
       content: '';
       position: absolute;
@@ -136,8 +141,9 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: linear-gradient(to bottom, rgba(255, 255, 255, 0.2) 0%, rgba(0, 0, 0, 0.1) 100%);
+      background: linear-gradient(to bottom, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0) 100%);
       pointer-events: none;
+      border-radius: 10px;
     }
 
     /* Separator Line */
