@@ -2294,12 +2294,39 @@
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <!-- 3. Lead List Table (Span 2) -->
           <!-- 3. Sales Funnel (MOVED HERE) -->
-          <div class="lg:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-            <h4 class="text-lg font-bold text-gray-900 mb-6">Sales Funnel</h4>
-            <div id="pipeline-funnel-container" class="funnel-container relative flex flex-col gap-2 w-full h-[400px]">
+          <!-- 3. Sales Funnel (Redesigned) -->
+          <div class="lg:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm p-6 flex flex-col">
+            <!-- Header -->
+            <div class="flex items-start justify-between mb-6">
+              <div>
+                <h4 class="text-lg font-bold text-gray-900">Sales Funnel</h4>
+                <p class="text-xs text-gray-500 mt-1">Lead progression overview</p>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <!-- Simple Time Filter (Visual only for now, logic can be wired later) -->
+                <div class="relative">
+                  <button
+                    class="flex items-center gap-1 text-xs font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 px-2 py-1.5 rounded transition-colors">
+                    This Week <i class="fas fa-chevron-down text-[10px] text-gray-400"></i>
+                  </button>
+                </div>
+                <!-- 3-Dot Menu -->
+                <button class="p-1.5 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-50 transition-colors">
+                  <i class="fas fa-ellipsis-v text-xs"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Funnel Container -->
+            <div id="pipeline-funnel-container"
+              class="funnel-container relative flex flex-col gap-3 w-full h-auto min-h-[400px] py-6 justify-center">
               <div class="text-center text-gray-400 py-4">Loading...</div>
             </div>
-            <div class="flex flex-wrap gap-4 mt-6 text-sm text-gray-500 justify-center" id="pipeline-funnel-metrics">
+
+            <!-- Footer Metrics (Redesigned) -->
+            <div class="grid grid-cols-2 gap-4 mt-8 pt-6 border-t border-dashed border-gray-100"
+              id="pipeline-funnel-metrics">
             </div>
           </div>
 

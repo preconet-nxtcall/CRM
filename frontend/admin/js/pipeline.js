@@ -310,50 +310,144 @@ class PipelineManager {
         }
 
         try {
-            // Map API keys to our Funnel Stages
+            // Define 5 Distinct Stages for True Funnel Representation
+            // Converted is now separate from Won
             const stages = [
-                { id: 'new', label: 'New Leads', icon: 'fa-star', count: pipe['New'] || 0, color: 'funnel-new' },
-                { id: 'attempted', label: 'Attempted', icon: 'fa-phone', count: pipe['Attempted'] || 0, color: 'funnel-attempted' },
-                { id: 'connected', label: 'Connected', icon: 'fa-comments', count: (pipe['Connected'] || 0) + (pipe['Follow-Up'] || 0), color: 'funnel-connected' },
-                { id: 'interested', label: 'Interested', icon: 'fa-thumbs-up', count: pipe['Interested'] || 0, color: 'funnel-interested' },
-                { id: 'won', label: 'Won / Closed', icon: 'fa-trophy', count: (pipe['Won'] || 0) + (pipe['Converted'] || 0), color: 'funnel-won' }
+                {
+                    id: 'new',
+                    label: 'New Leads',
+                    subtext: 'Incoming leads',
+                    icon: 'fa-star',
+                    count: pipe['New'] || 0,
+                    colorClass: 'bg-blue-500',
+                    bgClass: 'bg-blue-50',
+                    borderClass: 'border-blue-200',
+                    textClass: 'text-blue-700',
+                    width: 'w-full max-w-3xl' // 100%
+                },
+                {
+                    id: 'attempted',
+                    label: 'Attempted',
+                    subtext: 'Contact attempted',
+                    icon: 'fa-phone',
+                    count: pipe['Attempted'] || 0,
+                    colorClass: 'bg-orange-500',
+                    bgClass: 'bg-orange-50',
+                    borderClass: 'border-orange-200',
+                    textClass: 'text-orange-700',
+                    width: 'w-[92%] max-w-[92%]'
+                },
+                {
+                    id: 'interested',
+                    label: 'Interested',
+                    subtext: 'User showed interest',
+                    icon: 'fa-thumbs-up',
+                    count: pipe['Interested'] || 0,
+                    colorClass: 'bg-emerald-500',
+                    bgClass: 'bg-emerald-50',
+                    borderClass: 'border-emerald-200',
+                    textClass: 'text-emerald-700',
+                    width: 'w-[84%] max-w-[84%]'
+                },
+                {
+                    id: 'converted',
+                    label: 'Converted',
+                    subtext: 'Converted to opportunity',
+                    icon: 'fa-check-circle',
+                    count: pipe['Converted'] || 0,
+                    colorClass: 'bg-purple-500',
+                    bgClass: 'bg-purple-50',
+                    borderClass: 'border-purple-200',
+                    textClass: 'text-purple-700',
+                    width: 'w-[76%] max-w-[76%]'
+                },
+                {
+                    id: 'won',
+                    label: 'Won / Closed',
+                    subtext: 'Deal successfully closed',
+                    icon: 'fa-trophy',
+                    count: pipe['Won'] || 0,
+                    colorClass: 'bg-pink-500',
+                    bgClass: 'bg-pink-50',
+                    borderClass: 'border-pink-200',
+                    textClass: 'text-pink-700',
+                    width: 'w-[68%] max-w-[68%]'
+                }
             ];
 
-            // Render Funnel
-            // container.className = "funnel-container flex-1 w-full h-full relative flex flex-col justify-center gap-1"; // Centered vertically, tight gap
+            // Render Funnel Cards
             container.innerHTML = stages.map(stage => `
-                 <div class="funnel-row flex items-center justify-center w-full">
-                     <div class="funnel-segment ${stage.color}">
-                         <div class="funnel-label font-bold text-white text-sm">
-                             <i class="fas ${stage.icon} mr-2"></i> ${stage.label}
+                 <div class="mx-auto flex items-center justify-between p-3 rounded-xl border transition-all hover:-translate-y-0.5 hover:shadow-md ${stage.width} ${stage.bgClass} ${stage.borderClass} relative group cursor-default">
+                     <!-- Left Color Strip -->
+                     <div class="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl ${stage.colorClass}"></div>
+                     
+                     <!-- Left: Icon & Info -->
+                     <div class="flex items-center gap-4 pl-3">
+                         <div class="w-8 h-8 rounded-full flex items-center justify-center ${stage.colorClass} text-white shadow-sm">
+                             <i class="fas ${stage.icon} text-xs"></i>
                          </div>
-                         <div class="funnel-count bg-white/20 px-2 py-0.5 rounded text-white font-bold text-xs">${stage.count}</div>
+                         <div>
+                             <h5 class="font-bold text-sm text-gray-900 leading-tight">${stage.label}</h5>
+                             <p class="text-[10px] text-gray-500 font-medium">${stage.subtext}</p>
+                         </div>
+                     </div>
+
+                     <!-- Right: Count Badge -->
+                     <div class="px-3 py-1 rounded-full ${stage.colorClass} text-white font-bold text-xs shadow-sm min-w-[32px] text-center">
+                         ${stage.count}
                      </div>
                  </div>
              `).join('');
 
-            // Calculate Conversion Metrics
-            // Total Volume = Sum of all active leads across stages + Lost/Won
-            // We sum up the counts from the stages array + 'Lost' from pipe if not in stages
+            // Calculate Metrics
+            // Total Volume = Sum of all keys in pipe (because our stages array only shows a subset)
+            // Backend maps 'Connected' -> 'Attempted'.
+            // Keys: New, Attempted, Converted, Interested, Follow-Up, Won, Lost.
+            // Stages show: New, Attempted, Interested, Converted, Won.
+            // Missing from Stages: Follow-Up, Lost.
+
+            const stagesCount = stages.reduce((acc, stage) => acc + stage.count, 0);
+            const followUpCount = pipe['Follow-Up'] || 0;
             const lostCount = pipe['Lost'] || 0;
-            const totalVolume = stages.reduce((acc, stage) => acc + stage.count, 0) + lostCount;
 
-            const won = stages[4].count;
-            const conversionRate = totalVolume > 0 ? ((won / totalVolume) * 100).toFixed(1) : 0;
+            const totalVolume = stagesCount + followUpCount + lostCount;
 
-            // Only show if we have data
-            if (totalVolume > 0) {
+            // Conversion: (Converted + Won) / Total Volume
+            // This reflects leads that moved to a "Success" state (Opportunity or Closed Deal)
+            const successCount = (pipe['Converted'] || 0) + (pipe['Won'] || 0);
+            const conversionRate = totalVolume > 0 ? ((successCount / totalVolume) * 100).toFixed(1) : 0;
+
+            // Render Footer Metrics
+            if (metrics) {
                 metrics.innerHTML = `
-                     <div class="px-3 py-1 bg-green-50 text-green-700 rounded-full border border-green-100 flex items-center gap-2">
-                         <i class="fas fa-chart-line"></i> Overall Conversion: <strong>${conversionRate}%</strong>
-                     </div>
-                     <div class="px-3 py-1 bg-blue-50 text-blue-700 rounded-full border border-blue-100 flex items-center gap-2">
-                         <i class="fas fa-users"></i> Total Volume: <strong>${totalVolume}</strong>
-                     </div>
+                    <!-- Metric 1: Overall Conversion -->
+                    <div class="flex items-center gap-4 p-4 rounded-xl border border-gray-100 bg-gray-50/50">
+                         <div class="relative w-12 h-12 flex items-center justify-center">
+                             <!-- Circular Progress Mockup (CSS conic gradient) -->
+                             <div class="w-full h-full rounded-full" style="background: conic-gradient(#10B981 ${conversionRate}%, #e5e7eb ${conversionRate}% 100%);"></div>
+                             <div class="absolute inset-1 bg-white rounded-full flex items-center justify-center">
+                                 <span class="text-[10px] font-bold text-gray-700">${Math.round(conversionRate)}%</span>
+                             </div>
+                         </div>
+                         <div>
+                             <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Conversion</p>
+                             <p class="text-lg font-bold text-gray-900">${conversionRate}%</p>
+                         </div>
+                    </div>
+
+                    <!-- Metric 2: Total Volume -->
+                    <div class="flex items-center gap-4 p-4 rounded-xl border border-gray-100 bg-gray-50/50">
+                         <div class="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl">
+                             <i class="fas fa-layer-group"></i>
+                         </div>
+                         <div>
+                             <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Total Volume</p>
+                             <p class="text-lg font-bold text-gray-900">${totalVolume} <span class="text-xs font-normal text-gray-400">Leads</span></p>
+                         </div>
+                    </div>
                  `;
-            } else {
-                metrics.innerHTML = '';
             }
+
         } catch (e) {
             console.error("Funnel Render Error:", e);
             container.innerHTML = '<div class="text-center text-red-400">Error rendering funnel.</div>';
@@ -363,4 +457,4 @@ class PipelineManager {
 
 window.pipelineManager = new PipelineManager();
 // Remove auto-init
-// window.pipelineManager.init();
+window.pipelineManager.init();

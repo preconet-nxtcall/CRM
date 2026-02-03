@@ -133,8 +133,9 @@ class LeadsManager {
 
     renderLeadDetails(lead) {
         if (!lead.custom_fields) return '-';
+        const source = (lead.source || '').toLowerCase();
 
-        if (lead.source === 'indiamart') {
+        if (source === 'indiamart') {
             // IndiaMART Format
             const subject = lead.custom_fields.subject || 'Inquiry';
             const company = lead.custom_fields.company || '';
@@ -145,30 +146,30 @@ class LeadsManager {
                 <div class="text-blue-600 font-medium truncate max-w-[200px]" title="${company}">${company}</div>
                 ${message ? `<div class="text-[10px] text-gray-400 mt-1 truncate max-w-[200px]" title="${message}">${message}</div>` : ''}
             `;
-        } else if (lead.source === 'call_history') {
+        } else if (source === 'call_history') {
             // Call History Format
             return `<div class="text-gray-500 italic">Manual Entry</div>`;
 
-        } else if (lead.source === 'magicbricks') {
+        } else if (source === 'magicbricks') {
             // Magicbricks Format
             return `
                 <div class="font-bold text-gray-900 truncate max-w-[200px]" title="${lead.property_type}">${lead.property_type || '-'}</div>
                 <div class="text-gray-500 truncate max-w-[200px]" title="${lead.budget} | ${lead.location}">${lead.budget || '-'}</div>
             `;
-        } else if (lead.source === '99acres') {
+        } else if (source === '99acres') {
             // 99acres Format
 
             return `
                 <div class="font-bold text-gray-900 truncate max-w-[200px]" title="${lead.property_type}">${lead.property_type || '-'}</div>
                 <div class="text-gray-500 truncate max-w-[200px]" title="${lead.location}">${lead.location || '-'}</div>
             `;
-        } else if (lead.source === 'justdial') {
+        } else if (source === 'justdial') {
             // JustDial Format
             return `
                 <div class="font-bold text-gray-900 truncate max-w-[200px]" title="${lead.requirement}">${lead.requirement || 'Business Enquiry'}</div>
                 <div class="text-gray-500 truncate max-w-[200px]" title="${lead.location}">${lead.location || '-'}</div>
             `;
-        } else if (lead.source === 'housing') {
+        } else if (source === 'housing') {
             // Housing Format
             return `
                 <div class="font-bold text-gray-900 truncate max-w-[200px]" title="${lead.requirement}">${lead.requirement || 'Residential Property'}</div>
@@ -200,8 +201,9 @@ class LeadsManager {
 
         let detailsHtml = '';
         const custom = lead.custom_fields || {};
+        const source = (lead.source || '').toLowerCase();
 
-        if (lead.source === 'indiamart') {
+        if (source === 'indiamart') {
             detailsHtml = `
                 <div class="grid grid-cols-2 gap-4 text-sm">
                     <div>
@@ -242,7 +244,7 @@ class LeadsManager {
                     </div>
                 </div>
              `;
-        } else if (lead.source === 'magicbricks') {
+        } else if (source === 'magicbricks') {
             // Magicbricks Format
             detailsHtml = `
                 <div class="grid grid-cols-2 gap-4 text-sm">
@@ -277,7 +279,7 @@ class LeadsManager {
                 </div>
 
             `;
-        } else if (lead.source === '99acres') {
+        } else if (source === '99acres') {
             // 99acres Format
             detailsHtml = `
                 <div class="grid grid-cols-2 gap-4 text-sm">
@@ -308,7 +310,7 @@ class LeadsManager {
 
                 </div>
             `;
-        } else if (lead.source === 'justdial') {
+        } else if (source === 'justdial') {
             // JustDial Format
             detailsHtml = `
                 <div class="grid grid-cols-2 gap-4 text-sm">
@@ -339,7 +341,7 @@ class LeadsManager {
                 </div>
 
             `;
-        } else if (lead.source === 'housing') {
+        } else if (source === 'housing') {
             // Housing Format
             detailsHtml = `
                 <div class="grid grid-cols-2 gap-4 text-sm">
@@ -370,10 +372,36 @@ class LeadsManager {
                 </div>
             `;
         } else {
-            // Generic Fallback
+            // Generic Fallback (SaaS Style)
             detailsHtml = `
-                <div class="text-sm">
-                    <pre class="bg-gray-50 p-3 rounded overflow-x-auto text-xs text-gray-700">${JSON.stringify(lead, null, 2)}</pre>
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <span class="block text-gray-500 text-xs">Lead Name</span>
+                        <span class="font-medium text-gray-900">${lead.name || '-'}</span>
+                    </div>
+                    <div>
+                        <span class="block text-gray-500 text-xs">Phone</span>
+                        <span class="font-medium text-gray-900">${lead.phone || '-'}</span>
+                    </div>
+                     <div>
+                        <span class="block text-gray-500 text-xs">Email</span>
+                        <span class="font-medium text-gray-900">${lead.email || '-'}</span>
+                    </div>
+                     <div>
+                        <span class="block text-gray-500 text-xs">Date</span>
+                        <span class="font-medium text-gray-900">${new Date(lead.created_at).toLocaleDateString()}</span>
+                    </div>
+                    <div class="col-span-2 bg-gray-50 p-3 rounded">
+                        <span class="block text-gray-500 text-xs mb-2">Additional Data</span>
+                         <div class="grid grid-cols-2 gap-2">
+                            ${Object.entries(custom).map(([key, value]) => `
+                                <div>
+                                    <span class="block text-[10px] text-gray-400 uppercase">${key.replace(/_/g, ' ')}</span>
+                                    <span class="text-xs text-gray-700 break-words">${value}</span>
+                                </div>
+                            `).join('')}
+                         </div>
+                    </div>
                 </div>
              `;
         }
