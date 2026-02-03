@@ -14,6 +14,8 @@ class KanbanManager {
         this.allLeads = []; // Store locally for search filtering
         this.agents = [];
         this.currentLeadId = null;
+        this.PAGE_SIZE = 20; // Pagination batch size
+        this.visibleCounts = {}; // Track visible cards per status
     }
 
     async init() {
@@ -181,8 +183,21 @@ class KanbanManager {
         this.debounceTimer = setTimeout(() => this.render(), 300);
     }
 
+
+    loadMore(status) {
+        if (!this.visibleCounts[status]) this.visibleCounts[status] = this.PAGE_SIZE;
+        this.visibleCounts[status] += this.PAGE_SIZE;
+        this.render(); // Re-render to show more
+    }
+
     createColumn(status, leads, revenue) {
         const meta = this.meta[status] || { color: 'gray', label: status };
+
+        // Pagination Logic
+        const totalLeads = leads.length;
+        const visibleLimit = this.visibleCounts[status] || this.PAGE_SIZE;
+        const visibleLeads = leads.slice(0, visibleLimit);
+        const hasMore = totalLeads > visibleLimit;
 
         // Header Layout: Title + Count ----- Revenue
         // Sub-header: Progress Bar
@@ -203,7 +218,7 @@ class KanbanManager {
                 <div class="flex justify-between items-baseline mb-1">
                     <div class="flex items-center gap-2 font-bold text-gray-700 text-[15px]">
                         <span>${meta.label}</span>
-                        <span class="text-xs font-normal text-gray-500" title="Count">(${leads.length})</span>
+                        <span class="text-xs font-normal text-gray-500" title="Count">(${totalLeads})</span>
                         <button onclick="kanbanManager.openModal(null, '${status.toLowerCase()}')" class="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-800 transition-opacity">
                             <i class="fas fa-plus text-xs"></i>
                         </button>
@@ -214,17 +229,31 @@ class KanbanManager {
                 </div>
                 
                 <div class="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden flex">
-                    <div class="${barColor} h-full" style="width: ${leads.length > 0 ? '70%' : '0%'}"></div>
+                    <div class="${barColor} h-full" style="width: ${totalLeads > 0 ? '70%' : '0%'}"></div>
                 </div>
             </div>
             
             <div class="kanban-cards p-2 space-y-1 overflow-y-auto flex-1 custom-scrollbar" id="col-${status}">
-                 <!-- Cards -->
+                 <!-- Cards injected below -->
             </div>
         `;
 
         const cardContainer = col.querySelector('.kanban-cards');
-        leads.forEach(lead => cardContainer.appendChild(this.createCard(lead)));
+        visibleLeads.forEach(lead => cardContainer.appendChild(this.createCard(lead)));
+
+        // "Load More" Button
+        if (hasMore) {
+            const remaining = totalLeads - visibleLimit;
+            const btnDiv = document.createElement('div');
+            btnDiv.className = 'text-center py-2';
+            btnDiv.innerHTML = `
+                <button onclick="kanbanManager.loadMore('${status}')" 
+                    class="text-xs font-medium text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-full transition-colors shadow-sm">
+                    Load More (${remaining} more)
+                </button>
+            `;
+            cardContainer.appendChild(btnDiv);
+        }
 
         // Sortable
         if (typeof Sortable !== 'undefined') {
@@ -310,15 +339,15 @@ class KanbanManager {
                 <div class="flex gap-3 mx-auto">
                     ${cleanPhone ? `
                      <a href="${waUrl}" target="_blank" class="quick-action group relative" title="WhatsApp" onclick="event.stopPropagation();">
-                        <div class="w-7 h-7 bg-green-100 rounded-full flex items-center justify-center hover:bg-green-200 transition-colors shadow-sm">
-                            <img src="images/whatsapp.png" alt="WA" class="w-4 h-4 object-contain group-hover:scale-110 transition-transform">
+                        <div class="w-8 h-8 flex items-center justify-center hover:scale-110 transition-transform shadow-sm bg-white rounded-full border border-gray-100">
+                            <img src="images/whatsapp_3d.png" alt="WA" class="w-full h-full object-cover">
                         </div>
                      </a>` : ''}
                     
                     ${lead.email ? `
                      <a href="mailto:${lead.email}" class="quick-action group relative" title="Email" onclick="event.stopPropagation();">
-                        <div class="w-7 h-7 bg-blue-50 rounded-full flex items-center justify-center hover:bg-blue-100 transition-colors shadow-sm">
-                            <img src="images/email.png" alt="Email" class="w-4 h-4 object-contain group-hover:scale-110 transition-transform">
+                        <div class="w-8 h-8 flex items-center justify-center hover:scale-110 transition-transform shadow-sm bg-white rounded-full border border-gray-100">
+                            <img src="images/email_3d.png" alt="Email" class="w-full h-full object-cover">
                         </div>
                      </a>` : ''}
                 </div>

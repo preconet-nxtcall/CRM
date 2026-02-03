@@ -1,6 +1,7 @@
 class LeadsManager {
     constructor() {
         this.tableBody = document.getElementById('leadsTableBody');
+        this.mobileContainer = document.getElementById('leadsMobileCards');
         this.paginationContainer = document.getElementById('leadsPagination');
         this.itemsPerPage = 10; // Changed to 10 records per page
         this.currentFilter = 'all'; // Default filter
@@ -89,7 +90,9 @@ class LeadsManager {
         if (!this.tableBody) return;
 
         this.currentPage = page; // Store current page
-        this.tableBody.innerHTML = '<tr><td colspan="8" class="text-center py-4">Loading...</td></tr>';
+        this.currentPage = page; // Store current page
+        if (this.tableBody) this.tableBody.innerHTML = '<tr><td colspan="8" class="text-center py-4">Loading...</td></tr>';
+        if (this.mobileContainer) this.mobileContainer.innerHTML = '<div class="text-center py-8 text-gray-500">Loading leads...</div>';
 
         try {
             // Include Filter in Request - now with date filter
@@ -117,6 +120,7 @@ class LeadsManager {
             const resp = await auth.makeAuthenticatedRequest(url);
             if (resp && resp.ok) {
                 const data = await resp.json();
+                console.log("Leads Data:", data); // DEBUG
                 this.leads = data.leads; // STORE LEADS LOCALLY
                 this.renderTable(data.leads);
                 // Backend now returns flat pagination structure or nested
@@ -128,11 +132,13 @@ class LeadsManager {
                     const errData = await resp.json();
                     if (errData.error) errorMsg = errData.error;
                 } catch (e) { }
-                this.tableBody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-red-500">${errorMsg}</td></tr>`;
+                if (this.tableBody) this.tableBody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-red-500">${errorMsg}</td></tr>`;
+                if (this.mobileContainer) this.mobileContainer.innerHTML = `<div class="text-center py-8 text-red-500">${errorMsg}</div>`;
             }
         } catch (e) {
             console.error("Error loading leads", e);
-            this.tableBody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-red-500">Error: ${e.message}</td></tr>`;
+            if (this.tableBody) this.tableBody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-red-500">Error: ${e.message}</td></tr>`;
+            if (this.mobileContainer) this.mobileContainer.innerHTML = `<div class="text-center py-8 text-red-500">Error: ${e.message}</div>`;
         }
     }
 
@@ -417,115 +423,168 @@ class LeadsManager {
 
     renderTable(leads) {
         if (!leads || leads.length === 0) {
-            this.tableBody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-gray-500">No leads found.</td></tr>`;
+            if (this.tableBody) this.tableBody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-gray-500">No leads found.</td></tr>`;
+            if (this.mobileContainer) this.mobileContainer.innerHTML = `<div class="text-center py-12 text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-200 m-4">No leads found.</div>`;
             return;
         }
 
-        this.tableBody.innerHTML = leads.map(lead => {
-            // Enhanced Date Formatting (Local Time, Cleaner)
-            let dateStr = lead.created_at;
-            if (!dateStr.endsWith('Z')) {
-                dateStr += 'Z'; // Treat as UTC
-            }
-            const dateObj = new Date(dateStr);
+        // 1. Desktop Table Rows
+        if (this.tableBody) {
+            this.tableBody.innerHTML = leads.map(lead => {
+                // Enhanced Date Formatting (Local Time, Cleaner)
+                let dateStr = lead.created_at;
+                if (dateStr && !dateStr.endsWith('Z')) dateStr += 'Z';
+                const dateObj = new Date(dateStr);
 
-            // Split Date and Time for 2-line display
-            const datePart = dateObj.toLocaleDateString('en-IN', {
-                day: '2-digit', month: 'short', year: 'numeric'
-            });
-            const timePart = dateObj.toLocaleTimeString('en-IN', {
-                hour: '2-digit', minute: '2-digit', hour12: true
-            });
+                // Split Date and Time for 2-line display
+                const datePart = dateObj.toLocaleDateString('en-IN', {
+                    day: '2-digit', month: 'short', year: 'numeric'
+                });
+                const timePart = dateObj.toLocaleTimeString('en-IN', {
+                    hour: '2-digit', minute: '2-digit', hour12: true
+                });
+                const dateHtml = `<div class="font-medium text-gray-900">${datePart}</div><div class="text-gray-500 text-[10px]">${timePart}</div>`;
 
-            const dateHtml = `<div class="font-medium text-gray-900">${datePart}</div><div class="text-gray-500 text-[10px]">${timePart}</div>`;
+                let statusColor = "bg-gray-100 text-gray-800";
+                if (lead.status === 'new') statusColor = "bg-blue-100 text-blue-800";
+                if (lead.status === 'attempted') statusColor = "bg-yellow-100 text-yellow-800";
+                if (lead.status === 'converted') statusColor = "bg-indigo-100 text-indigo-800";
+                if (lead.status === 'interested') statusColor = "bg-purple-100 text-purple-800";
+                if (lead.status === 'follow-up') statusColor = "bg-pink-100 text-pink-800";
+                if (lead.status === 'won') statusColor = "bg-green-100 text-green-800";
+                if (lead.status === 'lost') statusColor = "bg-red-100 text-red-800";
 
-            let statusColor = "bg-gray-100 text-gray-800";
-            if (lead.status === 'new') statusColor = "bg-blue-100 text-blue-800";
-            if (lead.status === 'attempted') statusColor = "bg-yellow-100 text-yellow-800";
-            if (lead.status === 'converted') statusColor = "bg-indigo-100 text-indigo-800";
-            if (lead.status === 'interested') statusColor = "bg-purple-100 text-purple-800";
-            if (lead.status === 'follow-up') statusColor = "bg-pink-100 text-pink-800";
-            if (lead.status === 'won') statusColor = "bg-green-100 text-green-800";
-            if (lead.status === 'lost') statusColor = "bg-red-100 text-red-800";
+                const source = (lead.source || '').toLowerCase();
+                let sourceBadge = `<span class="px-2 py-0.5 text-xs font-bold rounded bg-gray-100 text-gray-700 border border-gray-200">${lead.source ? lead.source.toUpperCase() : 'UNKNOWN'}</span>`;
 
-            const source = (lead.source || '').toLowerCase();
-            let sourceBadge = `<span class="px-2 py-0.5 text-xs font-bold rounded bg-gray-100 text-gray-700 border border-gray-200">${lead.source ? lead.source.toUpperCase() : 'UNKNOWN'}</span>`;
+                // Badge Logic (Same as before)
+                if (source === 'magicbricks') sourceBadge = `<span class="px-2 py-0.5 text-xs font-bold rounded bg-[#FFF0F0] text-[#D8232A] border border-[#ffdbdb]">MAGICBRICKS</span>`;
+                else if (source === '99acres') sourceBadge = `<span class="px-2 py-0.5 text-xs font-bold rounded bg-[#F0F8FF] text-[#005CA8] border border-[#dceeff]">99ACRES</span>`;
+                else if (source === 'housing') sourceBadge = `<span class="px-2 py-0.5 text-xs font-bold rounded bg-[#FAF0FA] text-[#800080] border border-[#f5d6f5]">HOUSING</span>`;
+                else if (source === 'indiamart') sourceBadge = `<span class="px-2 py-0.5 text-xs font-bold rounded bg-[#EEF2FF] text-[#4338CA] border border-[#e0e7ff]">INDIAMART</span>`;
+                else if (source === 'justdial') sourceBadge = `<span class="px-2 py-0.5 text-xs font-bold rounded bg-[#FFF7ED] text-[#EA580C] border border-[#ffedd5]">JUSTDIAL</span>`;
+                else if (source === 'facebook') sourceBadge = `<span class="px-2 py-0.5 text-xs font-bold rounded bg-[#EFF6FF] text-[#1877F2] border border-[#dbeafe]">FACEBOOK</span>`;
+                else if (source === 'call_history') sourceBadge = `<span class="px-2 py-0.5 text-xs font-bold rounded bg-gray-100 text-gray-700 border border-gray-200">CALL HISTORY</span>`;
 
-            // MagicBricks (Red)
-            if (source === 'magicbricks') {
-                sourceBadge = `<span class="px-2 py-0.5 text-xs font-bold rounded bg-[#FFF0F0] text-[#D8232A] border border-[#ffdbdb]">MAGICBRICKS</span>`;
-            }
-            // 99Acres (Blue) - Branding is Blue/Green usually, sticking to Blue
-            else if (source === '99acres') {
-                sourceBadge = `<span class="px-2 py-0.5 text-xs font-bold rounded bg-[#F0F8FF] text-[#005CA8] border border-[#dceeff]">99ACRES</span>`;
-            }
-            // Housing (Purple) - #800080
-            else if (source === 'housing') {
-                sourceBadge = `<span class="px-2 py-0.5 text-xs font-bold rounded bg-[#FAF0FA] text-[#800080] border border-[#f5d6f5]">HOUSING</span>`;
-            }
-            // IndiaMART (Teal/Indigo) - Branding uses Red/Blue, but typically distinguished by Indigo/Purple in CRMs or #E6E6FA
-            else if (source === 'indiamart') {
-                sourceBadge = `<span class="px-2 py-0.5 text-xs font-bold rounded bg-[#EEF2FF] text-[#4338CA] border border-[#e0e7ff]">INDIAMART</span>`;
-            }
-            // JustDial (Orange)
-            else if (source === 'justdial') {
-                sourceBadge = `<span class="px-2 py-0.5 text-xs font-bold rounded bg-[#FFF7ED] text-[#EA580C] border border-[#ffedd5]">JUSTDIAL</span>`;
-            }
-            // Facebook (Blue)
-            else if (source === 'facebook') {
-                sourceBadge = `<span class="px-2 py-0.5 text-xs font-bold rounded bg-[#EFF6FF] text-[#1877F2] border border-[#dbeafe]">FACEBOOK</span>`;
-            }
-            // Call History (Database/Gray)
-            else if (source === 'call_history') {
-                sourceBadge = `<span class="px-2 py-0.5 text-xs font-bold rounded bg-gray-100 text-gray-700 border border-gray-200">CALL HISTORY</span>`;
-            }
+                return `
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="px-4 py-3 whitespace-nowrap text-xs">${dateHtml}</td>
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <div class="font-medium text-gray-900">${lead.name || '-'}</div>
+                            <div class="text-xs text-blue-600 custom-copy-text cursor-pointer hover:underline mt-0.5" 
+                                 onclick="leadsManager.showCallHistory('${lead.phone}')" 
+                                 title="Click to view call history">
+                                 ${lead.phone || '-'}
+                            </div>
+                        </td>
+                        <td class="px-4 py-3 text-gray-500 whitespace-nowrap">${lead.email || '-'}</td>
+                        <td class="px-4 py-3">${sourceBadge}</td>
+                        <td class="px-4 py-3 leading-tight">${this.renderLeadDetails(lead)}</td>
+                        <td class="px-4 py-3 text-gray-600">
+                             <select onchange="leadsManager.updateLeadAgent(${lead.id}, this.value)" 
+                                class="text-xs rounded border-gray-200 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 bg-white">
+                                <option value="">Unassigned</option>
+                                ${this.renderAgentOptions(lead.assigned_agent_id)}
+                            </select>
+                        </td>
+                        <td class="px-4 py-3">
+                             <select onchange="leadsManager.updateLeadStatus(${lead.id}, this.value)" 
+                                class="text-xs rounded border-gray-200 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 ${statusColor}">
+                                <option value="new" ${lead.status === 'new' ? 'selected' : ''}>New</option>
+                                <option value="attempted" ${lead.status === 'attempted' ? 'selected' : ''}>Attempted</option>
+                                <option value="interested" ${lead.status === 'interested' ? 'selected' : ''}>Interested</option>
+                                <option value="follow-up" ${lead.status === 'follow-up' ? 'selected' : ''}>Follow-Up</option>
+                                <option value="converted" ${lead.status === 'converted' ? 'selected' : ''}>Converted</option>
+                                <option value="won" ${lead.status === 'won' ? 'selected' : ''}>Won</option>
+                                <option value="lost" ${lead.status === 'lost' ? 'selected' : ''}>Lost</option>
+                            </select>
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-right">
+                            <button onclick="leadsManager.openLeadModal(${lead.id})" 
+                                    class="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors mr-1" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                            </button>
+                            <button onclick="leadsManager.showHistory(${lead.id})" 
+                                    class="p-1.5 text-purple-600 hover:text-purple-800 hover:bg-purple-50 rounded transition-colors" title="History & Status">
+                                    <i class="fas fa-history"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
 
-            return `
-                <tr class="hover:bg-gray-50 transition-colors">
-                    <td class="px-4 py-3 whitespace-nowrap text-xs">${dateHtml}</td>
-                    <td class="px-4 py-3 whitespace-nowrap">
-                        <div class="font-medium text-gray-900">${lead.name || '-'}</div>
-                        <div class="text-xs text-blue-600 custom-copy-text cursor-pointer hover:underline mt-0.5" 
-                             onclick="leadsManager.showCallHistory('${lead.phone}')" 
-                             title="Click to view call history">
-                             ${lead.phone || '-'}
+        // 2. Mobile Cards
+        if (this.mobileContainer) {
+            this.mobileContainer.innerHTML = leads.map(lead => {
+                let dateStr = lead.created_at;
+                if (dateStr && !dateStr.endsWith('Z')) dateStr += 'Z';
+                const dateObj = new Date(dateStr);
+                const dateDisplay = dateObj.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) + ' ' +
+                    dateObj.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+
+
+                // Source Badge Small
+                const source = (lead.source || '').toLowerCase();
+                let sourceClass = "bg-gray-100 text-gray-700 border-gray-200";
+                if (source === 'indiamart') sourceClass = "bg-[#EEF2FF] text-[#4338CA] border-[#e0e7ff]";
+                else if (source === 'magicbricks') sourceClass = "bg-[#FFF0F0] text-[#D8232A] border-[#ffdbdb]";
+                else if (source === 'facebook') sourceClass = "bg-[#EFF6FF] text-[#1877F2] border-[#dbeafe]";
+
+                // Status Color for Card
+                let statusColor = "bg-gray-100 text-gray-800";
+                if (lead.status === 'new') statusColor = "bg-blue-100 text-blue-800";
+                if (lead.status === 'converted') statusColor = "bg-green-100 text-green-800";
+                if (lead.status === 'lost') statusColor = "bg-red-100 text-red-800";
+
+                return `
+                    <div class="p-4 bg-white hover:bg-gray-50 transition-colors">
+                        <div class="flex justify-between items-start mb-2">
+                             <div>
+                                <h4 class="font-bold text-gray-900">${lead.name || 'Unknown'}</h4>
+                                <div class="text-sm text-blue-600 font-medium mt-0.5" onclick="leadsManager.showCallHistory('${lead.phone}')">${lead.phone || '-'}</div>
+                             </div>
+                             <div class="text-xs text-gray-400 text-right">
+                                <div>${dateDisplay}</div>
+                                <span class="inline-block mt-1 px-2 py-0.5 text-[10px] uppercase font-bold border rounded ${sourceClass}">${lead.source || 'UNK'}</span>
+                             </div>
                         </div>
-                    </td>
-                    <td class="px-4 py-3 text-gray-500 whitespace-nowrap">${lead.email || '-'}</td>
-                    <td class="px-4 py-3">${sourceBadge}</td>
-                    <td class="px-4 py-3 leading-tight">${this.renderLeadDetails(lead)}</td>
-                    <td class="px-4 py-3 text-gray-600">
-                         <select onchange="leadsManager.updateLeadAgent(${lead.id}, this.value)" 
-                            class="text-xs rounded border-gray-200 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 bg-white">
-                            <option value="">Unassigned</option>
-                            ${this.renderAgentOptions(lead.assigned_agent_id)}
-                        </select>
-                    </td>
-                    <td class="px-4 py-3">
-                         <select onchange="leadsManager.updateLeadStatus(${lead.id}, this.value)" 
-                            class="text-xs rounded border-gray-200 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 ${statusColor}">
-                            <option value="new" ${lead.status === 'new' ? 'selected' : ''}>New</option>
-                            <option value="attempted" ${lead.status === 'attempted' ? 'selected' : ''}>Attempted</option>
-                            <option value="interested" ${lead.status === 'interested' ? 'selected' : ''}>Interested</option>
-                            <option value="follow-up" ${lead.status === 'follow-up' ? 'selected' : ''}>Follow-Up</option>
-                            <option value="converted" ${lead.status === 'converted' ? 'selected' : ''}>Converted</option>
-                            <option value="won" ${lead.status === 'won' ? 'selected' : ''}>Won</option>
-                            <option value="lost" ${lead.status === 'lost' ? 'selected' : ''}>Lost</option>
-                        </select>
-                    </td>
-                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium">
-                        <button onclick="leadsManager.openLeadModal(${lead.id})" 
-                                class="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors mr-2" title="View Details">
-                                <i class="fas fa-eye"></i>
-                        </button>
-                        <button onclick="leadsManager.showHistory(${lead.id})" 
-                                class="p-1.5 text-purple-600 hover:text-purple-800 hover:bg-purple-50 rounded transition-colors" title="History & Status">
-                                <i class="fas fa-history"></i>
-                        </button>
-                    </td>
-                </tr>
-            `;
-        }).join('');
+
+                        <div class="flex items-center justify-between gap-3 mt-3 pt-3 border-t border-gray-50">
+                             <div class="flex-1">
+                                <select onchange="leadsManager.updateLeadStatus(${lead.id}, this.value)" 
+                                    class="w-full text-xs py-1.5 pl-2 pr-6 rounded border-gray-200 font-medium ${statusColor}">
+                                    <option value="new" ${lead.status === 'new' ? 'selected' : ''}>New</option>
+                                    <option value="attempted" ${lead.status === 'attempted' ? 'selected' : ''}>Attempted</option>
+                                    <option value="interested" ${lead.status === 'interested' ? 'selected' : ''}>Interested</option>
+                                    <option value="follow-up" ${lead.status === 'follow-up' ? 'selected' : ''}>Follow-Up</option>
+                                    <option value="converted" ${lead.status === 'converted' ? 'selected' : ''}>Converted</option>
+                                    <option value="won" ${lead.status === 'won' ? 'selected' : ''}>Won</option>
+                                    <option value="lost" ${lead.status === 'lost' ? 'selected' : ''}>Lost</option>
+                                </select>
+                             </div>
+                             
+                             <div class="flex gap-1">
+                                <button onclick="leadsManager.openLeadModal(${lead.id})" class="p-2 text-gray-400 hover:text-blue-600 bg-gray-50 rounded-lg">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                 <button onclick="leadsManager.showHistory(${lead.id})" class="p-2 text-gray-400 hover:text-purple-600 bg-gray-50 rounded-lg">
+                                    <i class="fas fa-history"></i>
+                                </button>
+                             </div>
+                        </div>
+                        
+                        <div class="mt-2" onclick="event.stopPropagation()">
+                             <select onchange="leadsManager.updateLeadAgent(${lead.id}, this.value)" 
+                                class="w-full text-xs text-gray-500 py-1 pl-0 border-0 bg-transparent focus:ring-0">
+                                <option value="">+ Assign Agent</option>
+                                ${this.renderAgentOptions(lead.assigned_agent_id)}
+                            </select>
+                        </div>
+                    </div>
+                 `;
+            }).join('');
+        }
     }
 
     renderStatusOptions(currentStatus) {
@@ -601,6 +660,10 @@ class LeadsManager {
     }
 
     renderPagination(currentPage, totalPages) {
+        // Safe defaults
+        currentPage = parseInt(currentPage) || 1;
+        totalPages = parseInt(totalPages) || 0;
+
         if (totalPages <= 1) {
             this.paginationContainer.innerHTML = '';
             return;

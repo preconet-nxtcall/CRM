@@ -285,12 +285,23 @@
     }
 
     .kanban-col {
-      min-width: 320px;
-      width: 320px;
+      min-width: 85vw;
+      /* Mobile: almost full width */
+      width: 85vw;
       flex-shrink: 0;
       display: flex;
       flex-direction: column;
-      margin-right: 8px;
+      margin-right: 12px;
+      scroll-snap-align: center;
+      /* Snap effect */
+    }
+
+    @media (min-width: 640px) {
+      .kanban-col {
+        min-width: 320px;
+        width: 320px;
+        margin-right: 16px;
+      }
     }
 
     .kanban-cards {
@@ -859,7 +870,7 @@
           </div>
 
           <div class="flex items-center gap-2 md:ml-auto">
-            <div class="hidden md:flex items-center gap-2 text-sm text-gray-600 mr-4">
+            <div class="flex items-center gap-2 text-sm text-gray-600 mr-4">
               <i class="fas fa-coins text-yellow-500"></i>
               <span class="font-medium">Total:</span>
               <span id="grand-total" class="font-bold text-gray-900">₹ 0</span>
@@ -1454,7 +1465,7 @@
             </div>
           </div>
           <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm mobile-card-table">
+            <table class="w-full text-left text-sm mobile-card-table hidden md:table">
               <thead
                 class="bg-gray-50 text-gray-500 uppercase tracking-wider font-semibold text-xs border-b border-gray-100">
                 <tr>
@@ -1472,6 +1483,11 @@
                 <!-- Injected by JS -->
               </tbody>
             </table>
+
+            <!-- Mobile Cards View (Visible on small screens) -->
+            <div id="leadsMobileCards" class="md:hidden flex flex-col divide-y divide-gray-100 bg-white">
+              <!-- Injected by JS -->
+            </div>
           </div>
           <div id="leadsPagination" class="p-4 border-t border-gray-100"></div>
         </div>
@@ -2224,7 +2240,7 @@
         </div> -->
 
         <!-- 1. Top KPI Section -->
-        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
           <!-- Total Leads -->
           <div class="kpi-card bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
             <div class="w-12 h-12 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 text-xl">
@@ -2297,7 +2313,8 @@
           <!-- 3. Sales Funnel (Redesigned) -->
           <div class="lg:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm p-6 flex flex-col">
             <!-- Header -->
-            <div class="flex items-start justify-between mb-2">
+            <!-- Header -->
+            <div class="flex items-start justify-between mb-0.5">
               <div>
                 <h4 class="text-lg font-bold text-gray-900">Sales Funnel</h4>
                 <p class="text-xs text-gray-500 mt-1">Lead progression overview</p>
@@ -2328,17 +2345,12 @@
                     </ul>
                   </div>
                 </div>
-
-                <!-- 3-Dot Menu -->
-                <button class="p-1.5 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-50 transition-colors">
-                  <i class="fas fa-ellipsis-v text-xs"></i>
-                </button>
               </div>
             </div>
 
             <!-- Funnel Container -->
             <div id="pipeline-funnel-container"
-              class="funnel-container relative flex flex-col gap-3 w-full h-auto min-h-[250px] py-2">
+              class="funnel-container relative flex flex-col gap-3 w-full h-auto min-h-[250px] py-0">
               <div class="text-center text-gray-400 py-4">Loading...</div>
             </div>
 
@@ -2370,7 +2382,7 @@
                 </div>
               </div>
               <div class="overflow-x-auto">
-                <table class="w-full text-left">
+                <table class="w-full text-left hidden md:table">
                   <thead class="bg-gray-50 text-xs text-gray-500 uppercase">
                     <tr>
                       <th class="px-4 py-2">Agent</th>
@@ -2382,6 +2394,11 @@
                     <!-- JS Injected -->
                   </tbody>
                 </table>
+
+                <!-- Mobile Agent Cards -->
+                <div id="pipeline-agent-mobile-cards" class="md:hidden flex flex-col divide-y divide-gray-50">
+                  <!-- JS Injected -->
+                </div>
               </div>
             </div>
 

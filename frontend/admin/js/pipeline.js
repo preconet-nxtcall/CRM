@@ -227,15 +227,32 @@ class PipelineManager {
             if (resp && resp.ok) {
                 const data = await resp.json();
                 const tbody = document.getElementById('pipeline-agent-table-body'); // Updated ID
-                if (!tbody) return;
+                const mobileContainer = document.getElementById('pipeline-agent-mobile-cards'); // Mobile view
 
-                tbody.innerHTML = (data.agents || []).slice(0, 5).map(a => `
-                    <tr class="border-b border-gray-50 last:border-0 hover:bg-gray-50">
-                        <td class="px-4 py-2 font-medium text-gray-800">${a.name}</td>
-                        <td class="px-4 py-2 text-right text-gray-600">${a.calls_made}</td>
-                        <td class="px-4 py-2 text-right font-medium text-green-600">${a.closed_leads}</td>
-                    </tr>
-                `).join('');
+                if (tbody) {
+                    tbody.innerHTML = (data.agents || []).slice(0, 5).map(a => `
+                        <tr class="border-b border-gray-50 last:border-0 hover:bg-gray-50">
+                            <td class="px-4 py-2 font-medium text-gray-800">${a.name}</td>
+                            <td class="px-4 py-2 text-right text-gray-600">${a.calls_made}</td>
+                            <td class="px-4 py-2 text-right font-medium text-green-600">${a.closed_leads}</td>
+                        </tr>
+                    `).join('');
+                }
+
+                if (mobileContainer) {
+                    mobileContainer.innerHTML = (data.agents || []).slice(0, 5).map(a => `
+                        <div class="px-4 py-3 flex items-center justify-between bg-white rounded-lg border border-gray-100 shadow-sm mb-2">
+                             <div>
+                                <h5 class="font-bold text-gray-900 text-sm">${a.name}</h5>
+                                <div class="text-xs text-gray-500 mt-0.5">Performance Score: ${Math.round((a.closed_leads / (a.calls_made || 1)) * 100)}%</div>
+                             </div>
+                             <div class="text-right">
+                                <div class="text-sm font-bold text-green-600">${a.closed_leads} Clsd</div>
+                                <div class="text-xs text-gray-400">${a.calls_made} Calls</div>
+                             </div>
+                        </div>
+                    `).join('');
+                }
 
                 // Update month selector display if exists
                 this.updateMonthDisplay(data.month, data.year);
