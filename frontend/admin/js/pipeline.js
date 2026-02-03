@@ -3,6 +3,7 @@
 class PipelineManager {
     constructor() {
         this.currentStatusFilter = 'all';
+        this.currentFunnelFilter = 'all'; // Default Funnel Time Filter
         this.currentPage = 1;
         this.pipelineData = {};
 
@@ -18,6 +19,10 @@ class PipelineManager {
             this.loadLeads(),
             this.loadAgents()
         ]);
+
+        // Init UI Label
+        const label = document.getElementById('funnel-filter-label');
+        if (label) label.textContent = 'All Time';
     }
 
     /* ------------------------------------------------
@@ -26,7 +31,8 @@ class PipelineManager {
     async loadStats() {
         try {
             const offset = new Date().getTimezoneOffset();
-            const resp = await auth.makeAuthenticatedRequest(`/api/pipeline/stats?timezone_offset=${offset}`);
+            // Pass date_filter param
+            const resp = await auth.makeAuthenticatedRequest(`/api/pipeline/stats?timezone_offset=${offset}&date_filter=${this.currentFunnelFilter}`);
             if (resp && resp.ok) {
                 const data = await resp.json();
                 this.renderKPIs(data.kpis);
@@ -37,6 +43,15 @@ class PipelineManager {
         } catch (e) {
             console.error("Stats Error:", e);
         }
+    }
+
+    filterFunnel(filter, labelText) {
+        this.currentFunnelFilter = filter;
+        const label = document.getElementById('funnel-filter-label');
+        if (label) label.textContent = labelText;
+
+        // Reload Stats with new filter
+        this.loadStats();
     }
 
     renderKPIs(kpis) {

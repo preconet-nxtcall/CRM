@@ -10,6 +10,7 @@ class LeadsManager {
         this.searchQuery = '';
         this.start_date = null;
         this.end_date = null;
+        this.agents = []; // Prevent undefined map error
     }
 
     async init() {
@@ -108,6 +109,10 @@ class LeadsManager {
             // Add Date Filters
             if (this.start_date) url += `&start_date=${this.start_date}`;
             if (this.end_date) url += `&end_date=${this.end_date}`;
+
+            // Add Timezone Offset for accurate date filtering
+            const offset = new Date().getTimezoneOffset();
+            url += `&timezone_offset=${offset}`;
 
             const resp = await auth.makeAuthenticatedRequest(url);
             if (resp && resp.ok) {

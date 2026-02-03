@@ -2297,20 +2297,38 @@
           <!-- 3. Sales Funnel (Redesigned) -->
           <div class="lg:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm p-6 flex flex-col">
             <!-- Header -->
-            <div class="flex items-start justify-between mb-6">
+            <div class="flex items-start justify-between mb-2">
               <div>
                 <h4 class="text-lg font-bold text-gray-900">Sales Funnel</h4>
                 <p class="text-xs text-gray-500 mt-1">Lead progression overview</p>
               </div>
 
               <div class="flex items-center gap-2">
-                <!-- Simple Time Filter (Visual only for now, logic can be wired later) -->
-                <div class="relative">
+                <!-- Time Filter Dropdown -->
+                <div class="relative group">
                   <button
-                    class="flex items-center gap-1 text-xs font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 px-2 py-1.5 rounded transition-colors">
-                    This Week <i class="fas fa-chevron-down text-[10px] text-gray-400"></i>
+                    class="flex items-center gap-1 text-xs font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 px-2 py-1.5 rounded transition-colors"
+                    id="funnel-filter-btn">
+                    <span id="funnel-filter-label">All Time</span> <i
+                      class="fas fa-chevron-down text-[10px] text-gray-400"></i>
                   </button>
+                  <!-- Dropdown Content -->
+                  <div
+                    class="absolute right-0 top-full mt-1 w-32 bg-white border border-gray-100 rounded-lg shadow-lg hidden group-hover:block z-20">
+                    <ul class="py-1 text-xs text-gray-600">
+                      <li><a href="#" onclick="pipelineManager.filterFunnel('today', 'Today'); return false;"
+                          class="block px-3 py-2 hover:bg-blue-50 hover:text-blue-600">Today</a></li>
+                      <li><a href="#" onclick="pipelineManager.filterFunnel('week', 'This Week'); return false;"
+                          class="block px-3 py-2 hover:bg-blue-50 hover:text-blue-600">This Week</a></li>
+                      <li><a href="#" onclick="pipelineManager.filterFunnel('month', 'This Month'); return false;"
+                          class="block px-3 py-2 hover:bg-blue-50 hover:text-blue-600">This Month</a></li>
+                      <li><a href="#" onclick="pipelineManager.filterFunnel('all', 'All Time'); return false;"
+                          class="block px-3 py-2 hover:bg-blue-50 hover:text-blue-600 border-t border-gray-50">All
+                          Time</a></li>
+                    </ul>
+                  </div>
                 </div>
+
                 <!-- 3-Dot Menu -->
                 <button class="p-1.5 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-50 transition-colors">
                   <i class="fas fa-ellipsis-v text-xs"></i>
@@ -2320,12 +2338,12 @@
 
             <!-- Funnel Container -->
             <div id="pipeline-funnel-container"
-              class="funnel-container relative flex flex-col gap-3 w-full h-auto min-h-[400px] py-6 justify-center">
+              class="funnel-container relative flex flex-col gap-3 w-full h-auto min-h-[250px] py-2">
               <div class="text-center text-gray-400 py-4">Loading...</div>
             </div>
 
             <!-- Footer Metrics (Redesigned) -->
-            <div class="grid grid-cols-2 gap-4 mt-8 pt-6 border-t border-dashed border-gray-100"
+            <div class="grid grid-cols-2 gap-4 mt-2 pt-4 border-t border-dashed border-gray-100"
               id="pipeline-funnel-metrics">
             </div>
           </div>

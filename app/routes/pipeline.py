@@ -33,38 +33,46 @@ def pipeline_stats():
     # Calculate local start of day
     # Local Time = UTC - offset_min (minutes)
     # But usually Frontend sends (UTC - Local), so Local = UTC - offset.
-    # JS: new Date().getTimezoneOffset() -> -330 for IST. 
-    # So UTC + 330 mins = IST.
-    # We want "Today 00:00" in Local Time converted back to UTC?
-    # Or just filter on Local Time if DB was Local... but DB is UTC.
-    
-    # Strategy: Determine the UTC range that corresponds to "Local Today"
-    
-    # Current UTC
     now_utc = datetime.utcnow()
-    
-    # Current Local Time
     local_delta = timedelta(minutes=-offset_min)
     now_local = now_utc + local_delta
-    
-    # Local Day Start (00:00)
     local_today_start = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
-    
-    # Convert Local Day Start back to UTC to query DB
-    # UTC = Local - delta
     today_start_utc = local_today_start - local_delta
 
-    # 1. Total Leads
-    total_leads = Lead.query.filter_by(admin_id=admin_id).count()
+    # Handle Date Filter for Funnel/Stats
+    date_filter = request.args.get("date_filter", "all")
+    filter_start_utc = None
+    filter_end_utc = None
 
-    # 2. New Leads Today
+    if date_filter == 'today':
+        filter_start_utc = today_start_utc
+        # End is implicit (create_at >= start)
+    elif date_filter == 'week':
+        # Start of week (Monday)
+        days_since_monday = local_today_start.weekday()
+        week_start_local = local_today_start - timedelta(days=days_since_monday)
+        filter_start_utc = week_start_local - local_delta
+    elif date_filter == 'month':
+        # Start of month
+        month_start_local = local_today_start.replace(day=1)
+        filter_start_utc = month_start_local - local_delta
+
+    # 1. Total Leads (Global or Filtered?)
+    # Usually Total Leads KPI is ALL TIME unless filtered
+    # If filtered, show count in range.
+    lead_query = Lead.query.filter_by(admin_id=admin_id)
+    if filter_start_utc:
+        lead_query = lead_query.filter(Lead.created_at >= filter_start_utc)
+    
+    total_leads = lead_query.count()
+
+    # 2. New Leads Today (Always Today for this specific KPI)
     new_leads_today = Lead.query.filter(
         Lead.admin_id == admin_id,
         Lead.created_at >= today_start_utc
     ).count()
 
-    # 3. Calls Today (from CallHistory)
-    # We need to filter by users belonging to this admin
+    # 3. Calls Today (Always Today for this specific KPI)
     users = User.query.filter_by(admin_id=admin_id).all()
     user_ids = [u.id for u in users]
 
@@ -74,26 +82,27 @@ def pipeline_stats():
     )
     
     calls_made_today = calls_today_query.count()
-    
-    # 4. Connected Calls Today
-    # Assuming 'connected' isn't a direct status but usually IMPLIED by duration > 0 or specific status?
-    # Let's rely on call_type or duration. If 'outgoing' and duration > 0 usually connected.
-    # Or if we have a status field. The model has 'call_type'.
-    # Let's count calls with duration > 10 seconds as a proxy for "Effective Connected", or just > 0.
     connected_calls_today = calls_today_query.filter(CallHistory.duration > 0).count()
 
-    # 5. Conversion Rate (Converted Leads / Total Leads) * 100
-    converted_leads = Lead.query.filter_by(admin_id=admin_id, status="Converted").count()
+    # 5. Conversion Rate (Converted Leads / Total Leads in Filter) * 100
+    converted_query = Lead.query.filter_by(admin_id=admin_id, status="Converted")
+    if filter_start_utc:
+        converted_query = converted_query.filter(Lead.created_at >= filter_start_utc)
+    
+    converted_leads = converted_query.count()
     conversion_rate = 0
     if total_leads > 0:
         conversion_rate = round((converted_leads / total_leads) * 100, 2)
 
     # 6. Pipeline Breakdown
-    # Statuses: New, Attempted, Converted, Interested, Follow-Up, Won, Lost
-    # We group by status
+    # Statuses based on Filter
+    pipeline_query = db.session.query(Lead.status, func.count(Lead.id)).filter(Lead.admin_id == admin_id)
+    
+    if filter_start_utc:
+        pipeline_query = pipeline_query.filter(Lead.created_at >= filter_start_utc)
+        
     status_counts = (
-        db.session.query(Lead.status, func.count(Lead.id))
-        .filter(Lead.admin_id == admin_id)
+        pipeline_query
         .group_by(Lead.status)
         .all()
     )
@@ -223,19 +232,31 @@ def pipeline_leads():
     # Date Filter
     start_date = request.args.get("start_date")
     end_date = request.args.get("end_date")
+    timezone_offset = request.args.get("timezone_offset", type=int) # JS offset (UTC - Local) in minutes
 
     if start_date:
         try:
-            # Assume YYYY-MM-DD
-            s_dt = datetime.strptime(start_date, "%Y-%m-%d")
+            # Parse Local Start Date
+            s_dt = datetime.strptime(start_date, "%Y-%m-%d") # 00:00:00 Local
+            
+            if timezone_offset is not None:
+                # Convert Local 00:00 to UTC
+                # UTC = Local + Offset
+                s_dt = s_dt + timedelta(minutes=timezone_offset)
+            
             query = query.filter(Lead.created_at >= s_dt)
         except ValueError:
             pass
 
     if end_date:
         try:
-             # End of day
-            e_dt = datetime.strptime(end_date, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
+             # Parse Local End Date (End of Day)
+            e_dt = datetime.strptime(end_date, "%Y-%m-%d").replace(hour=23, minute=59, second=59) # 23:59:59 Local
+
+            if timezone_offset is not None:
+                # Convert Local 23:59 to UTC
+                e_dt = e_dt + timedelta(minutes=timezone_offset)
+
             query = query.filter(Lead.created_at <= e_dt)
         except ValueError:
             pass
