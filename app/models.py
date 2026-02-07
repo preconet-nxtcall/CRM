@@ -163,6 +163,7 @@ class User(db.Model):
 
     # Session Management
     current_session_id = db.Column(db.String(100), nullable=True)
+    fcm_token = db.Column(db.String(255), nullable=True) # For Notifications
 
     def set_password(self, password):
         self.password_hash = bcrypt.generate_password_hash(password).decode("utf-8")

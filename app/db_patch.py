@@ -79,6 +79,15 @@ def run_schema_patch():
                     except Exception as e:
                          print(f"❌ Failed to add subscription_expiry_date: {e}")
 
+                # 5. fcm_token
+                if 'fcm_token' not in user_cols:
+                    print("Adding fcm_token to users table...")
+                    try:
+                         conn.execute(text("ALTER TABLE users ADD COLUMN fcm_token VARCHAR(255)"))
+                         print("✅ Added fcm_token to users")
+                    except Exception as e:
+                         print(f"❌ Failed to add fcm_token: {e}")
+
             # ADMINS table for session_id
             if 'admins' in inspector.get_table_names():
                 admin_cols = [c['name'] for c in inspector.get_columns('admins')]
