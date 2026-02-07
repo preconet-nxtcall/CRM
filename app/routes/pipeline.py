@@ -188,7 +188,7 @@ def pipeline_leads():
 
     query = Lead.query.filter_by(admin_id=admin_id)
 
-    if status_filter and status_filter != "all":
+    if status_filter and status_filter.lower() != "all":
         # Handle mapped statuses matching pipeline_stats logic (Case Insensitive)
         if status_filter == "Attempted":
              query = query.filter(func.lower(Lead.status).in_([
@@ -198,6 +198,10 @@ def pipeline_leads():
              ]))
         elif status_filter == "Converted":
              query = query.filter(func.lower(Lead.status) == "converted")
+        elif status_filter == "Connected":
+             query = query.filter(func.lower(Lead.status).in_([
+                 "connected", "contacted", "in conversation"
+             ]))
         elif status_filter == "Interested":
              query = query.filter(func.lower(Lead.status).in_([
                  "interested", "meeting scheduled", "demo scheduled"
