@@ -599,14 +599,14 @@
             <div
               class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col hover:shadow-md transition-shadow group relative overflow-hidden h-full">
               <div class="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity">
-                <img src="images/integrations/indiamart.png"
+                <img src="images/integrations/indiamart.svg"
                   class="w-32 h-32 object-contain transform -rotate-12 -mr-8 -mt-8 grayscale">
               </div>
 
               <div class="flex items-center justify-between mb-6 relative z-10">
                 <div
                   class="w-14 h-14 bg-white rounded-xl flex items-center justify-center shadow-sm border border-gray-100">
-                  <img src="images/integrations/indiamart.png" class="w-10 h-10 object-contain">
+                  <img src="images/integrations/indiamart.svg" class="w-10 h-10 object-contain">
                 </div>
                 <!-- Badge (Updated by JS) -->
                 <span id="badge-im-status"
@@ -1396,6 +1396,25 @@
                   title="Refresh Data">
                   <i class="fas fa-sync-alt"></i>
                 </button>
+
+                <!-- Status Filter Dropdown -->
+                <div class="relative">
+                  <select id="leads-status-filter" onchange="leadsManager.changeStatusFilter(this.value)"
+                    class="appearance-none pl-3 pr-8 py-2 text-sm font-medium border border-gray-200 rounded-lg bg-white text-gray-700 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer shadow-sm transition-all">
+                    <option value="all" selected>All Status</option>
+                    <option value="New">New</option>
+                    <option value="Attempted">Attempted</option>
+                    <option value="Connected">Connected</option>
+                    <option value="Interested">Interested</option>
+                    <option value="Follow-Up">Follow-Up</option>
+                    <option value="Converted">Converted</option>
+                    <option value="Won">Won</option>
+                    <option value="Lost">Lost</option>
+                  </select>
+                  <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+                    <i class="fas fa-chevron-down text-xs"></i>
+                  </div>
+                </div>
 
                 <!-- Date Filter Dropdown -->
                 <div class="relative">

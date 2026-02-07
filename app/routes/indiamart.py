@@ -125,11 +125,17 @@ def disconnect():
 #  SYNC LEADS
 # =======================================================
 
+# =======================================================
+#  SYNC LEADS
+# =======================================================
+
+import threading
+
 @bp.route('/api/indiamart/sync', methods=['POST'])
 @jwt_required()
 def sync_leads():
     """
-    Fetch leads from IndiaMART API and save to DB.
+    Fetch leads from IndiaMART API and save to DB (Async).
     """
     try:
         claims = get_jwt()
@@ -142,19 +148,27 @@ def sync_leads():
             return jsonify({"error": "Admin privileges required"}), 403
             
         if not admin:
-             return jsonify({"error": "Admin account not found"}), 404
+            return jsonify({"error": "Admin account not found"}), 404
 
-        from app.services.indiamart_service import sync_admin_leads
+        # Spawn Background Thread
+        thread = threading.Thread(target=run_sync_async, args=(current_app._get_current_object(), admin.id))
+        thread.start()
         
-        result = sync_admin_leads(admin.id)
-        
-        if result.get("status") == "error":
-             code = 500
-             if "IndiaMART API Error" in result.get("error", ""): code = 502
-             if "not connected" in result.get("error", ""): code = 400
-             return jsonify(result), code
-        
-        return jsonify(result), 200
+        return jsonify({"message": "Sync started in background"}), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+def run_sync_async(app, admin_id):
+    """
+    Wrapper to run sync in thread context.
+    """
+    with app.app_context():
+        try:
+            from app.services.indiamart_service import sync_admin_leads
+            app.logger.info(f"Starting Background Sync for Admin {admin_id}")
+            result = sync_admin_leads(admin_id)
+            app.logger.info(f"Background Sync Result for Admin {admin_id}: {result}")
+        except Exception as e:
+            app.logger.error(f"Background Sync Failed for Admin {admin_id}: {e}")

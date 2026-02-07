@@ -58,17 +58,30 @@ def get_justdial_status():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+import threading
+
 @bp.route('/api/justdial/sync', methods=['POST'])
 @jwt_required()
 def sync_justdial():
     try:
         current_user_id = int(get_jwt_identity())
-        result = sync_justdial_leads(current_user_id)
-        if result['status'] == 'error':
-            return jsonify(result), 400
-        return jsonify(result), 200
+        
+        # Spawn Background Thread
+        thread = threading.Thread(target=run_jd_sync_async, args=(current_app._get_current_object(), current_user_id))
+        thread.start()
+        
+        return jsonify({"message": "Sync started in background"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+def run_jd_sync_async(app, admin_id):
+    with app.app_context():
+        try:
+            app.logger.info(f"Starting JustDial Sync for {admin_id}")
+            result = sync_justdial_leads(admin_id)
+            app.logger.info(f"JustDial Sync Result: {result}")
+        except Exception as e:
+            app.logger.error(f"JustDial Sync Failed: {e}")
 
 @bp.route('/api/justdial/disconnect', methods=['POST'])
 @jwt_required()

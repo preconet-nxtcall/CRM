@@ -77,17 +77,30 @@ def get_housing_status():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+import threading
+
 @bp.route('/api/housing/sync', methods=['POST'])
 @jwt_required()
 def sync_housing():
     try:
         current_user_id = int(get_jwt_identity())
-        result = sync_housing_leads(current_user_id)
-        if result['status'] == 'error':
-            return jsonify(result), 400
-        return jsonify(result), 200
+        
+        # Spawn Background Thread
+        thread = threading.Thread(target=run_housing_sync_async, args=(current_app._get_current_object(), current_user_id))
+        thread.start()
+        
+        return jsonify({"message": "Sync started in background"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+def run_housing_sync_async(app, admin_id):
+    with app.app_context():
+        try:
+            app.logger.info(f"Starting Housing Sync for {admin_id}")
+            result = sync_housing_leads(admin_id)
+            app.logger.info(f"Housing Sync Result: {result}")
+        except Exception as e:
+            app.logger.error(f"Housing Sync Failed: {e}")
 
 @bp.route('/api/housing/disconnect', methods=['POST'])
 @jwt_required()

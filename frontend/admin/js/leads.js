@@ -4,7 +4,8 @@ class LeadsManager {
         this.mobileContainer = document.getElementById('leadsMobileCards');
         this.paginationContainer = document.getElementById('leadsPagination');
         this.itemsPerPage = 10; // Changed to 10 records per page
-        this.currentFilter = 'all'; // Default filter
+        this.currentFilter = 'all'; // Default filter (Source)
+        this.statusFilter = 'all'; // New Status Filter
         this.dateFilter = 'all'; // Default to all records
 
         // New Filters
@@ -25,6 +26,11 @@ class LeadsManager {
         this.currentFilter = source;
         this.updateFilterButtons();
         this.loadLeads(1); // Reset to page 1
+    }
+
+    changeStatusFilter(val) {
+        this.statusFilter = val;
+        this.loadLeads(1);
     }
 
     changeDateFilter(val) {
@@ -123,6 +129,10 @@ class LeadsManager {
 
             if (this.currentFilter !== 'all') {
                 url += `&source=${this.currentFilter}`;
+            }
+
+            if (this.statusFilter !== 'all') {
+                url += `&status=${this.statusFilter}`;
             }
 
             // Add Search
@@ -395,6 +405,49 @@ class LeadsManager {
                         <span class="font-medium text-gray-900">${lead.custom_fields?.project || '-'}</span>
                     </div>
 
+                </div>
+            `;
+        } else if (source === 'facebook') {
+            // Facebook Format (Enhanced)
+            detailsHtml = `
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <span class="block text-gray-500 text-xs">Lead Name</span>
+                        <span class="font-medium text-gray-900">${lead.name || '-'}</span>
+                    </div>
+                    <div>
+                        <span class="block text-gray-500 text-xs">Phone</span>
+                        <span class="font-medium text-gray-900">${lead.phone || '-'}</span>
+                    </div>
+                    <div>
+                        <span class="block text-gray-500 text-xs">Email</span>
+                        <span class="font-medium text-gray-900">${lead.email || '-'}</span>
+                    </div>
+                     <div>
+                        <span class="block text-gray-500 text-xs">Form Name</span>
+                        <span class="font-medium text-blue-600 break-words">${custom.form_name || '-'}</span>
+                    </div>
+                    <div>
+                        <span class="block text-gray-500 text-xs">Campaign</span>
+                        <span class="font-medium text-gray-700 break-words">${custom.campaign_name || '-'}</span>
+                    </div>
+                     <div>
+                        <span class="block text-gray-500 text-xs">Ad Name</span>
+                        <span class="font-medium text-gray-700 break-words">${custom.ad_name || '-'}</span>
+                    </div>
+                    <div class="col-span-2 bg-gray-50 p-3 rounded">
+                        <span class="block text-gray-500 text-xs mb-2">Additional Data</span>
+                         <div class="grid grid-cols-2 gap-2">
+                            ${Object.entries(custom).map(([key, value]) => {
+                if (['form_name', 'campaign_name', 'ad_name'].includes(key)) return ''; // Skip already shown fields
+                return `
+                                <div>
+                                    <span class="block text-[10px] text-gray-400 uppercase">${key.replace(/_/g, ' ')}</span>
+                                    <span class="text-xs text-gray-700 break-words">${value}</span>
+                                </div>
+                            `}).join('')}
+                         </div>
+                    </div>
                 </div>
             `;
         } else if (source === 'justdial') {

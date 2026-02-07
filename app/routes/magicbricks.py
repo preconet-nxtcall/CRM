@@ -62,25 +62,33 @@ def connect_mb():
     except Exception as e:
         return jsonify({"error": f"Connection failed: {str(e)}"}), 400
 
+import threading
+
 @bp.route('/api/magicbricks/sync', methods=['POST'])
 @jwt_required()
 def sync_mb():
     """
-    Trigger Manual Sync
+    Trigger Manual Sync (Async)
     """
     current_id = int(get_jwt_identity())
     
     try:
-        result = sync_magicbricks_leads(current_id)
-        if result.get("status") == "error":
-             return jsonify({"error": result.get("message")}), 400
-             
-        return jsonify({
-            "message": "Sync complete",
-            "added": result.get("added", 0)
-        }), 200
+        # Spawn Background Thread
+        thread = threading.Thread(target=run_mb_sync_async, args=(current_app._get_current_object(), current_id))
+        thread.start()
+
+        return jsonify({"message": "Sync started in background"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+def run_mb_sync_async(app, admin_id):
+    with app.app_context():
+        try:
+            app.logger.info(f"Starting Magicbricks Sync for {admin_id}")
+            result = sync_magicbricks_leads(admin_id)
+            app.logger.info(f"Magicbricks Sync Result: {result}")
+        except Exception as e:
+            app.logger.error(f"Magicbricks Sync Failed: {e}")
 
 @bp.route('/api/magicbricks/disconnect', methods=['POST'])
 @jwt_required()

@@ -377,6 +377,12 @@ def get_status_history(lead_id):
 
 
 # Webhook Verification & Handling
+import threading
+
+# Global Cache for Form Names to reduce API calls
+# Format: {form_id: form_name}
+FORM_CACHE = {}
+
 @bp.route('/api/facebook/webhook', methods=['GET', 'POST'])
 def handle_webhook():
     # 1. VERIFY (Get)
@@ -394,14 +400,13 @@ def handle_webhook():
         return "Invalid signature", 403
 
     data = request.json
-    current_app.logger.info(f"WEBHOOK_DATA: {data}")
+    # current_app.logger.info(f"WEBHOOK_DATA: {data}")
 
     if data.get('object') == 'page':
         for entry in data.get('entry', []):
             page_id = entry.get('id')
             
             # Find Connection strictly by page_id (and ensuring active status)
-            # Note: We query FacebookConnection directly now
             conn = FacebookConnection.query.filter_by(page_id=page_id, status='active').first()
             if not conn:
                 current_app.logger.warning(f"Webhook received for unknown/inactive page {page_id}")
@@ -416,12 +421,28 @@ def handle_webhook():
                     if not lead_id or lead_id.startswith("444"): # Example test ID filter
                         continue
                         
-                    process_lead_strict(conn, lead_id, form_id)
+                    # ASYNC PROCESSING: Offload to thread to return 200 OK instantly
+                    # This is critical for high volume (1 Lakh Users)
+                    process_thread = threading.Thread(target=process_lead_strict_async, args=(current_app._get_current_object(), conn.id, lead_id, form_id))
+                    process_thread.start()
 
         return 'EVENT_RECEIVED', 200
     
     return 'Not a Page Event', 404
 
+
+def process_lead_strict_async(app, conn_id, lead_id, form_id):
+    """
+    Wrapper to run in thread context with app context.
+    """
+    with app.app_context():
+        try:
+            # Re-fetch connection inside thread session
+            conn = FacebookConnection.query.get(conn_id)
+            if conn:
+                process_lead_strict(conn, lead_id, form_id)
+        except Exception as e:
+            app.logger.error(f"Async Lead Processing Failed: {e}")
 
 def process_lead_strict(conn, lead_id, form_id):
     """
@@ -449,6 +470,7 @@ def process_lead_strict(conn, lead_id, form_id):
             return
             
         lead_data = resp.json()
+
         
         # 3. Dynamic Field Parsing
         name = "Unknown"
@@ -512,7 +534,30 @@ def process_lead_strict(conn, lead_id, form_id):
         except Exception as e:
             current_app.logger.error(f"Assignment Logic Failed: {e}")
 
-        # 5. Save
+        # 5. Fetch Form Name (New)
+        if form_id:
+            try:
+                # 1. Check Cache First
+                if form_id in FORM_CACHE:
+                    custom_fields['form_name'] = FORM_CACHE[form_id]
+                else:
+                    # 2. Fetch from API if not in cache
+                    form_url = f"https://graph.facebook.com/v24.0/{form_id}"
+                    f_params = {"access_token": sys_token, "fields": "name"}
+                    f_resp = requests.get(form_url, params=f_params)
+                    if f_resp.status_code == 200:
+                        form_data = f_resp.json()
+                        f_name = form_data.get('name')
+                        
+                        # Update Cache
+                        custom_fields['form_name'] = f_name
+                        FORM_CACHE[form_id] = f_name
+                        
+                        current_app.logger.info(f"Fetched & Cached Form Name: {f_name}")
+            except Exception as e:
+                current_app.logger.error(f"Failed to fetch form name: {e}")
+
+        # 6. Save
         lead = Lead(
             admin_id=conn.admin_id,
             facebook_lead_id=lead_id,
