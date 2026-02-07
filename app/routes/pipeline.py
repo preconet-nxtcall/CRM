@@ -188,35 +188,36 @@ def pipeline_leads():
 
     query = Lead.query.filter_by(admin_id=admin_id)
 
-    if status_filter and status_filter.lower() != "all":
-        # Handle mapped statuses matching pipeline_stats logic (Case Insensitive)
-        if status_filter == "Attempted":
+    if status_filter and status_filter.strip().lower() != "all":
+        # Handle mapped statuses matching pipeline_stats logic (Normalized)
+        sf = status_filter.strip().title()
+
+        if sf == "Attempted":
              query = query.filter(func.lower(Lead.status).in_([
                  "attempted", "ringing", "busy", "not reachable", 
-                 "switch off", "no answer",
-                 "connected", "contacted", "in conversation"
+                 "switch off", "no answer"
              ]))
-        elif status_filter == "Converted":
+        elif sf == "Converted":
              query = query.filter(func.lower(Lead.status) == "converted")
-        elif status_filter == "Connected":
+        elif sf == "Connected":
              query = query.filter(func.lower(Lead.status).in_([
                  "connected", "contacted", "in conversation"
              ]))
-        elif status_filter == "Interested":
+        elif sf == "Interested":
              query = query.filter(func.lower(Lead.status).in_([
                  "interested", "meeting scheduled", "demo scheduled"
              ]))
-        elif status_filter == "Follow-Up":
+        elif sf == "Follow-up": # Title case 'Follow-up' might vary, check raw input or normalize
              query = query.filter(func.lower(Lead.status).in_([
                  "follow-up", "follow up", "call later", "callback"
              ]))
-        elif status_filter == "Won":
+        elif sf == "Won":
              query = query.filter(func.lower(Lead.status).in_(["won", "closed"]))
-        elif status_filter == "Lost":
+        elif sf == "Lost":
              query = query.filter(func.lower(Lead.status).in_([
                  "lost", "junk", "wrong number", "invalid", "not interested", "not intersted"
              ]))
-        elif status_filter == "New":
+        elif sf == "New":
              query = query.filter(func.lower(Lead.status) == "new")
         else:
              # Fallback for direct match (e.g. specific status like "Ringing" if selected directly)
