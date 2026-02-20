@@ -19,6 +19,41 @@ MAX_PER_PAGE = 200
 # -------------------------------------------------
 # Helpers
 # -------------------------------------------------
+import os
+import boto3
+
+def get_presigned_url(object_key, expires_in=3600):
+    if not object_key or object_key.startswith("uploads/"):
+        return None
+    
+    wasabi_access_key = os.getenv("WASABI_ACCESS_KEY_ID") or os.getenv("WASABI_ACCESS_KEY")
+    wasabi_secret_key = os.getenv("WASABI_SECRET_ACCESS_KEY") or os.getenv("WASABI_SECRET_KEY")
+    wasabi_bucket = os.getenv("WASABI_BUCKET_NAME")
+    wasabi_region = os.getenv("WASABI_REGION", "us-east-1")
+    
+    if not all([wasabi_access_key, wasabi_secret_key, wasabi_bucket]):
+        return None
+
+    wasabi_endpoint = os.getenv("WASABI_ENDPOINT_URL", f"https://s3.{wasabi_region}.wasabisys.com")
+
+    s3_client = boto3.client(
+        "s3",
+        endpoint_url=wasabi_endpoint,
+        aws_access_key_id=wasabi_access_key,
+        aws_secret_access_key=wasabi_secret_key,
+        region_name=wasabi_region
+    )
+    
+    try:
+        url = s3_client.generate_presigned_url(
+            'get_object',
+            Params={'Bucket': wasabi_bucket, 'Key': object_key},
+            ExpiresIn=expires_in
+        )
+        return url
+    except Exception:
+        return None
+
 def parse_timestamp(ts_value):
     """Convert timestamp input from ISO string, seconds, or milliseconds."""
     if ts_value is None:
@@ -248,9 +283,15 @@ def my_call_history():
         q = CallHistory.query.filter_by(user_id=user_id).order_by(CallHistory.timestamp.desc())
         items, meta = paginate(q)
 
+        history_data = []
+        for r in items:
+            record_dict = r.to_dict()
+            record_dict["playback_url"] = get_presigned_url(r.recording_path)
+            history_data.append(record_dict)
+
         return jsonify({
             "user_id": user_id,
-            "call_history": [r.to_dict() for r in items],
+            "call_history": history_data,
             "meta": meta
         })
 
@@ -270,9 +311,15 @@ def admin_user_call_history(user_id):
         q = CallHistory.query.filter_by(user_id=user_id).order_by(CallHistory.timestamp.desc())
         items, meta = paginate(q)
 
+        history_data = []
+        for r in items:
+            record_dict = r.to_dict()
+            record_dict["playback_url"] = get_presigned_url(r.recording_path)
+            history_data.append(record_dict)
+
         return jsonify({
             "user_id": user_id,
-            "call_history": [r.to_dict() for r in items],
+            "call_history": history_data,
             "meta": meta
         })
 
@@ -282,9 +329,11 @@ def admin_user_call_history(user_id):
 
 
 # -------------------------------------------------
-# 4️⃣ UPLOAD CALL RECORDING
+# 4️⃣ UPLOAD CALL RECORDING (WASABI)
 # -------------------------------------------------
 import os
+import boto3
+from botocore.exceptions import ClientError, BotoCoreError
 from werkzeug.utils import secure_filename
 
 ALLOWED_EXTENSIONS = {'mp3', 'wav', 'aac', 'm4a', 'amr', 'opus', 'ogg', '3gp'}
@@ -333,94 +382,87 @@ def upload_recording():
         dt = dt.replace(microsecond=0)
 
         # 🔍 Try to find existing record
-        # We match broadly on timestamp (within seconds tolerance?) 
-        # For now, exact match on normalized timestamp as per sync logic
         record = CallHistory.query.filter(
             CallHistory.user_id == user_id,
             CallHistory.phone_number == phone_number,
             CallHistory.timestamp == dt
         ).first()
 
-        # If not found exactly, maybe allow small drift? (Optional, skipping for now)
-
         if not record:
-            # Create new record if one doesn't exist (Recording arrived before sync or missed sync)
+            # Create new record if one doesn't exist
             record = CallHistory(
                 user_id=user_id,
                 phone_number=phone_number,
-                formatted_number="", # Can be added if sent
+                formatted_number="",
                 call_type=call_type.lower() if call_type else "unknown",
                 duration=duration,
                 timestamp=dt,
                 contact_name=contact_name
             )
             db.session.add(record)
-            db.session.flush() # Get ID
-        
-        # 📂 Save File
-        # Structure: uploads/recordings/user_{id}/filename
-        # Fix V2.6: Use explicit os.getcwd() to ensure we save to backend/uploads (which is verified to exist/be compatible)
-        # rather than app.root_path/static which might be missing.
-        upload_folder = os.path.join(os.getcwd(), 'uploads', 'recordings', f'user_{user_id}')
-        os.makedirs(upload_folder, exist_ok=True)
-        
-        original_filename = secure_filename(f"{dt.strftime('%Y%m%d_%H%M%S')}_{phone_number}_{file.filename}")
-        original_file_path = os.path.join(upload_folder, original_filename)
-        file.save(original_file_path)
-        
-        final_filename = original_filename
-        final_file_path = original_file_path
-        
-        # 🎵 AUTO-CONVERT TO MP3 (if .amr or .3gp)
-        # Browsers don't support AMR/3GP. We use pydub/ffmpeg to convert.
-        lower_name = original_filename.lower()
-        if lower_name.endswith('.amr') or lower_name.endswith('.3gp'):
-            try:
-                from pydub import AudioSegment
-                
-                # Input format
-                fmt = 'amr' if lower_name.endswith('.amr') else '3gp'
-                
-                print(f"🔄 Converting {fmt.upper()} to MP3: {original_filename}")
-                
-                # Load audio
-                audio = AudioSegment.from_file(original_file_path, format=fmt)
-                
-                # Define new filename
-                mp3_filename = os.path.splitext(original_filename)[0] + ".mp3"
-                mp3_path = os.path.join(upload_folder, mp3_filename)
-                
-                # Export as mp3
-                audio.export(mp3_path, format="mp3")
-                
-                print(f"✅ Conversion successful: {mp3_filename}")
-                
-                # Update references (We serve the MP3)
-                final_filename = mp3_filename
-                final_file_path = mp3_path
-                
-                # Cleanup original? (Optional: Keep for backup or delete to save space)
-                # os.remove(original_file_path) 
-                
-            except Exception as conv_err:
-                print(f"❌ Audio conversion failed: {conv_err}")
-                print("⚠️ Falling back to original file (Download required for playback)")
-                # If conversion fails (e.g. ffmpeg not installed), we keep original
-                pass
+            db.session.flush() # Get ID, but don't commit yet
 
-        # Store relative path for frontend access
-        # Assuming typical static setup: /static/uploads/...
-        relative_path = f"uploads/recordings/user_{user_id}/{final_filename}"
-        record.recording_path = relative_path
+        # ☁️ Upload File to Wasabi (S3)
+        wasabi_access_key = os.getenv("WASABI_ACCESS_KEY_ID") or os.getenv("WASABI_ACCESS_KEY")
+        wasabi_secret_key = os.getenv("WASABI_SECRET_ACCESS_KEY") or os.getenv("WASABI_SECRET_KEY")
+        wasabi_bucket = os.getenv("WASABI_BUCKET_NAME")
+        wasabi_region = os.getenv("WASABI_REGION", "us-east-1")
         
+        if not all([wasabi_access_key, wasabi_secret_key, wasabi_bucket]):
+            db.session.rollback()
+            return jsonify({"error": "Storage configuration is missing on the server"}), 500
+
+        wasabi_endpoint = os.getenv("WASABI_ENDPOINT_URL", f"https://s3.{wasabi_region}.wasabisys.com")
+
+        s3_client = boto3.client(
+            "s3",
+            endpoint_url=wasabi_endpoint,
+            aws_access_key_id=wasabi_access_key,
+            aws_secret_access_key=wasabi_secret_key,
+            region_name=wasabi_region
+        )
+
+        original_filename = secure_filename(f"{dt.strftime('%Y%m%d_%H%M%S')}_{phone_number}_{file.filename}")
+        object_key = f"recordings/user_{user_id}/{original_filename}"
+
+        try:
+            # Ensure file pointer is at the beginning
+            file.seek(0)
+            s3_client.upload_fileobj(
+                file,
+                wasabi_bucket,
+                object_key,
+                ExtraArgs={
+                    "ContentType": file.content_type
+                }
+            )
+        except (BotoCoreError, ClientError) as upload_err:
+            db.session.rollback()
+            current_app.logger.error(f"Wasabi upload failed: {str(upload_err)}")
+            return jsonify({"error": "Failed to upload recording to storage"}), 500
+
+        # Store the object key in the DB. This key can later be used to generate a presigned URL.
+        record.recording_path = object_key
+        
+        # Now that upload is successful, we commit the transaction
         db.session.commit()
 
+        # 🔗 Optional Example: How to generate a presigned URL for playback
+        # You can use this logic in a separate endpoint to serve the recording securely to the frontend.
+        # presigned_url = s3_client.generate_presigned_url(
+        #     'get_object',
+        #     Params={'Bucket': wasabi_bucket, 'Key': object_key},
+        #     ExpiresIn=3600  # URL valid for 1 hour
+        # )
+
         return jsonify({
-            "message": "Recording uploaded successfully",
+            "message": "Recording uploaded successfully to storage",
             "id": record.id,
-            "path": relative_path
+            "path": object_key
+            # "playback_url": presigned_url
         }), 200
 
     except Exception as e:
+        db.session.rollback()
         current_app.logger.exception("UPLOAD RECORDING ERROR")
         return jsonify({"error": "Upload failed", "detail": str(e)}), 500

@@ -24,4 +24,11 @@ class Config:
     FACEBOOK_APP_ID = os.environ.get("FACEBOOK_APP_ID", "1537220340728257")
     FACEBOOK_APP_SECRET = os.environ.get("FACEBOOK_APP_SECRET", "774f3a44a2590515de08680001d7bbaf")
 
+    # Wasabi / S3 Storage
+    WASABI_ACCESS_KEY = os.environ.get("WASABI_ACCESS_KEY", "")
+    WASABI_SECRET_KEY = os.environ.get("WASABI_SECRET_KEY", "")
+    WASABI_REGION = os.environ.get("WASABI_REGION", "us-east-1")
+    WASABI_BUCKET_NAME = os.environ.get("WASABI_BUCKET_NAME", "")
+    WASABI_ENDPOINT_URL = os.environ.get("WASABI_ENDPOINT_URL", "https://s3.wasabisys.com")
+
 

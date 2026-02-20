@@ -192,25 +192,29 @@ class CallHistoryManager {
               // Recording Player
               let recordingPlayer = '<span class="text-gray-400 text-xs">-</span>';
               if (r.recording_path) {
-                // V2.5 Fix: Handle "uploads/" prefix duplication and nested paths
+                let finalUrl = "";
                 let rawPath = r.recording_path.trim();
 
-                // Normalize backslashes to forward slashes
-                rawPath = rawPath.replace(/\\/g, '/');
+                if (r.playback_url) {
+                    finalUrl = r.playback_url;
+                } else {
+                    // Normalize backslashes to forward slashes
+                    rawPath = rawPath.replace(/\\/g, '/');
 
-                // Remove leading slash if present to standardize
-                if (rawPath.startsWith('/')) {
-                  rawPath = rawPath.substring(1);
+                    // Remove leading slash if present to standardize
+                    if (rawPath.startsWith('/')) {
+                      rawPath = rawPath.substring(1);
+                    }
+
+                    // Remove "uploads/" prefix if present in the DB path (to avoid /uploads/uploads/...)
+                    // The route is /uploads/..., which maps to static/uploads/...
+                    if (rawPath.startsWith('uploads/')) {
+                      rawPath = rawPath.substring(8); // Remove "uploads/"
+                    }
+
+                    // Construct clean URL
+                    finalUrl = `/uploads/${rawPath}`;
                 }
-
-                // Remove "uploads/" prefix if present in the DB path (to avoid /uploads/uploads/...)
-                // The route is /uploads/..., which maps to static/uploads/...
-                if (rawPath.startsWith('uploads/')) {
-                  rawPath = rawPath.substring(8); // Remove "uploads/"
-                }
-
-                // Construct clean URL
-                const finalUrl = `/uploads/${rawPath}`;
 
                 // Calculate duration text (e.g., "00:30")
                 const durationSec = parseInt(r.duration || 0, 10);

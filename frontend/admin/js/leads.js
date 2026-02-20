@@ -1104,11 +1104,11 @@ class LeadsManager {
                     // Audio Player
                     let audioPlayer = '-';
                     if (call.recording_path) {
-                        // DB stores 'uploads/recordings/...', frontend route is '/uploads/...' -> so '/'+recording_path works.
+                        let finalUrl = call.playback_url ? call.playback_url : `/${call.recording_path}`;
                         audioPlayer = `
                             <audio controls class="h-8 w-40" preload="none" onerror="this.style.display='none'; this.insertAdjacentHTML('afterend', '<span class=\\'text-xs text-red-400\\'>Error loading</span>')">
-                                <source src="/${call.recording_path}" type="audio/mpeg">
-                                <source src="/${call.recording_path}" type="audio/wav"> <!-- Fallback -->
+                                <source src="${finalUrl}" type="audio/mpeg">
+                                <source src="${finalUrl}" type="audio/wav"> <!-- Fallback -->
                             </audio>
                          `;
                     }

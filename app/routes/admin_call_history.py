@@ -164,6 +164,8 @@ def all_call_history():
         # Pagination
         paginated = query.paginate(page=page, per_page=per_page, error_out=False)
 
+        from app.routes.call_history import get_presigned_url
+        
         data = []
         for rec, user_obj in paginated.items:
             # Safely get recording_path (may not exist in DB yet)
@@ -182,6 +184,7 @@ def all_call_history():
                 "call_type": rec.call_type,
                 "duration": rec.duration,
                 "recording_path": recording_path,
+                "playback_url": get_presigned_url(recording_path) if recording_path else None,
                 "timestamp": rec.timestamp.isoformat() + 'Z' if rec.timestamp else None,
                 "created_at": rec.created_at.isoformat() + 'Z' if rec.created_at else None,
             })
