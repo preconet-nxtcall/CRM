@@ -28,7 +28,7 @@ class Config:
     WASABI_ACCESS_KEY = os.environ.get("WASABI_ACCESS_KEY", "")
     WASABI_SECRET_KEY = os.environ.get("WASABI_SECRET_KEY", "")
     WASABI_REGION = os.environ.get("WASABI_REGION", "us-east-1")
-    WASABI_BUCKET_NAME = os.environ.get("WASABI_BUCKET_NAME", "")
-    WASABI_ENDPOINT_URL = os.environ.get("WASABI_ENDPOINT_URL", "https://s3.wasabisys.com")
+    WASABI_BUCKET_NAME = os.environ.get("WASABI_BUCKET", os.environ.get("WASABI_BUCKET_NAME", ""))
+    WASABI_ENDPOINT_URL = os.environ.get("WASABI_ENDPOINT", os.environ.get("WASABI_ENDPOINT_URL", "https://s3.wasabisys.com"))
 
 
