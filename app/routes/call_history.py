@@ -28,13 +28,13 @@ def get_presigned_url(object_key, expires_in=3600):
     
     wasabi_access_key = os.getenv("WASABI_ACCESS_KEY_ID") or os.getenv("WASABI_ACCESS_KEY")
     wasabi_secret_key = os.getenv("WASABI_SECRET_ACCESS_KEY") or os.getenv("WASABI_SECRET_KEY")
-    wasabi_bucket = os.getenv("WASABI_BUCKET_NAME")
+    wasabi_bucket = os.getenv("WASABI_BUCKET_NAME") or os.getenv("WASABI_BUCKET")
     wasabi_region = os.getenv("WASABI_REGION", "us-east-1")
     
     if not all([wasabi_access_key, wasabi_secret_key, wasabi_bucket]):
         return None
 
-    wasabi_endpoint = os.getenv("WASABI_ENDPOINT_URL", f"https://s3.{wasabi_region}.wasabisys.com")
+    wasabi_endpoint = os.getenv("WASABI_ENDPOINT_URL") or os.getenv("WASABI_ENDPOINT", f"https://s3.{wasabi_region}.wasabisys.com")
 
     s3_client = boto3.client(
         "s3",
@@ -405,14 +405,14 @@ def upload_recording():
         # ☁️ Upload File to Wasabi (S3)
         wasabi_access_key = os.getenv("WASABI_ACCESS_KEY_ID") or os.getenv("WASABI_ACCESS_KEY")
         wasabi_secret_key = os.getenv("WASABI_SECRET_ACCESS_KEY") or os.getenv("WASABI_SECRET_KEY")
-        wasabi_bucket = os.getenv("WASABI_BUCKET_NAME")
+        wasabi_bucket = os.getenv("WASABI_BUCKET_NAME") or os.getenv("WASABI_BUCKET")
         wasabi_region = os.getenv("WASABI_REGION", "us-east-1")
         
         if not all([wasabi_access_key, wasabi_secret_key, wasabi_bucket]):
             db.session.rollback()
             return jsonify({"error": "Storage configuration is missing on the server"}), 500
 
-        wasabi_endpoint = os.getenv("WASABI_ENDPOINT_URL", f"https://s3.{wasabi_region}.wasabisys.com")
+        wasabi_endpoint = os.getenv("WASABI_ENDPOINT_URL") or os.getenv("WASABI_ENDPOINT", f"https://s3.{wasabi_region}.wasabisys.com")
 
         s3_client = boto3.client(
             "s3",
