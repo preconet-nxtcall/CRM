@@ -173,14 +173,15 @@ class BrandmoService:
             try:
                 data = r.json()
             except Exception as json_err:
+                short_text = r.text[:200].replace("<", "&lt;").replace(">", "&gt;")
                 current_app.logger.error(
-                    f"[WA Sync] Non-JSON response from Brandmo (status {r.status_code}): "
-                    f"{r.text[:500]}"
+                    f"[WA Sync] Non-JSON response from Brandmo (status {r.status_code}): {r.text[:500]}"
                 )
                 raise ValueError(
                     f"Brandmo returned an unexpected response (not JSON). "
                     f"Status: {r.status_code}. "
-                    "This usually means your Access Token or WABA ID is invalid."
+                    f"Response preview: {short_text}... "
+                    "This usually means your Access Token or WABA ID is invalid or the API is currently unavailable."
                 )
 
             # Now raise for HTTP errors (after JSON parsed, so we can include the message)
