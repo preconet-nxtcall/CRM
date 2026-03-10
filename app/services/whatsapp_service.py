@@ -62,12 +62,20 @@ class BrandmoService:
     # SEND TEMPLATE MESSAGE
     # ------------------------------------------------------------------
     def send_template(self, phone: str, template_name: str, language: str,
-                      parameters: list) -> dict:
+                      parameters: list = None, header: dict = None) -> dict:
         """
         parameters: list of str values for {{1}}, {{2}}, ... body variables.
+        header: dict representing the header, e.g. {"type": "IMAGE", "image": {"link": "..."}}
         Builds a standard body-parameter template payload.
         """
         components = []
+        if header:
+            # We enforce standard format if it's missing the "parameters" wrapper
+            components.append({
+                "type": "header",
+                "parameters": [header] if "type" in header else header.get("parameters", [])
+            })
+            
         if parameters:
             components.append({
                 "type": "body",
@@ -82,9 +90,52 @@ class BrandmoService:
             "template": {
                 "language": {"policy": "deterministic", "code": language},
                 "name":     template_name,
-                "components": components,
             },
         }
+        
+        # Meta API throws validation errors if components is an empty list
+        if components:
+            payload["template"]["components"] = components
+
+        r = requests.post(self._msg_url(), json=payload, headers=self._headers(), timeout=20)
+        r.raise_for_status()
+        return r.json()
+
+    # ------------------------------------------------------------------
+    # SEND MEDIA MESSAGE (Direct format outside template)
+    # ------------------------------------------------------------------
+    def send_media(self, phone: str, media_type: str, media_link: str = None, 
+                   media_id: str = None, caption: str = None, filename: str = None) -> dict:
+        """
+        media_type: image, video, audio, document
+        media_link: URL to public media file
+        media_id: ID returned from Meta Media upload
+        Requires 24-hour conversational window.
+        """
+        if media_type not in ["image", "video", "audio", "document"]:
+            raise ValueError(f"Unsupported media type: {media_type}")
+            
+        payload = {
+            "messaging_product": "whatsapp",
+            "recipient_type":    "individual",
+            "to":                phone,
+            "type":              media_type,
+            media_type:          {}
+        }
+        
+        if media_link:
+            payload[media_type]["link"] = media_link
+        elif media_id:
+            payload[media_type]["id"] = media_id
+        else:
+            raise ValueError("Either media_link or media_id must be provided")
+
+        if caption and media_type in ["image", "video", "document"]:
+            payload[media_type]["caption"] = caption
+            
+        if filename and media_type == "document":
+            payload[media_type]["filename"] = filename
+
         r = requests.post(self._msg_url(), json=payload, headers=self._headers(), timeout=20)
         r.raise_for_status()
         return r.json()
@@ -106,9 +157,40 @@ class BrandmoService:
 
         # Paginate through all templates
         while url:
-            r = requests.get(url, headers=self._headers(), params=params, timeout=20)
-            r.raise_for_status()
-            data = r.json()
+            r = requests.get(url, headers=self._headers(), params=params, timeout=30)
+
+            # Log raw response for debugging if it's not JSON
+            if not r.content:
+                current_app.logger.error(
+                    f"[WA Sync] Empty response from Brandmo (status {r.status_code})"
+                )
+                raise ValueError(
+                    f"Brandmo returned an empty response (HTTP {r.status_code}). "
+                    "Please check your Access Token and WABA ID."
+                )
+
+            # Try to parse JSON — Brandmo sometimes returns HTML on auth errors
+            try:
+                data = r.json()
+            except Exception as json_err:
+                current_app.logger.error(
+                    f"[WA Sync] Non-JSON response from Brandmo (status {r.status_code}): "
+                    f"{r.text[:500]}"
+                )
+                raise ValueError(
+                    f"Brandmo returned an unexpected response (not JSON). "
+                    f"Status: {r.status_code}. "
+                    "This usually means your Access Token or WABA ID is invalid."
+                )
+
+            # Now raise for HTTP errors (after JSON parsed, so we can include the message)
+            if not r.ok:
+                err_msg = data.get("error", {}).get("message", r.text[:300])
+                current_app.logger.error(f"[WA Sync] Brandmo API error: {data}")
+                raise requests.HTTPError(
+                    f"Brandmo API error ({r.status_code}): {err_msg}",
+                    response=r,
+                )
 
             templates_data.extend(data.get("data", []))
             paging = data.get("paging", {})

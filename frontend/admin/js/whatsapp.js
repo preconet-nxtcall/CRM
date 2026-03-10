@@ -35,7 +35,7 @@ class WhatsAppManager {
        TAB SWITCHING
     ───────────────────────────────────────── */
     _bindTabs() {
-        const tabs = ['Settings', 'Templates', 'Inbox'];
+        const tabs = ['Settings', 'Templates', 'Inbox', 'Automations'];
         tabs.forEach(tab => {
             const btn = document.getElementById(`waTab${tab}`);
             if (btn) {
@@ -45,7 +45,7 @@ class WhatsAppManager {
     }
 
     _switchTab(tab) {
-        ['settings', 'templates', 'inbox'].forEach(t => {
+        ['settings', 'templates', 'inbox', 'automations'].forEach(t => {
             const pane = document.getElementById(`waPane${t.charAt(0).toUpperCase() + t.slice(1)}`);
             const btn = document.getElementById(`waTab${t.charAt(0).toUpperCase() + t.slice(1)}`);
             if (pane) pane.classList.add('hidden');
@@ -59,6 +59,7 @@ class WhatsAppManager {
 
         if (tab === 'templates') this.loadTemplates();
         if (tab === 'inbox') this.loadInbox();
+        if (tab === 'automations') this.loadLeadAssignConfig();
     }
 
     /* ─────────────────────────────────────────
@@ -156,6 +157,140 @@ class WhatsAppManager {
             this._toast('WhatsApp disconnected.', 'info');
         } catch (e) {
             this._toast('Failed to disconnect.', 'error');
+        }
+    }
+
+    /* ─────────────────────────────────────────
+       AUTOMATIONS TAB
+    ───────────────────────────────────────── */
+    async loadLeadAssignConfig() {
+        const panes = ['Agent', 'Lead'];
+        panes.forEach(p => {
+            const select = document.getElementById(`waAuto${p}Tpl`);
+            if (select) {
+                const approved = this.templates.filter(t => t.status === 'APPROVED');
+                select.innerHTML = '<option value="">-- No Message --</option>' +
+                    approved.map(t => `<option value="${t.name}" data-vars="${t.variable_count}" data-header-type="${t.header_type}">${this._esc(t.name)}</option>`).join('');
+                select.onchange = () => this._onAutoTemplateChange(p.toLowerCase(), select);
+            }
+        });
+
+        try {
+            const res = await this._api('GET', '/api/whatsapp/lead-assign-config');
+            const data = await res.json();
+            if (data.config) {
+                this._renderLeadAssignConfig(data.config);
+            }
+        } catch (e) {
+            console.error('Lead assign config load error', e);
+        }
+
+        const saveBtn = document.getElementById('waSaveAutoBtn');
+        if (saveBtn && !saveBtn._bound) {
+            saveBtn._bound = true;
+            saveBtn.onclick = () => this.saveLeadAssignConfig();
+        }
+    }
+
+    _onAutoTemplateChange(type, select) {
+        const opt = select.options[select.selectedIndex];
+        const varCount = parseInt(opt?.dataset?.vars || '0');
+        const headerType = opt?.dataset?.headerType || 'NONE';
+
+        const typeTitle = type.charAt(0).toUpperCase() + type.slice(1);
+        const headerWrap = document.getElementById(`waAuto${typeTitle}HeaderWrap`);
+        const headerLabel = document.getElementById(`waAuto${typeTitle}HeaderType`);
+        const varsContainer = document.getElementById(`waAuto${typeTitle}Vars`);
+
+        if (headerWrap) {
+            if (['IMAGE', 'VIDEO', 'DOCUMENT'].includes(headerType)) {
+                headerWrap.classList.remove('hidden');
+                if (headerLabel) headerLabel.textContent = headerType;
+            } else {
+                headerWrap.classList.add('hidden');
+            }
+        }
+
+        if (varsContainer) {
+            varsContainer.innerHTML = '';
+            for (let i = 1; i <= varCount; i++) {
+                varsContainer.innerHTML += `
+                    <div class="wa-field-group">
+                        <label class="wa-label text-[10px]">Variable {{${i}}}</label>
+                        <input type="text" id="waAuto${typeTitle}Var${i}" placeholder="Enter parameter for {{${i}}}" class="wa-input text-xs">
+                    </div>`;
+            }
+        }
+    }
+
+    _renderLeadAssignConfig(cfg) {
+        const enableCheck = document.getElementById('waAutoEnable');
+        if (enableCheck) enableCheck.checked = cfg.is_enabled;
+
+        const setSide = (type, prefix) => {
+            const tplSelect = document.getElementById(`waAuto${type}Tpl`);
+            if (tplSelect) {
+                tplSelect.value = cfg[`${prefix}_template_name`] || '';
+                this._onAutoTemplateChange(prefix, tplSelect);
+
+                const headerUrl = document.getElementById(`waAuto${type}HeaderUrl`);
+                if (headerUrl) headerUrl.value = cfg[`${prefix}_header_url`] || '';
+
+                const params = cfg[`${prefix}_params`] || [];
+                params.forEach((p, idx) => {
+                    const input = document.getElementById(`waAuto${type}Var${idx + 1}`);
+                    if (input) input.value = p;
+                });
+            }
+        };
+
+        setSide('Agent', 'agent');
+        setSide('Lead', 'lead');
+    }
+
+    async saveLeadAssignConfig() {
+        const btn = document.getElementById('waSaveAutoBtn');
+        const is_enabled = document.getElementById('waAutoEnable')?.checked;
+
+        const getSide = (type, prefix) => {
+            const tplSelect = document.getElementById(`waAuto${type}Tpl`);
+            const template_name = tplSelect?.value || null;
+            const header_url = document.getElementById(`waAuto${type}HeaderUrl`)?.value || null;
+
+            const params = [];
+            if (tplSelect) {
+                const opt = tplSelect.options[tplSelect.selectedIndex];
+                const varCount = parseInt(opt?.dataset?.vars || '0');
+                for (let i = 1; i <= varCount; i++) {
+                    params.push(document.getElementById(`waAuto${type}Var${i}`)?.value || '');
+                }
+            }
+            return { template_name, header_url, params };
+        };
+
+        const agent = getSide('Agent', 'agent');
+        const lead = getSide('Lead', 'lead');
+
+        const payload = {
+            is_enabled,
+            agent_template_name: agent.template_name,
+            agent_header_url: agent.header_url,
+            agent_params: agent.params,
+            lead_template_name: lead.template_name,
+            lead_header_url: lead.header_url,
+            lead_params: lead.params
+        };
+
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Saving...'; }
+
+        try {
+            const res = await this._api('POST', '/api/whatsapp/lead-assign-config', payload);
+            if (!res.ok) throw new Error('Failed to save automation settings');
+            this._toast('Automation settings saved! 🤖', 'success');
+        } catch (e) {
+            this._toast(e.message, 'error');
+        } finally {
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save mr-2"></i>Save Automation Settings'; }
         }
     }
 
@@ -339,6 +474,10 @@ class WhatsAppManager {
 
         const sendTplBtn = document.getElementById('waChatSendTemplateBtn');
         if (sendTplBtn) sendTplBtn.addEventListener('click', () => this._openSendTemplatePanel());
+
+        // New: Bind Direct Media Panel Send Button
+        const sendMediaBtn = document.getElementById('waDirectMediaSendBtn');
+        if (sendMediaBtn) sendMediaBtn.addEventListener('click', () => this._sendDirectMediaMessage());
     }
 
     async loadInbox() {
@@ -552,6 +691,46 @@ class WhatsAppManager {
         }
     }
 
+    async _sendDirectMediaMessage() {
+        if (!this.activeConvId) return;
+        const typeSelect = document.getElementById('waDirectMediaType');
+        const urlInput = document.getElementById('waDirectMediaUrl');
+        const captionInput = document.getElementById('waDirectMediaCaption');
+
+        const type = typeSelect?.value || 'image';
+        const media_link = urlInput?.value?.trim();
+        const caption = captionInput?.value?.trim();
+        const filename = (type === 'document' && media_link) ? media_link.split('/').pop() : undefined;
+
+        if (!media_link) { this._toast('Media URL is required', 'error'); return; }
+
+        const btn = document.getElementById('waDirectMediaSendBtn');
+        if (btn) { btn.disabled = true; btn.textContent = 'Sending...'; }
+
+        try {
+            const payload = { type, media_link, caption };
+            if (filename) payload.filename = filename;
+
+            const res = await this._api('POST', `/api/whatsapp/conversations/${this.activeConvId}/send`, payload);
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Media send failed');
+
+            this._toast('Media sent! ✅', 'success');
+
+            // Clean up UI
+            document.getElementById('waDirectMediaPanel').classList.add('hidden');
+            urlInput.value = '';
+            captionInput.value = '';
+
+            // Refresh messages
+            await this.openConversation(this.activeConvId);
+        } catch (e) {
+            this._toast(e.message, 'error');
+        } finally {
+            if (btn) { btn.disabled = false; btn.textContent = 'Send Media'; }
+        }
+    }
+
     /* ─────────────────────────────────────────
        SEND TEMPLATE FROM INBOX
     ───────────────────────────────────────── */
@@ -565,7 +744,7 @@ class WhatsAppManager {
         if (select) {
             const approved = this.templates.filter(t => t.status === 'APPROVED');
             select.innerHTML = `<option value="">— Select Template —</option>` +
-                approved.map(t => `<option value="${t.id}" data-name="${this._esc(t.name)}" data-vars="${t.variable_count}" data-body="${this._esc(t.body_text || '')}" data-lang="${t.language}">${this._esc(t.name)} (${t.variable_count} var)</option>`).join('');
+                approved.map(t => `<option value="${t.id}" data-name="${this._esc(t.name)}" data-vars="${t.variable_count}" data-body="${this._esc(t.body_text || '')}" data-lang="${t.language}" data-header-type="${t.header_type}">${this._esc(t.name)} (${t.variable_count} var)</option>`).join('');
 
             select.onchange = () => this._onTemplateSelectChange(select);
         }
@@ -580,8 +759,20 @@ class WhatsAppManager {
         const opt = select.options[select.selectedIndex];
         const varCount = parseInt(opt.dataset.vars || '0');
         const body = opt.dataset.body || '';
+        const headerType = opt.dataset.headerType || 'NONE';
         const container = document.getElementById('waSendTplVarsContainer');
+        const headerWrap = document.getElementById('waSendTplHeaderWrap');
+        const headerLabel = document.getElementById('waSendTplHeaderType');
+
         if (!container) return;
+
+        // Toggle media header box
+        if (headerWrap && headerType && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(headerType)) {
+            headerWrap.classList.remove('hidden');
+            if (headerLabel) headerLabel.textContent = headerType;
+        } else if (headerWrap) {
+            headerWrap.classList.add('hidden');
+        }
 
         container.innerHTML = '';
         if (varCount > 0) {
@@ -609,20 +800,37 @@ class WhatsAppManager {
         const tplName = opt.dataset.name;
         const language = opt.dataset.lang || 'en';
         const varCount = parseInt(opt.dataset.vars || '0');
+        const headerType = opt.dataset.headerType || 'NONE';
         const params = [];
+
         for (let i = 1; i <= varCount; i++) {
             const val = document.getElementById(`waSendVar${i}`)?.value?.trim();
             if (!val) { this._toast(`Please fill in variable {{${i}}}`, 'error'); return; }
             params.push(val);
         }
 
+        // Build header
+        let header = null;
+        if (['IMAGE', 'VIDEO', 'DOCUMENT'].includes(headerType)) {
+            const urlNode = document.getElementById('waSendTplHeaderUrl');
+            const urlVal = urlNode?.value?.trim();
+            if (!urlVal) { this._toast(`Please provide a media URL for the ${headerType} header`, 'error'); return; }
+            header = {
+                type: headerType.toLowerCase(),
+                [headerType.toLowerCase()]: { link: urlVal }
+            };
+        }
+
         const btn = document.getElementById('waSendTemplateConfirmBtn');
         if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
 
         try {
-            const res = await this._api('POST', `/api/whatsapp/conversations/${this.activeConvId}/send`, {
+            const payload = {
                 type: 'template', template_name: tplName, parameters: params, language
-            });
+            };
+            if (header) payload.header = header;
+
+            const res = await this._api('POST', `/api/whatsapp/conversations/${this.activeConvId}/send`, payload);
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Send failed');
             this._toast('Template sent! ✅', 'success');

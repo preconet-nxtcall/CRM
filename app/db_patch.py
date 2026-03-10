@@ -321,6 +321,26 @@ def run_schema_patch():
                     print(f"❌ Failed to create housing_settings: {e}")
 
             # -------------------------------------------------------------
+            # WA LEAD ASSIGN CONFIG TABLES
+            # -------------------------------------------------------------
+            if 'wa_lead_assign_configs' in inspector.get_table_names():
+                wa_cols = [c['name'] for c in inspector.get_columns('wa_lead_assign_configs')]
+                if 'agent_header_url' not in wa_cols:
+                    print("Adding agent_header_url to wa_lead_assign_configs table...")
+                    try:
+                         conn.execute(text('ALTER TABLE wa_lead_assign_configs ADD COLUMN agent_header_url VARCHAR(1000)'))
+                         print("✅ Added agent_header_url")
+                    except Exception as e:
+                         print(f"❌ Failed to add agent_header_url: {e}")
+                if 'lead_header_url' not in wa_cols:
+                    print("Adding lead_header_url to wa_lead_assign_configs table...")
+                    try:
+                         conn.execute(text('ALTER TABLE wa_lead_assign_configs ADD COLUMN lead_header_url VARCHAR(1000)'))
+                         print("✅ Added lead_header_url")
+                    except Exception as e:
+                         print(f"❌ Failed to add lead_header_url: {e}")
+
+            # -------------------------------------------------------------
             # FACEBOOK CONNECTIONS (Strict SaaS)
             # -------------------------------------------------------------
             if 'facebook_connections' not in inspector.get_table_names():

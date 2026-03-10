@@ -1190,10 +1190,12 @@ class WALeadAssignConfig(db.Model):
     # Template to send to the AGENT
     agent_template_name = db.Column(db.String(255), nullable=True)
     agent_params        = db.Column(JSONAuto())   # list[str] with {{placeholders}}
+    agent_header_url    = db.Column(db.String(1000), nullable=True) # Optional media link
 
     # Template to send to the LEAD
     lead_template_name  = db.Column(db.String(255), nullable=True)
     lead_params         = db.Column(JSONAuto())   # list[str] with {{placeholders}}
+    lead_header_url     = db.Column(db.String(1000), nullable=True) # Optional media link
 
     created_at          = db.Column(db.DateTime, default=now)
     updated_at          = db.Column(db.DateTime, default=now, onupdate=now)
@@ -1207,7 +1209,9 @@ class WALeadAssignConfig(db.Model):
             "is_enabled":           self.is_enabled,
             "agent_template_name":  self.agent_template_name,
             "agent_params":         self.agent_params or [],
+            "agent_header_url":     self.agent_header_url,
             "lead_template_name":   self.lead_template_name,
             "lead_params":          self.lead_params or [],
+            "lead_header_url":      self.lead_header_url,
             "updated_at":           self.updated_at.isoformat() if self.updated_at else None,
         }

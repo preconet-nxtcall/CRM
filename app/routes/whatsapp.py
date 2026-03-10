@@ -214,14 +214,19 @@ def sync_templates():
     except _ext_requests.HTTPError as e:
         body = ""
         try:
-            body = e.response.json().get("error", {}).get("message", e.response.text)
+            err_json = e.response.json()
+            body = err_json.get("error", {}).get("message") or e.response.text[:300]
+            current_app.logger.error(f"Template sync HTTP {e.response.status_code}: {err_json}")
         except Exception:
             body = str(e)
-        current_app.logger.error(f"Template sync HTTP error: {body}")
         return jsonify({"error": f"Brandmo API error: {body}"}), 502
+    except ValueError as e:
+        # Raised when Brandmo returns empty or non-JSON response
+        current_app.logger.error(f"Template sync ValueError: {e}")
+        return jsonify({"error": str(e)}), 502
     except Exception as e:
         current_app.logger.exception("Template sync failed")
-        return jsonify({"error": f"Sync failed: {str(e)}"}), 500
+        return jsonify({"error": f"Sync failed: {str(e)}\n\nPlease verify your Access Token and WABA ID in Settings."}), 500
 
 
 # ─────────────────────────────────────────────
@@ -377,6 +382,7 @@ def send_template():
     phone         = (data.get("phone") or "").strip()
     template_name = (data.get("template_name") or "").strip()
     parameters    = data.get("parameters", [])
+    header        = data.get("header", None)
     language      = data.get("language", "en")
 
     if not phone or not template_name:
@@ -395,7 +401,7 @@ def send_template():
     try:
         from app.services.whatsapp_service import BrandmoService
         svc    = BrandmoService(cfg)
-        result = svc.send_template(phone, template_name, tmpl.language or language, parameters)
+        result = svc.send_template(phone, template_name, tmpl.language or language, parameters, header)
 
         # Extract wamid from Brandmo response
         wamid = None
@@ -604,6 +610,7 @@ def send_in_conversation(conv_id):
         elif msg_type == "template":
             template_name = (data.get("template_name") or "").strip()
             parameters    = data.get("parameters", [])
+            header        = data.get("header", None)
             if not template_name:
                 return jsonify({"error": "template_name is required"}), 400
 
@@ -615,7 +622,7 @@ def send_in_conversation(conv_id):
                 return jsonify({"error": f"Template '{template_name}' is not APPROVED (status: {tmpl.status}). Cannot send."}), 400
 
             language = tmpl.language or "en"
-            result   = svc.send_template(phone, template_name, language, parameters)
+            result   = svc.send_template(phone, template_name, language, parameters, header)
             messages_list = result.get("messages", [])
             if messages_list:
                 wamid = messages_list[0].get("id")
@@ -623,6 +630,21 @@ def send_in_conversation(conv_id):
             body_preview = tmpl.body_text or template_name
             for i, val in enumerate(parameters, start=1):
                 body_preview = body_preview.replace(f"{{{{{i}}}}}", val)
+                
+        elif msg_type in ["image", "video", "audio", "document"]:
+            media_link = data.get("media_link")
+            media_id   = data.get("media_id")
+            caption    = data.get("caption")
+            filename   = data.get("filename")
+            
+            if not media_link and not media_id:
+                return jsonify({"error": "Either media_link or media_id is required for media messages"}), 400
+                
+            result = svc.send_media(phone, msg_type, media_link, media_id, caption, filename)
+            messages_list = result.get("messages", [])
+            if messages_list:
+                wamid = messages_list[0].get("id")
+            body_preview = caption or f"Sent {msg_type}"
         else:
             return jsonify({"error": f"Unsupported message type: {msg_type}"}), 400
 
@@ -636,6 +658,10 @@ def send_in_conversation(conv_id):
                 sender_id       = admin.id,
                 message_type    = msg_type,
                 message_text    = body_preview,
+                media_url       = data.get("media_link") if msg_type in ["image", "video", "audio", "document"] else None,
+                media_id        = data.get("media_id") if msg_type in ["image", "video", "audio", "document"] else None,
+                media_filename  = data.get("filename") if msg_type == "document" else None,
+                caption         = data.get("caption") if msg_type in ["image", "video", "document"] else None,
                 template_name   = data.get("template_name") if msg_type == "template" else None,
                 status          = "sent",
             )
@@ -1001,11 +1027,20 @@ def send_lead_assignment_whatsapp(admin_id, lead, agent):
                 ).first()
                 if tmpl and tmpl.status.upper() == "APPROVED":
                     params  = _resolve_params(cfg_auto.agent_params, context)
+                    
+                    header_payload = None
+                    if tmpl.header_type in ["IMAGE", "VIDEO", "DOCUMENT"] and cfg_auto.agent_header_url:
+                        header_payload = {
+                            "type": tmpl.header_type.lower(),
+                            tmpl.header_type.lower(): {"link": cfg_auto.agent_header_url}
+                        }
+
                     result  = svc.send_template(
                         agent_phone_e164,
                         tmpl.name,
                         tmpl.language or "en",
                         params,
+                        header=header_payload
                     )
                     wamid   = (result.get("messages") or [{}])[0].get("id")
                     contact = get_or_create_contact(admin_id, agent_phone_e164,
@@ -1053,11 +1088,20 @@ def send_lead_assignment_whatsapp(admin_id, lead, agent):
                 ).first()
                 if tmpl and tmpl.status.upper() == "APPROVED":
                     params  = _resolve_params(cfg_auto.lead_params, context)
+                    
+                    header_payload = None
+                    if tmpl.header_type in ["IMAGE", "VIDEO", "DOCUMENT"] and cfg_auto.lead_header_url:
+                        header_payload = {
+                            "type": tmpl.header_type.lower(),
+                            tmpl.header_type.lower(): {"link": cfg_auto.lead_header_url}
+                        }
+
                     result  = svc.send_template(
                         lead_phone_e164,
                         tmpl.name,
                         tmpl.language or "en",
                         params,
+                        header=header_payload
                     )
                     wamid   = (result.get("messages") or [{}])[0].get("id")
                     contact = get_or_create_contact(admin_id, lead_phone_e164,
@@ -1159,6 +1203,10 @@ def save_lead_assign_config():
         cfg.lead_template_name = (data["lead_template_name"] or "").strip() or None
     if "lead_params" in data:
         cfg.lead_params = data["lead_params"] if isinstance(data["lead_params"], list) else []
+    if "agent_header_url" in data:
+        cfg.agent_header_url = (data["agent_header_url"] or "").strip() or None
+    if "lead_header_url" in data:
+        cfg.lead_header_url = (data["lead_header_url"] or "").strip() or None
 
     db.session.commit()
     return jsonify({"message": "Config saved", "config": cfg.to_dict()}), 200

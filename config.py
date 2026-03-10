@@ -1,7 +1,12 @@
 import os
 
 class Config:
-    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL", "").replace("postgres://", "postgresql://")
+    _base_db_url = os.environ.get("DATABASE_URL", "").replace("postgres://", "postgresql://")
+    if _base_db_url and "?" not in _base_db_url:
+        _base_db_url += "?sslmode=require"
+    elif _base_db_url and "sslmode" not in _base_db_url:
+        _base_db_url += "&sslmode=require"
+    SQLALCHEMY_DATABASE_URI = _base_db_url
     
     # Connection Pooling for High Concurrency (100k users ready)
     SQLALCHEMY_ENGINE_OPTIONS = {
