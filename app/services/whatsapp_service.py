@@ -194,7 +194,7 @@ class BrandmoService:
             "language":   language,
             "components": components,
         }
-        r = requests.post(url, json=payload, headers=self._headers(), timeout=20)
+        r = requests.post(url, json=payload, headers=self._headers(), timeout=30)
         r.raise_for_status()
         return r.json()
 

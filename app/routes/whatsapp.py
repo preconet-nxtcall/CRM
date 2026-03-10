@@ -267,9 +267,9 @@ def create_template():
     var_matches = _re.findall(r"\{\{\d+\}\}", body_text)
     body_component = {"type": "BODY", "text": body_text}
     if var_matches:
-        # Build example placeholders
+        # Build numbered example placeholders (e.g. "Value 1", "Value 2")
         body_component["example"] = {
-            "body_text": [["EXAMPLE"] * len(var_matches)]
+            "body_text": [[f"Value {i+1}" for i in range(len(var_matches))]]
         }
     components.append(body_component)
 
@@ -303,12 +303,18 @@ def create_template():
         return jsonify({"message": "Template submitted for review", "template": tmpl.to_dict()}), 201
     except _ext_requests.HTTPError as e:
         db.session.rollback()
-        body = ""
+        error_msg = str(e)
         try:
-            body = e.response.json().get("error", {}).get("message", e.response.text)
+            err_json = e.response.json()
+            # Brandmo wraps Meta errors in {"error": {"message": "...", "error_data": {...}}}
+            err_obj = err_json.get("error", {})
+            error_msg = err_obj.get("message") or err_obj.get("error_user_msg") or e.response.text
+            current_app.logger.error(
+                f"Template create HTTP {e.response.status_code}: {err_json}"
+            )
         except Exception:
-            body = str(e)
-        return jsonify({"error": f"Brandmo API error: {body}"}), 502
+            current_app.logger.error(f"Template create error (non-JSON): {e.response.text}")
+        return jsonify({"error": f"Brandmo API error: {error_msg}"}), 502
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception("Template creation failed")
