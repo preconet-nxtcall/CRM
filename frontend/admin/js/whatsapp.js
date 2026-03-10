@@ -72,6 +72,10 @@ class WhatsAppManager {
             this._renderConfigStatus(data.config);
         } catch (e) {
             console.error('WA config load error', e);
+            // Show error state instead of staying stuck on 'Loading...'
+            this._renderConfigStatus(null);
+            const badge = document.getElementById('waConnectionStatus');
+            if (badge) { badge.textContent = 'Connection Error'; badge.style.color = '#f87171'; }
         }
     }
 

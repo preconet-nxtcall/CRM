@@ -82,6 +82,10 @@ document.addEventListener("DOMContentLoaded", () => {
     window.callAnalyticsManager = new CallAnalyticsManager();
     window.performanceManager = new PerformanceManager();
     window.appPerformanceManager = new AppPerformanceManager();
+    // Instantiate WhatsApp Manager so it is ready before navItems array is built
+    if (typeof WhatsAppManager !== 'undefined') {
+        window.whatsappManager = new WhatsAppManager();
+    }
     // facebookManager is initialized in its own file (window.facebookManager = new ...)
 
     // Load Dashboard by default
@@ -145,7 +149,7 @@ document.addEventListener("DOMContentLoaded", () => {
         { id: "menuPipeline", section: "sectionPipeline", title: "Lead Pipeline", manager: window.pipelineManager },
         { id: "menuKanban", section: "sectionKanban", title: "Kanban Dashboard", manager: window.kanbanManager },
         { id: "menuIntegrations", mobileId: null, section: "sectionIntegrations", title: "Lead Integrations", manager: window.integrationsManager },
-        { id: "menuWhatsApp", mobileId: null, section: "sectionWhatsApp", title: "WhatsApp CRM", manager: window.whatsappManager }
+        { id: "menuWhatsApp", mobileId: null, section: "sectionWhatsApp", title: "WhatsApp CRM", manager: null }
     ];
 
     const pageTitle = document.getElementById("pageTitle");
