@@ -993,10 +993,11 @@
           </div>
 
           <!-- Create Template Modal -->
-          <div id="waCreateTemplateModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div id="waCreateTemplateModal"
+            class="hidden fixed inset-0 z-50 flex items-start justify-center p-4 py-6 overflow-y-auto">
             <div class="absolute inset-0 bg-black bg-opacity-70" style="backdrop-filter:blur(4px)"
               onclick="window.whatsappManager._hideCreateModal()"></div>
-            <div class="relative wa-modal w-full max-w-lg z-10">
+            <div class="relative wa-modal w-full max-w-lg z-10 my-auto">
               <div class="flex items-center justify-between mb-5">
                 <div>
                   <h3 class="text-lg font-bold text-gray-900">Create New Template</h3>
@@ -1051,7 +1052,7 @@
                   <label class="wa-label">Body Message * &mdash; use {{1}}, {{2}} for variables</label>
                   <textarea id="waTplBody" rows="4" placeholder="Hello {{1}}, your appointment on {{2}} is confirmed."
                     class="wa-input" style="resize:none;height:auto"></textarea>
-                  <p class="text-xs text-green-400 mt-1 font-medium" id="waTplVarCount">0 variable(s) detected</p>
+                  <p class="text-xs text-green-600 mt-1 font-medium" id="waTplVarCount">0 variable(s) detected</p>
                 </div>
                 <div class="wa-field-group">
                   <label class="wa-label">Footer Text <span class="text-gray-500">(Optional)</span></label>
