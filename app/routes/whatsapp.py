@@ -662,37 +662,43 @@ def webhook_verify():
     """
     Webhook verification endpoint — handles two formats:
 
-    1. Brandmo / simple GET: no hub.* query params → return 200 OK immediately.
-       Brandmo verifies by simply checking the endpoint returns 2xx.
+    1. Brandmo format: ?echo=true&challange=<VALUE>
+       → must echo back exactly <VALUE> as plain text body
 
-    2. Meta-standard: hub.mode=subscribe + hub.verify_token + hub.challenge
-       → validate token, echo back the challenge.
+    2. Meta-standard: ?hub.mode=subscribe&hub.verify_token=<TOKEN>&hub.challenge=<CHALLENGE>
+       → validate token, echo back the challenge
     """
+    # ── Case 1: Brandmo echo verification ──
+    echo      = request.args.get("echo")
+    challange = request.args.get("challange")   # Brandmo typo: "challange" not "challenge"
+
+    if echo == "true" and challange:
+        current_app.logger.info(f"[Webhook] Brandmo echo verification — echoing: {challange}")
+        return challange, 200, {"Content-Type": "text/plain"}
+
+    # ── Case 2: Meta-standard subscribe handshake ──
     mode      = request.args.get("hub.mode")
     token     = request.args.get("hub.verify_token")
     challenge = request.args.get("hub.challenge")
 
-    # ── Case 1: Brandmo simple ping (no hub.mode params) ──
-    if not mode and not token and not challenge:
-        current_app.logger.info("[Webhook] Simple GET ping — returning 200 OK")
-        return "OK", 200
-
-    # ── Case 2: Meta-standard subscribe handshake ──
     global_token = current_app.config.get("WA_WEBHOOK_VERIFY_TOKEN", "nxtcall_wa_webhook_2026")
 
     if mode == "subscribe":
-        # Check global token
         if token == global_token:
             current_app.logger.info("[Webhook] Meta subscription verified (global token)")
             return challenge or "", 200
 
-        # Check per-admin tokens
         cfg = WhatsAppConfig.query.filter_by(verify_token=token).first()
         if cfg:
             current_app.logger.info(f"[Webhook] Meta subscription verified (admin {cfg.admin_id})")
             return challenge or "", 200
 
-    current_app.logger.warning(f"[Webhook] Verification failed — mode={mode} token={token}")
+    # ── Case 3: Plain GET with no params — just return 200 ──
+    if not mode and not echo:
+        current_app.logger.info("[Webhook] Plain GET ping — returning 200 OK")
+        return "OK", 200
+
+    current_app.logger.warning(f"[Webhook] Verification failed — mode={mode} echo={echo}")
     return "Forbidden", 403
 
 
