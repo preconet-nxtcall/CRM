@@ -29,7 +29,8 @@ class BrandmoService:
             version  = "v19.0"
 
         normalized_base, normalized_version = self._normalize_base_and_version(base_url, version)
-        self.base      = f"{normalized_base}/{normalized_version}"
+        self.base_no_version = normalized_base
+        self.base      = f"{normalized_base}/{normalized_version}" if normalized_version else normalized_base
         self.token     = config.get_token()
         self.phone_id  = config.phone_number_id
         self.waba_id   = config.waba_id
@@ -74,6 +75,50 @@ class BrandmoService:
         """Messages endpoint."""
         return f"{self.base}/{self.phone_id}/messages"
 
+    @staticmethod
+    def _looks_like_html(response: requests.Response) -> bool:
+        ct = (response.headers.get("Content-Type") or "").lower()
+        if "text/html" in ct:
+            return True
+        snippet = (response.text or "").lstrip()[:50].lower()
+        return snippet.startswith("<!doctype html") or snippet.startswith("<html")
+
+    @staticmethod
+    def _join_url(base: str, path: str) -> str:
+        return f"{base.rstrip('/')}/{path.lstrip('/')}"
+
+    def _request(self, method: str, path_or_url: str, **kwargs) -> requests.Response:
+        """
+        Execute Brandmo request. If response is HTML and a versioned base is used,
+        retry once against non-versioned base (some Brandmo tenants only expose that route).
+        """
+        is_absolute = path_or_url.startswith("http://") or path_or_url.startswith("https://")
+        primary_url = path_or_url if is_absolute else self._join_url(self.base, path_or_url)
+        r = requests.request(method, primary_url, **kwargs)
+
+        can_retry_without_version = (
+            self.base_no_version
+            and self.base_no_version != self.base
+            and self._looks_like_html(r)
+        )
+        if not can_retry_without_version:
+            return r
+
+        alt_url = None
+        if is_absolute:
+            if primary_url.startswith(self.base.rstrip("/") + "/"):
+                alt_url = primary_url.replace(self.base.rstrip("/") + "/", self.base_no_version.rstrip("/") + "/", 1)
+        else:
+            alt_url = self._join_url(self.base_no_version, path_or_url)
+
+        if not alt_url or alt_url == primary_url:
+            return r
+
+        current_app.logger.warning(
+            f"[Brandmo] HTML response on versioned URL, retrying without version: {primary_url} -> {alt_url}"
+        )
+        return requests.request(method, alt_url, **kwargs)
+
     def _validate_required_config(self):
         missing = []
         if not self.token:
@@ -109,7 +154,7 @@ class BrandmoService:
             "type":              "text",
             "text":              {"body": text},
         }
-        r = requests.post(self._msg_url(), json=payload, headers=self._headers(), timeout=20)
+        r = self._request("POST", f"{self.phone_id}/messages", json=payload, headers=self._headers(), timeout=20)
         r.raise_for_status()
         return self._json_or_raise(r, "send_text")
 
@@ -152,7 +197,7 @@ class BrandmoService:
         if components:
             payload["template"]["components"] = components
 
-        r = requests.post(self._msg_url(), json=payload, headers=self._headers(), timeout=20)
+        r = self._request("POST", f"{self.phone_id}/messages", json=payload, headers=self._headers(), timeout=20)
         r.raise_for_status()
         return self._json_or_raise(r, "send_template")
 
@@ -191,7 +236,7 @@ class BrandmoService:
         if filename and media_type == "document":
             payload[media_type]["filename"] = filename
 
-        r = requests.post(self._msg_url(), json=payload, headers=self._headers(), timeout=20)
+        r = self._request("POST", f"{self.phone_id}/messages", json=payload, headers=self._headers(), timeout=20)
         r.raise_for_status()
         return self._json_or_raise(r, "send_media")
 
@@ -212,7 +257,7 @@ class BrandmoService:
 
         # Paginate through all templates
         while url:
-            r = requests.get(url, headers=self._headers(), params=params, timeout=30)
+            r = self._request("GET", url, headers=self._headers(), params=params, timeout=30)
 
             # Log raw response for debugging if it's not JSON
             if not r.content:
@@ -333,7 +378,7 @@ class BrandmoService:
             "language":   language,
             "components": components,
         }
-        r = requests.post(url, json=payload, headers=self._headers(), timeout=30)
+        r = self._request("POST", url, json=payload, headers=self._headers(), timeout=30)
         r.raise_for_status()
         return self._json_or_raise(r, "create_template")
 
@@ -343,7 +388,7 @@ class BrandmoService:
     def delete_template(self, template_name: str) -> dict:
         url = f"{self.base}/{self.waba_id}/message_templates"
         params = {"name": template_name}
-        r = requests.delete(url, headers=self._headers(), params=params, timeout=20)
+        r = self._request("DELETE", url, headers=self._headers(), params=params, timeout=20)
         r.raise_for_status()
         return self._json_or_raise(r, "delete_template")
 
