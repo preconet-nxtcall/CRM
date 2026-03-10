@@ -1,6 +1,6 @@
 # app/routes/pipeline.py
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from datetime import datetime, timedelta
 from sqlalchemy import func, case, or_
@@ -607,6 +607,17 @@ def create_lead():
         )
         db.session.add(lead)
         db.session.commit()
+
+        # ── Auto-WhatsApp on assignment ──────────────────────────────
+        if lead.assigned_to:
+            try:
+                from app.routes.whatsapp import send_lead_assignment_whatsapp
+                agent = User.query.get(lead.assigned_to)
+                send_lead_assignment_whatsapp(admin_id, lead, agent)
+            except Exception as _wa_err:
+                current_app.logger.warning(f"[LeadAssign WA] create trigger error: {_wa_err}")
+        # ─────────────────────────────────────────────────────────────
+
         return jsonify({"message": "Lead created", "lead": lead.to_dict()}), 201
     except Exception as e:
         db.session.rollback()
@@ -637,7 +648,10 @@ def update_lead_details(lead_id):
         if "property_type" in data: lead.property_type = data["property_type"]
         if "location" in data: lead.location = data["location"]
         if "requirement" in data: lead.requirement = data["requirement"]
-        if "assigned_to" in data: 
+
+        # Capture old agent before reassignment for WA trigger
+        old_assigned_to = lead.assigned_to
+        if "assigned_to" in data:
             val = data["assigned_to"]
             lead.assigned_to = int(val) if val else None
 
@@ -645,11 +659,25 @@ def update_lead_details(lead_id):
         if "priority" in data:
             cf = dict(lead.custom_fields) if lead.custom_fields else {}
             cf['priority'] = int(data["priority"])
-            lead.custom_fields = cf # Reassign to trigger update
-            # Force mutable tracking if needed, but reassignment works
+            lead.custom_fields = cf
 
         lead.updated_at = datetime.utcnow()
         db.session.commit()
+
+        # ── Auto-WhatsApp on reassignment ────────────────────────────
+        if (
+            "assigned_to" in data
+            and lead.assigned_to
+            and lead.assigned_to != old_assigned_to
+        ):
+            try:
+                from app.routes.whatsapp import send_lead_assignment_whatsapp
+                agent = User.query.get(lead.assigned_to)
+                send_lead_assignment_whatsapp(admin_id, lead, agent)
+            except Exception as _wa_err:
+                current_app.logger.warning(f"[LeadAssign WA] update trigger error: {_wa_err}")
+        # ─────────────────────────────────────────────────────────────
+
         return jsonify({"message": "Lead updated", "lead": lead.to_dict()}), 200
     except Exception as e:
         db.session.rollback()

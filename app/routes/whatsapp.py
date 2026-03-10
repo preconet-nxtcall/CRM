@@ -13,7 +13,7 @@ import requests as _ext_requests
 from ..models import (
     db, Admin, User,
     WhatsAppConfig, WATemplate, WAContact, WAConversation, WAMessage,
-    WAMessageStatusLog, WAConversationLock,
+    WAMessageStatusLog, WAConversationLock, WALeadAssignConfig,
 )
 
 bp = Blueprint("whatsapp", __name__, url_prefix="/api/whatsapp")
@@ -37,6 +37,9 @@ def get_admin_or_err():
         return None, (jsonify({"error": "Unauthorized"}), 401)
     if not admin.is_active:
         return None, (jsonify({"error": "Account deactivated"}), 403)
+    # SaaS: block expired admins from using WhatsApp features
+    if admin.is_expired():
+        return None, (jsonify({"error": "Subscription expired. Please renew to use WhatsApp features."}), 403)
     return admin, None
 
 def get_wa_config(admin_id):
@@ -44,30 +47,48 @@ def get_wa_config(admin_id):
     return WhatsAppConfig.query.filter_by(admin_id=admin_id).first()
 
 def get_or_create_contact(admin_id, phone, profile_name=None, lead_id=None):
-    """Find or create WAContact for this admin+phone."""
+    """Find or create WAContact for this admin+phone.
+    
+    Handles concurrent-webhook race conditions via IntegrityError retry.
+    """
+    from sqlalchemy.exc import IntegrityError
     contact = WAContact.query.filter_by(admin_id=admin_id, phone_number=phone).first()
     if not contact:
-        contact = WAContact(
-            admin_id=admin_id,
-            phone_number=phone,
-            profile_name=profile_name,
-            name=profile_name,
-            lead_id=lead_id,
-        )
-        db.session.add(contact)
-        db.session.flush()
+        try:
+            contact = WAContact(
+                admin_id=admin_id,
+                phone_number=phone,
+                profile_name=profile_name,
+                name=profile_name,
+                lead_id=lead_id,
+            )
+            db.session.add(contact)
+            db.session.flush()
+        except IntegrityError:
+            # Concurrent request already inserted — roll back and fetch
+            db.session.rollback()
+            contact = WAContact.query.filter_by(admin_id=admin_id, phone_number=phone).first()
     elif profile_name and not contact.profile_name:
         contact.profile_name = profile_name
         contact.name = profile_name
     return contact
 
 def get_or_create_conversation(admin_id, contact_id):
-    """Find or create WAConversation for admin+contact."""
+    """Find or create WAConversation for admin+contact.
+    
+    Handles concurrent-webhook race conditions via IntegrityError retry.
+    """
+    from sqlalchemy.exc import IntegrityError
     conv = WAConversation.query.filter_by(admin_id=admin_id, contact_id=contact_id).first()
     if not conv:
-        conv = WAConversation(admin_id=admin_id, contact_id=contact_id, status="open")
-        db.session.add(conv)
-        db.session.flush()
+        try:
+            conv = WAConversation(admin_id=admin_id, contact_id=contact_id, status="open")
+            db.session.add(conv)
+            db.session.flush()
+        except IntegrityError:
+            # Concurrent request already created this conversation
+            db.session.rollback()
+            conv = WAConversation.query.filter_by(admin_id=admin_id, contact_id=contact_id).first()
     return conv
 
 
@@ -362,7 +383,7 @@ def send_template():
     ).first()
     if not tmpl:
         return jsonify({"error": f"Template '{template_name}' not found. Please sync templates first."}), 404
-    if tmpl.status not in ("APPROVED", "approved"):
+    if tmpl.status.upper() != "APPROVED":
         return jsonify({"error": f"Template status is '{tmpl.status}'. Only APPROVED templates can be sent."}), 400
 
     try:
@@ -385,25 +406,27 @@ def send_template():
         for i, val in enumerate(parameters, start=1):
             body_preview = body_preview.replace(f"{{{{{i}}}}}", val)
 
-        msg = WAMessage(
-            conversation_id = conv.id,
-            admin_id        = admin.id,
-            whatsapp_msg_id = wamid,
-            sender_type     = "agent",
-            sender_id       = admin.id,
-            message_type    = "template",
-            message_text    = body_preview,
-            template_name   = template_name,
-            status          = "sent",
-        )
-        db.session.add(msg)
+        # Only save WAMessage when Brandmo confirmed a real message ID
+        if wamid:
+            msg = WAMessage(
+                conversation_id = conv.id,
+                admin_id        = admin.id,
+                whatsapp_msg_id = wamid,
+                sender_type     = "agent",
+                sender_id       = admin.id,
+                message_type    = "template",
+                message_text    = body_preview,
+                template_name   = template_name,
+                status          = "sent",
+            )
+            db.session.add(msg)
         conv.last_message_at = datetime.utcnow()
         db.session.commit()
 
         return jsonify({
             "message":    "Template sent",
             "wamid":      wamid,
-            "message_id": msg.id,
+            "message_id": msg.id if wamid else None,
             "raw":        result,
         }), 200
 
@@ -478,11 +501,6 @@ def list_messages(conv_id):
     if not conv:
         return jsonify({"error": "Conversation not found"}), 404
 
-    # Mark as read
-    if conv.unread_count > 0:
-        conv.unread_count = 0
-        db.session.commit()
-
     page     = max(1, int(request.args.get("page", 1)))
     per_page = min(int(request.args.get("per_page", 50)), 200)
 
@@ -493,6 +511,11 @@ def list_messages(conv_id):
     )
     pag      = q.paginate(page=page, per_page=per_page, error_out=False)
     messages = [m.to_dict() for m in pag.items]
+
+    # Mark as read AFTER fetching so unread is only cleared if query succeeded
+    if conv.unread_count > 0:
+        conv.unread_count = 0
+        db.session.commit()
 
     return jsonify({
         "conversation": conv.to_dict(),
@@ -546,6 +569,16 @@ def send_in_conversation(conv_id):
             "within_window": False,
         }), 400
 
+    # Enforce conversation lock expiry before allowing send
+    if conv.lock and not conv.lock.is_expired():
+        from flask_jwt_extended import get_jwt_identity as _get_id
+        current_actor_id = int(_get_id())
+        if conv.lock.agent_id != current_actor_id:
+            return jsonify({
+                "error": "Conversation is locked by another agent.",
+                "locked_by": conv.lock.agent_id,
+            }), 409
+
     try:
         from app.services.whatsapp_service import BrandmoService
         svc    = BrandmoService(cfg)
@@ -571,6 +604,9 @@ def send_in_conversation(conv_id):
             tmpl = WATemplate.query.filter_by(admin_id=admin.id, name=template_name).first()
             if not tmpl:
                 return jsonify({"error": "Template not found"}), 404
+            # Enforce approval status (case-insensitive)
+            if tmpl.status.upper() != "APPROVED":
+                return jsonify({"error": f"Template '{template_name}' is not APPROVED (status: {tmpl.status}). Cannot send."}), 400
 
             language = tmpl.language or "en"
             result   = svc.send_template(phone, template_name, language, parameters)
@@ -584,26 +620,27 @@ def send_in_conversation(conv_id):
         else:
             return jsonify({"error": f"Unsupported message type: {msg_type}"}), 400
 
-        # Persist message
-        msg = WAMessage(
-            conversation_id = conv_id,
-            admin_id        = admin.id,
-            whatsapp_msg_id = wamid,
-            sender_type     = "agent",
-            sender_id       = admin.id,
-            message_type    = msg_type,
-            message_text    = body_preview,
-            template_name   = data.get("template_name") if msg_type == "template" else None,
-            status          = "sent",
-        )
-        db.session.add(msg)
+        # Only save WAMessage when Brandmo confirmed a real message ID
+        if wamid:
+            msg = WAMessage(
+                conversation_id = conv_id,
+                admin_id        = admin.id,
+                whatsapp_msg_id = wamid,
+                sender_type     = "agent",
+                sender_id       = admin.id,
+                message_type    = msg_type,
+                message_text    = body_preview,
+                template_name   = data.get("template_name") if msg_type == "template" else None,
+                status          = "sent",
+            )
+            db.session.add(msg)
         conv.last_message_at = datetime.utcnow()
         db.session.commit()
 
         return jsonify({
             "message":    "Sent",
             "wamid":      wamid,
-            "message_id": msg.id,
+            "message_id": msg.id if wamid else None,
         }), 200
 
     except _ext_requests.HTTPError as e:
@@ -741,7 +778,9 @@ def webhook_receive():
 
     except Exception as e:
         current_app.logger.exception("Webhook processing error")
-        return jsonify({"status": "error", "detail": str(e)}), 500
+        # Always return 200 to Brandmo — returning 5xx causes automatic retries
+        # which would re-process the same events and cause duplicate messages.
+        return jsonify({"status": "ok", "warning": "internal processing error"}), 200
 
 
 def _handle_inbound_message(admin_id, msg_obj, val):
@@ -754,8 +793,8 @@ def _handle_inbound_message(admin_id, msg_obj, val):
     timestamp_ts = int(msg_obj.get("timestamp", 0))
     msg_type     = msg_obj.get("type", "text")
 
-    # Deduplicate
-    if wamid and WAMessage.query.filter_by(whatsapp_msg_id=wamid).first():
+    # Deduplicate — scoped to admin_id so cross-admin wamid collision doesn't suppress a valid inbound
+    if wamid and WAMessage.query.filter_by(whatsapp_msg_id=wamid, admin_id=admin_id).first():
         return
 
     # Profile name
@@ -857,4 +896,263 @@ def _handle_status_update(status_obj):
         raw_payload = str(status_obj),
     )
     db.session.add(log)
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"[Webhook] Failed to save status update for {wamid}: {e}")
+
+
+# ─────────────────────────────────────────────────────────
+# LEAD ASSIGNMENT AUTO-WHATSAPP HELPER
+# ─────────────────────────────────────────────────────────
+
+def _resolve_params(param_list, context):
+    """
+    Replace {{placeholder}} variables in each param string with real values.
+
+    context dict keys:
+        lead_name, lead_phone, lead_source, agent_name, agent_phone
+    """
+    resolved = []
+    for p in (param_list or []):
+        s = str(p)
+        for key, val in context.items():
+            s = s.replace("{{" + key + "}}", str(val or ""))
+        resolved.append(s)
+    return resolved
+
+
+def normalize_phone(phone: str) -> str:
+    """
+    Normalize a phone number to E.164 format required by WhatsApp/Brandmo.
+    Rules:
+      - Strip spaces, dashes, parentheses, + prefix
+      - If 10 digits remain (Indian mobile), prepend country code 91
+      - If already has country code (11-13 digits), use as-is
+      - Returns empty string if input is empty/None
+    """
+    if not phone:
+        return ""
+    import re as _re
+    # Remove all non-digit characters
+    digits = _re.sub(r"\D", "", phone)
+    if not digits:
+        return ""
+    # 10-digit number → assume Indian → prepend 91
+    if len(digits) == 10:
+        return "91" + digits
+    # Already has country code (11-13 digits) → use as-is
+    return digits
+
+
+def send_lead_assignment_whatsapp(admin_id, lead, agent):
+    """
+    Non-blocking. Call this after a lead is assigned to an agent.
+
+    Sends:
+      • agent_template → agent.phone  (notify agent of new lead)
+      • lead_template  → lead.phone   (welcome message to lead)
+
+    All failures are silently logged — never raises, never blocks lead save.
+
+    Returns dict with results or None if not configured/enabled.
+    """
+    try:
+        # 1. Load config
+        cfg_wa   = WhatsAppConfig.query.filter_by(admin_id=admin_id, is_active=True).first()
+        cfg_auto = WALeadAssignConfig.query.filter_by(admin_id=admin_id).first()
+
+        if not cfg_wa or not cfg_auto or not cfg_auto.is_enabled:
+            return None  # Not set up — skip silently
+
+        # Check admin subscription
+        admin = Admin.query.get(admin_id)
+        if not admin or not admin.is_active or admin.is_expired():
+            return None
+
+        from app.services.whatsapp_service import BrandmoService
+        svc = BrandmoService(cfg_wa)
+
+        # Build substitution context
+        context = {
+            "lead_name":   lead.name   or "",
+            "lead_phone":  lead.phone  or "",
+            "lead_source": lead.source or "",
+            "agent_name":  agent.name  if agent else "",
+            "agent_phone": agent.phone if agent else "",
+        }
+
+        results = {}
+
+        # ── Send to AGENT ──────────────────────────────────
+        agent_phone_e164 = normalize_phone(agent.phone) if (agent and agent.phone) else ""
+        if cfg_auto.agent_template_name and agent and agent_phone_e164:
+            try:
+                tmpl = WATemplate.query.filter_by(
+                    admin_id=admin_id,
+                    name=cfg_auto.agent_template_name,
+                ).first()
+                if tmpl and tmpl.status.upper() == "APPROVED":
+                    params  = _resolve_params(cfg_auto.agent_params, context)
+                    result  = svc.send_template(
+                        agent_phone_e164,
+                        tmpl.name,
+                        tmpl.language or "en",
+                        params,
+                    )
+                    wamid   = (result.get("messages") or [{}])[0].get("id")
+                    contact = get_or_create_contact(admin_id, agent_phone_e164,
+                                                    profile_name=agent.name)
+                    conv    = get_or_create_conversation(admin_id, contact.id)
+                    body_preview = tmpl.body_text or tmpl.name
+                    for i, v in enumerate(params, start=1):
+                        body_preview = body_preview.replace(f"{{{{{i}}}}}", v)
+                    # Only persist message when Brandmo returned a real wamid
+                    if wamid:
+                        msg = WAMessage(
+                            conversation_id = conv.id,
+                            admin_id        = admin_id,
+                            whatsapp_msg_id = wamid,
+                            sender_type     = "system",
+                            message_type    = "template",
+                            message_text    = body_preview,
+                            template_name   = tmpl.name,
+                            status          = "sent",
+                        )
+                        db.session.add(msg)
+                    conv.last_message_at = datetime.utcnow()
+                    db.session.commit()
+                    results["agent"] = {"status": "sent", "wamid": wamid}
+                else:
+                    results["agent"] = {"status": "skipped",
+                                        "reason": "template not found or not APPROVED"}
+            except Exception as e:
+                db.session.rollback()
+                current_app.logger.warning(
+                    f"[LeadAssign WA] Agent send failed (admin={admin_id}): {e}"
+                )
+                results["agent"] = {"status": "error", "detail": str(e)}
+        else:
+            results["agent"] = {"status": "skipped",
+                                 "reason": "no agent template, no agent, or agent phone invalid"}
+
+        # ── Send to LEAD ───────────────────────────────────
+        lead_phone_e164 = normalize_phone(lead.phone) if lead.phone else ""
+        if cfg_auto.lead_template_name and lead_phone_e164:
+            try:
+                tmpl = WATemplate.query.filter_by(
+                    admin_id=admin_id,
+                    name=cfg_auto.lead_template_name,
+                ).first()
+                if tmpl and tmpl.status.upper() == "APPROVED":
+                    params  = _resolve_params(cfg_auto.lead_params, context)
+                    result  = svc.send_template(
+                        lead_phone_e164,
+                        tmpl.name,
+                        tmpl.language or "en",
+                        params,
+                    )
+                    wamid   = (result.get("messages") or [{}])[0].get("id")
+                    contact = get_or_create_contact(admin_id, lead_phone_e164,
+                                                    profile_name=lead.name,
+                                                    lead_id=lead.id)
+                    conv    = get_or_create_conversation(admin_id, contact.id)
+                    body_preview = tmpl.body_text or tmpl.name
+                    for i, v in enumerate(params, start=1):
+                        body_preview = body_preview.replace(f"{{{{{i}}}}}", v)
+                    # Only persist message when Brandmo returned a real wamid
+                    if wamid:
+                        msg = WAMessage(
+                            conversation_id = conv.id,
+                            admin_id        = admin_id,
+                            whatsapp_msg_id = wamid,
+                            sender_type     = "system",
+                            message_type    = "template",
+                            message_text    = body_preview,
+                            template_name   = tmpl.name,
+                            status          = "sent",
+                        )
+                        db.session.add(msg)
+                    conv.last_message_at = datetime.utcnow()
+                    db.session.commit()
+                    results["lead"] = {"status": "sent", "wamid": wamid}
+                else:
+                    results["lead"] = {"status": "skipped",
+                                       "reason": "template not found or not APPROVED"}
+            except Exception as e:
+                db.session.rollback()
+                current_app.logger.warning(
+                    f"[LeadAssign WA] Lead send failed (admin={admin_id}): {e}"
+                )
+                results["lead"] = {"status": "error", "detail": str(e)}
+        else:
+            results["lead"] = {"status": "skipped",
+                                "reason": "no lead template or lead phone invalid"}
+
+        return results
+
+    except Exception as e:
+        current_app.logger.warning(
+            f"[LeadAssign WA] Outer error (admin={admin_id}): {e}"
+        )
+        return None
+
+
+# ─────────────────────────────────────────────────────────
+# 12. LEAD ASSIGN CONFIG — GET / SAVE
+# ─────────────────────────────────────────────────────────
+
+@bp.route("/lead-assign-config", methods=["GET"])
+@jwt_required()
+def get_lead_assign_config():
+    """Get the current auto-WhatsApp-on-assignment config for this admin."""
+    if not admin_required():
+        return jsonify({"error": "Admin role required"}), 403
+    admin, err = get_admin_or_err()
+    if err:
+        return err
+
+    cfg = WALeadAssignConfig.query.filter_by(admin_id=admin.id).first()
+    return jsonify({"config": cfg.to_dict() if cfg else None}), 200
+
+
+@bp.route("/lead-assign-config", methods=["POST"])
+@jwt_required()
+def save_lead_assign_config():
+    """
+    Save/update the auto-WhatsApp-on-assignment config.
+
+    Body (all optional):
+      is_enabled          bool
+      agent_template_name str   — APPROVED template name to send to agent
+      agent_params        list  — param strings, may include {{lead_name}} etc.
+      lead_template_name  str   — APPROVED template name to send to lead
+      lead_params         list  — param strings
+    """
+    if not admin_required():
+        return jsonify({"error": "Admin role required"}), 403
+    admin, err = get_admin_or_err()
+    if err:
+        return err
+
+    data = request.get_json() or {}
+
+    cfg = WALeadAssignConfig.query.filter_by(admin_id=admin.id).first()
+    if not cfg:
+        cfg = WALeadAssignConfig(admin_id=admin.id)
+        db.session.add(cfg)
+
+    if "is_enabled" in data:
+        cfg.is_enabled = bool(data["is_enabled"])
+    if "agent_template_name" in data:
+        cfg.agent_template_name = (data["agent_template_name"] or "").strip() or None
+    if "agent_params" in data:
+        cfg.agent_params = data["agent_params"] if isinstance(data["agent_params"], list) else []
+    if "lead_template_name" in data:
+        cfg.lead_template_name = (data["lead_template_name"] or "").strip() or None
+    if "lead_params" in data:
+        cfg.lead_params = data["lead_params"] if isinstance(data["lead_params"], list) else []
+
     db.session.commit()
+    return jsonify({"message": "Config saved", "config": cfg.to_dict()}), 200

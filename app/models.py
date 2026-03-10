@@ -956,6 +956,8 @@ class WAConversation(db.Model):
         return delta.total_seconds() < 86400  # 24h in seconds
 
     def to_dict(self, include_last_message=False):
+        # Treat expired locks as if there is no lock
+        active_lock = self.lock if (self.lock and not self.lock.is_expired()) else None
         d = {
             "id": self.id,
             "admin_id": self.admin_id,
@@ -966,8 +968,8 @@ class WAConversation(db.Model):
             "unread_count": self.unread_count,
             "last_message_at": self.last_message_at.isoformat() if self.last_message_at else None,
             "within_24h_window": self.is_within_24h_window(),
-            "locked_by": self.lock.agent_id if self.lock else None,
-            "locked_by_name": self.lock.agent.name if (self.lock and self.lock.agent) else None,
+            "locked_by": active_lock.agent_id if active_lock else None,
+            "locked_by_name": active_lock.agent.name if (active_lock and active_lock.agent) else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
         if include_last_message:
@@ -1133,8 +1135,18 @@ class WAConversationLock(db.Model):
 
     @property
     def agent(self):
-        """Soft-link to User — may return None for admin lock holders."""
-        return db.session.get(User, self.agent_id)
+        """Resolve the lock holder — could be a User (agent) or an Admin.
+        
+        agent_id is stored without a FK so it can hold either ID type.
+        Try User first (most common), then Admin as fallback.
+        Returns None only if the ID cannot be resolved in either table.
+        """
+        holder = db.session.get(User, self.agent_id)
+        if holder:
+            return holder
+        # Fallback: lock may be held by an Admin (e.g. admin opened the conversation)
+        from app.models import Admin as _Admin
+        return db.session.get(_Admin, self.agent_id)
 
     def is_expired(self):
         if not self.expires_at:
@@ -1150,4 +1162,52 @@ class WAConversationLock(db.Model):
             "locked_at": self.locked_at.isoformat() if self.locked_at else None,
             "expires_at": self.expires_at.isoformat() if self.expires_at else None,
             "is_expired": self.is_expired(),
+        }
+
+
+# =========================================================
+# WA LEAD ASSIGN CONFIG (Auto-send WA on lead assignment)
+# =========================================================
+class WALeadAssignConfig(db.Model):
+    """
+    Per-admin config for auto-WhatsApp on lead assignment.
+    When a lead is assigned to an agent:
+      • agent_template  → sent to the AGENT's phone
+      • lead_template   → sent to the LEAD's phone
+
+    Param lists support placeholders resolved at send time:
+        {{lead_name}}, {{lead_phone}}, {{lead_source}},
+        {{agent_name}}, {{agent_phone}}
+    """
+    __tablename__ = "wa_lead_assign_configs"
+
+    id                  = db.Column(db.Integer, primary_key=True)
+    admin_id            = db.Column(db.Integer, db.ForeignKey("admins.id"),
+                                    nullable=False, unique=True, index=True)
+
+    is_enabled          = db.Column(db.Boolean, default=False)
+
+    # Template to send to the AGENT
+    agent_template_name = db.Column(db.String(255), nullable=True)
+    agent_params        = db.Column(JSONAuto())   # list[str] with {{placeholders}}
+
+    # Template to send to the LEAD
+    lead_template_name  = db.Column(db.String(255), nullable=True)
+    lead_params         = db.Column(JSONAuto())   # list[str] with {{placeholders}}
+
+    created_at          = db.Column(db.DateTime, default=now)
+    updated_at          = db.Column(db.DateTime, default=now, onupdate=now)
+
+    admin = db.relationship("Admin", backref=db.backref("wa_lead_assign_config", uselist=False))
+
+    def to_dict(self):
+        return {
+            "id":                   self.id,
+            "admin_id":             self.admin_id,
+            "is_enabled":           self.is_enabled,
+            "agent_template_name":  self.agent_template_name,
+            "agent_params":         self.agent_params or [],
+            "lead_template_name":   self.lead_template_name,
+            "lead_params":          self.lead_params or [],
+            "updated_at":           self.updated_at.isoformat() if self.updated_at else None,
         }

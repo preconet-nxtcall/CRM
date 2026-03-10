@@ -218,10 +218,14 @@ def sync_all_wa_templates(app):
     Called from app/__init__.py on a schedule.
     """
     with app.app_context():
-        from app.models import WhatsAppConfig
+        from app.models import WhatsAppConfig, Admin
         configs = WhatsAppConfig.query.filter_by(is_active=True).all()
         for cfg in configs:
             try:
+                # SaaS: skip expired admins — don't waste API calls on lapsed subscriptions
+                admin = Admin.query.get(cfg.admin_id)
+                if not admin or not admin.is_active or admin.is_expired():
+                    continue
                 svc = BrandmoService(cfg)
                 if not svc.token or not svc.waba_id:
                     continue
