@@ -81,16 +81,16 @@ class WhatsAppManager {
 
     _renderConfigStatus(cfg) {
         const statusBadge = document.getElementById('waConnectionStatus');
-        const statusDot   = document.getElementById('waStatusDot');
-        const phoneEl     = document.getElementById('waDisplayPhone');
-        const phonePill   = document.getElementById('waPhonePill');
+        const statusDot = document.getElementById('waStatusDot');
+        const phoneEl = document.getElementById('waDisplayPhone');
+        const phonePill = document.getElementById('waPhonePill');
         if (!statusBadge) return;
 
         if (cfg && cfg.is_connected) {
             statusBadge.textContent = 'Connected';
             statusBadge.style.color = '#6ee7b7';
             if (statusDot) statusDot.classList.add('online');
-            if (phoneEl)   phoneEl.textContent = cfg.phone_number_id || '-';
+            if (phoneEl) phoneEl.textContent = cfg.phone_number_id || '-';
             if (phonePill) phonePill.style.display = 'flex';
         } else {
             statusBadge.textContent = 'Not Connected';
@@ -98,7 +98,6 @@ class WhatsAppManager {
             if (statusDot) statusDot.classList.remove('online');
             if (phonePill) phonePill.style.display = 'none';
         }
-    }
     }
 
     _bindConfigForm() {
@@ -201,25 +200,25 @@ class WhatsAppManager {
 
         tbody.innerHTML = templates.map(t => {
             const statusColors = {
-                APPROVED: 'bg-green-900 text-green-300',
-                PENDING: 'bg-yellow-900 text-yellow-300',
-                REJECTED: 'bg-red-900 text-red-300',
+                APPROVED: 'bg-green-100 text-green-700',
+                PENDING: 'bg-yellow-100 text-yellow-700',
+                REJECTED: 'bg-red-100 text-red-700',
             };
-            const badge = statusColors[t.status] || 'bg-gray-700 text-gray-300';
+            const badge = statusColors[t.status] || 'bg-gray-100 text-gray-600';
             const bodyPreview = (t.body_text || '').substring(0, 80) + (t.body_text?.length > 80 ? '…' : '');
 
-            return `<tr class="border-b border-gray-700 hover:bg-gray-800 transition-colors">
-                <td class="px-4 py-3 font-mono text-sm text-green-300">${this._esc(t.name)}</td>
+            return `<tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                <td class="px-4 py-3 font-mono text-sm text-green-700">${this._esc(t.name)}</td>
                 <td class="px-4 py-3">
                     <span class="px-2 py-0.5 rounded text-xs font-medium ${badge}">${t.status}</span>
                 </td>
-                <td class="px-4 py-3 text-xs text-gray-400 uppercase">${t.category || '—'}</td>
-                <td class="px-4 py-3 text-xs text-gray-300">${this._esc(t.language)}</td>
-                <td class="px-4 py-3 text-sm text-gray-300 max-w-xs truncate" title="${this._esc(t.body_text || '')}">${this._esc(bodyPreview)}</td>
-                <td class="px-4 py-3 text-xs text-gray-400">${t.variable_count} var(s)</td>
+                <td class="px-4 py-3 text-xs text-gray-500 uppercase">${t.category || '—'}</td>
+                <td class="px-4 py-3 text-xs text-gray-600">${this._esc(t.language)}</td>
+                <td class="px-4 py-3 text-sm text-gray-700 max-w-xs truncate" title="${this._esc(t.body_text || '')}">${this._esc(bodyPreview)}</td>
+                <td class="px-4 py-3 text-xs text-gray-500">${t.variable_count} var(s)</td>
                 <td class="px-4 py-3">
                     <button onclick="window.whatsappManager.deleteTemplate(${t.id}, '${this._esc(t.name)}')"
-                        class="text-red-400 hover:text-red-300 text-xs px-2 py-1 rounded hover:bg-red-900/30 transition">
+                        class="text-red-500 hover:text-red-700 text-xs px-2 py-1 rounded hover:bg-red-50 transition">
                         <i class="fas fa-trash mr-1"></i>Delete
                     </button>
                 </td>
@@ -380,20 +379,20 @@ class WhatsAppManager {
             const isActive = this.activeConvId === c.id;
 
             return `<div onclick="window.whatsappManager.openConversation(${c.id})"
-                class="flex items-center gap-3 px-4 py-3 cursor-pointer border-b border-gray-700 hover:bg-gray-800 transition-colors ${isActive ? 'bg-gray-800' : ''}"
+                class="flex items-center gap-3 px-4 py-3 cursor-pointer border-b border-gray-100 hover:bg-gray-50 transition-colors ${isActive ? 'bg-gray-50' : ''}"
                 data-conv-id="${c.id}">
                 <div class="relative flex-shrink-0">
-                    <div class="w-10 h-10 rounded-full bg-green-700 flex items-center justify-center text-white font-bold text-sm">
+                    <div class="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white font-bold text-sm">
                         ${name.charAt(0).toUpperCase()}
                     </div>
-                    <span class="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-gray-900 ${windowOk ? 'bg-green-400' : 'bg-gray-500'}"></span>
+                    <span class="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${windowOk ? 'bg-green-400' : 'bg-gray-300'}"></span>
                 </div>
                 <div class="flex-1 min-w-0">
                     <div class="flex justify-between items-center">
-                        <p class="font-medium text-sm text-white truncate">${this._esc(name)}</p>
-                        <span class="text-xs text-gray-500 flex-shrink-0">${lastAt}</span>
+                        <p class="font-medium text-sm text-gray-900 truncate">${this._esc(name)}</p>
+                        <span class="text-xs text-gray-400 flex-shrink-0">${lastAt}</span>
                     </div>
-                    <p class="text-xs text-gray-400 truncate">${this._esc(lastMsg.substring(0, 50))}</p>
+                    <p class="text-xs text-gray-500 truncate">${this._esc(lastMsg.substring(0, 50))}</p>
                 </div>
                 ${unread ? `<span class="bg-green-500 text-white text-xs rounded-full px-1.5 py-0.5 flex-shrink-0">${unread}</span>` : ''}
             </div>`;
@@ -504,10 +503,10 @@ class WhatsAppManager {
             bubble.innerHTML = `
                 <div class="max-w-xs lg:max-w-md px-3 py-2 rounded-2xl text-sm shadow-md break-words
                     ${isAgent
-                    ? 'bg-green-700 text-white rounded-br-sm'
+                    ? 'bg-green-600 text-white rounded-br-sm'
                     : isSystem
-                        ? 'bg-gray-700 text-gray-300 italic text-xs'
-                        : 'bg-gray-700 text-white rounded-bl-sm'}">
+                        ? 'bg-gray-100 text-gray-500 italic text-xs'
+                        : 'bg-white text-gray-800 rounded-bl-sm border border-gray-100 shadow-sm'}">
                     ${msgContent}
                     <div class="text-right text-xs mt-1 ${isAgent ? 'text-green-200' : 'text-gray-400'}">
                         ${timeStr} ${statusIcon}
