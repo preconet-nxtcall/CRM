@@ -1,4 +1,4 @@
-/* frontend/admin/js/whatsapp.js
+﻿/* frontend/admin/js/whatsapp.js
    WhatsApp Template Messaging Manager
    Handles: Settings, Template Management, Inbox (Conversations + Chat)
 */
@@ -49,13 +49,13 @@ class WhatsAppManager {
             const pane = document.getElementById(`waPane${t.charAt(0).toUpperCase() + t.slice(1)}`);
             const btn = document.getElementById(`waTab${t.charAt(0).toUpperCase() + t.slice(1)}`);
             if (pane) pane.classList.add('hidden');
-            if (btn) { btn.classList.remove('wa-tab-active'); btn.classList.add('wa-tab-inactive'); }
+            if (btn) { btn.classList.remove('wa-tab--active'); }
         });
 
         const activePane = document.getElementById(`waPane${tab.charAt(0).toUpperCase() + tab.slice(1)}`);
         const activeBtn = document.getElementById(`waTab${tab.charAt(0).toUpperCase() + tab.slice(1)}`);
         if (activePane) activePane.classList.remove('hidden');
-        if (activeBtn) { activeBtn.classList.add('wa-tab-active'); activeBtn.classList.remove('wa-tab-inactive'); }
+        if (activeBtn) { activeBtn.classList.add('wa-tab--active'); }
 
         if (tab === 'templates') this.loadTemplates();
         if (tab === 'inbox') this.loadInbox();
@@ -77,21 +77,24 @@ class WhatsAppManager {
 
     _renderConfigStatus(cfg) {
         const statusBadge = document.getElementById('waConnectionStatus');
-        const phoneEl = document.getElementById('waDisplayPhone');
-        const wabaEl = document.getElementById('waDisplayWaba');
+        const statusDot   = document.getElementById('waStatusDot');
+        const phoneEl     = document.getElementById('waDisplayPhone');
+        const phonePill   = document.getElementById('waPhonePill');
         if (!statusBadge) return;
 
         if (cfg && cfg.is_connected) {
-            statusBadge.textContent = '✅ Connected';
-            statusBadge.className = 'text-green-400 font-semibold';
-            if (phoneEl) phoneEl.textContent = cfg.phone_number_id || '—';
-            if (wabaEl) wabaEl.textContent = cfg.waba_id || '—';
+            statusBadge.textContent = 'Connected';
+            statusBadge.style.color = '#6ee7b7';
+            if (statusDot) statusDot.classList.add('online');
+            if (phoneEl)   phoneEl.textContent = cfg.phone_number_id || '-';
+            if (phonePill) phonePill.style.display = 'flex';
         } else {
-            statusBadge.textContent = '⚠️ Not Connected';
-            statusBadge.className = 'text-yellow-400 font-semibold';
-            if (phoneEl) phoneEl.textContent = '—';
-            if (wabaEl) wabaEl.textContent = '—';
+            statusBadge.textContent = 'Not Connected';
+            statusBadge.style.color = '#fcd34d';
+            if (statusDot) statusDot.classList.remove('online');
+            if (phonePill) phonePill.style.display = 'none';
         }
+    }
     }
 
     _bindConfigForm() {

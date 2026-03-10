@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -810,260 +810,402 @@
       <!-- ══════════════════════════════════════════════
            WHATSAPP CRM SECTION
       ══════════════════════════════════════════════ -->
-      <section id="sectionWhatsApp" class="hidden-section animate-fade-in">
-        <div class="flex items-center justify-between mb-6">
-          <div>
-            <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">
-              <i class="fab fa-whatsapp text-green-500 text-2xl"></i> WhatsApp CRM
-            </h2>
-            <p class="text-sm text-gray-500 mt-0.5">Manage templates, send messages, and handle your WhatsApp inbox</p>
-          </div>
-        </div>
+<!-- ══════════════════════════════════════════════
+           WHATSAPP CRM SECTION — MODERN SaaS DESIGN
+      ══════════════════════════════════════════════ -->
+<section id="sectionWhatsApp" class="hidden-section animate-fade-in wa-section">
 
-        <!-- Tabs -->
-        <div class="border-b border-gray-200 mb-6">
-          <nav class="flex gap-6 -mb-px">
-            <button id="waTabSettings" class="wa-tab-active   py-3 text-sm transition-colors">⚙️ Settings</button>
-            <button id="waTabTemplates" class="wa-tab-inactive py-3 text-sm transition-colors">📋 Templates</button>
-            <button id="waTabInbox" class="wa-tab-inactive py-3 text-sm transition-colors">💬 Inbox</button>
-          </nav>
-        </div>
-
-        <!-- SETTINGS PANE -->
-        <div id="waPaneSettings">
-          <div class="max-w-xl bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-5">
-            <h3 class="font-semibold text-gray-900">Connect Your WhatsApp Account (Brandmo)</h3>
-            <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl text-sm flex-wrap">
-              <span class="text-gray-500">Status:</span>
-              <span id="waConnectionStatus" class="font-semibold text-yellow-500">Loading…</span>
-              <span class="text-gray-300 mx-1">|</span>
-              <span class="text-gray-500">Phone ID:</span>
-              <span id="waDisplayPhone" class="font-mono text-gray-700 text-xs">—</span>
-              <span class="text-gray-300 mx-1">|</span>
-              <span class="text-gray-500">WABA ID:</span>
-              <span id="waDisplayWaba" class="font-mono text-gray-700 text-xs">—</span>
+    <!-- HERO HEADER -->
+    <div class="wa-hero rounded-2xl p-6 mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div class="flex items-center gap-4">
+            <div class="wa-hero-icon">
+                <i class="fab fa-whatsapp text-2xl"></i>
             </div>
-            <form id="waConfigForm" class="space-y-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Access Token <span
-                    class="text-red-500">*</span></label>
-                <input type="password" id="waAccessToken" placeholder="EAAxxxx…"
-                  class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none" />
-                <p class="text-xs text-gray-400 mt-1">Your Brandmo access token</p>
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Phone Number ID <span
-                    class="text-red-500">*</span></label>
-                <input type="text" id="waPhoneNumberId" placeholder="1234567890"
-                  class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none" />
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">WABA ID <span
-                    class="text-red-500">*</span></label>
-                <input type="text" id="waWabaId" placeholder="1234567890"
-                  class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none" />
-              </div>
-              <div class="flex gap-3 pt-2">
-                <button id="waSaveConfigBtn" type="submit"
-                  class="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 px-4 rounded-lg text-sm transition-colors">
-                  <i class="fab fa-whatsapp mr-2"></i>Save &amp; Connect
-                </button>
-                <button id="waDisconnectBtn" type="button"
-                  class="px-4 py-2.5 border border-red-300 text-red-500 hover:bg-red-50 rounded-lg text-sm transition-colors">Disconnect</button>
-              </div>
-            </form>
-            <div class="p-3 bg-blue-50 rounded-xl text-xs text-blue-700 space-y-1">
-              <p><i class="fas fa-info-circle mr-1"></i><strong>Configure this in your Brandmo dashboard:</strong></p>
-              <p>Webhook URL: <code
-                  class="bg-blue-100 px-1 rounded select-all">https://crm-2gkk.onrender.com/api/whatsapp/webhook</code>
-              </p>
-              <p>Verify Token: <code class="bg-blue-100 px-1 rounded select-all">nxtcall_wa_webhook_2026</code></p>
+            <div>
+                <h2 class="text-xl font-bold text-white tracking-tight">WhatsApp CRM</h2>
+                <p class="text-sm text-green-200 opacity-70 mt-0.5">Brandmo Cloud API &bull; Real-time messaging</p>
             </div>
-          </div>
         </div>
-
-        <!-- TEMPLATES PANE -->
-        <div id="waPaneTemplates" class="hidden">
-          <div class="flex justify-between items-center mb-4">
-            <h3 class="font-semibold text-gray-900">Message Templates</h3>
-            <div class="flex gap-2">
-              <button id="waSyncTemplatesBtn"
-                class="px-4 py-2 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">
-                <i class="fas fa-sync mr-1"></i>Sync from Brandmo
-              </button>
-              <button id="waCreateTemplateBtn"
-                class="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
-                <i class="fas fa-plus mr-1"></i>Create Template
-              </button>
+        <div class="flex items-center gap-3 flex-wrap">
+            <div class="wa-stat-pill">
+                <span class="wa-stat-dot" id="waStatusDot"></span>
+                <span id="waConnectionStatus" class="text-sm font-medium text-white">Loading&hellip;</span>
             </div>
-          </div>
-          <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-x-auto">
-            <table class="w-full text-left">
-              <thead class="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Name</th>
-                  <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Status</th>
-                  <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Category</th>
-                  <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Language</th>
-                  <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Body Preview</th>
-                  <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Vars</th>
-                  <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Action</th>
-                </tr>
-              </thead>
-              <tbody id="waTemplatesTableBody">
-                <tr>
-                  <td colspan="7" class="text-center py-10 text-gray-400">Click Sync to load templates.</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <!-- Create Template Modal -->
-          <div id="waCreateTemplateModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div class="absolute inset-0 bg-black/50 backdrop-blur-sm"
-              onclick="window.whatsappManager._hideCreateModal()"></div>
-            <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 z-10">
-              <button id="waCreateModalClose" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
-                <i class="fas fa-times"></i>
-              </button>
-              <h3 class="text-lg font-bold text-gray-900 mb-4">Create New Template</h3>
-              <form id="waCreateTemplateForm" class="space-y-4">
-                <div class="grid grid-cols-2 gap-4">
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Template Name *</label>
-                    <input type="text" id="waTplName" placeholder="e.g. welcome_message"
-                      class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 outline-none" />
-                    <p class="text-xs text-gray-400 mt-0.5">lowercase, underscores only</p>
-                  </div>
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Category *</label>
-                    <select id="waTplCategory"
-                      class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 outline-none">
-                      <option value="MARKETING">Marketing</option>
-                      <option value="UTILITY" selected>Utility</option>
-                      <option value="AUTHENTICATION">Authentication</option>
-                    </select>
-                  </div>
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Language</label>
-                  <select id="waTplLanguage"
-                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 outline-none">
-                    <option value="en" selected>English</option>
-                    <option value="hi">Hindi</option>
-                    <option value="mr">Marathi</option>
-                    <option value="gu">Gujarati</option>
-                    <option value="ta">Tamil</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Header Text (Optional)</label>
-                  <input type="text" id="waTplHeader" placeholder="e.g. Welcome!"
-                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 outline-none" />
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Body Message * (use {{1}}, {{2}} for
-                    variables)</label>
-                  <textarea id="waTplBody" rows="4" placeholder="Hello {{1}}, your order {{2}} is confirmed."
-                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 outline-none resize-none"></textarea>
-                  <p class="text-xs text-green-600 mt-0.5" id="waTplVarCount">0 variable(s) detected</p>
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Footer Text (Optional)</label>
-                  <input type="text" id="waTplFooter" placeholder="e.g. Reply STOP to unsubscribe"
-                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 outline-none" />
-                </div>
-                <button id="waCreateSubmitBtn" type="submit"
-                  class="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 rounded-lg text-sm transition-colors">
-                  Submit Template for Review
-                </button>
-              </form>
+            <div class="wa-stat-pill" id="waPhonePill" style="display:none">
+                <i class="fas fa-phone text-green-300 text-xs"></i>
+                <span class="text-sm text-white font-mono" id="waDisplayPhone">&mdash;</span>
             </div>
-          </div>
         </div>
+    </div>
 
-        <!-- INBOX PANE -->
-        <div id="waPaneInbox" class="hidden">
-          <div class="flex justify-between items-center mb-4">
-            <h3 class="font-semibold text-gray-900">WhatsApp Inbox</h3>
-            <button id="waRefreshInboxBtn"
-              class="px-4 py-2 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors">
-              <i class="fas fa-sync mr-1"></i>Refresh
+    <!-- TABS -->
+    <div class="wa-tabs-bar mb-6">
+        <div class="wa-tabs-inner">
+            <button id="waTabSettings" class="wa-tab wa-tab--active">
+                <i class="fas fa-cog"></i> Settings
             </button>
-          </div>
-          <div class="flex gap-4" style="height:calc(100vh - 290px);min-height:480px;">
-            <!-- Conversation List -->
-            <div
-              class="w-72 flex-shrink-0 bg-gray-900 rounded-2xl overflow-hidden flex flex-col shadow-lg border border-gray-700">
-              <div class="px-4 py-3 border-b border-gray-700 bg-gray-800">
-                <p class="text-sm font-semibold text-white">Conversations</p>
-              </div>
-              <div id="waConversationList" class="flex-1 overflow-y-auto">
-                <div class="text-center py-10 text-gray-400"><i class="fas fa-spinner fa-spin"></i></div>
-              </div>
+            <button id="waTabTemplates" class="wa-tab">
+                <i class="fas fa-layer-group"></i> Templates
+            </button>
+            <button id="waTabInbox" class="wa-tab">
+                <i class="fas fa-comments"></i> Inbox
+                <span id="waInboxBadge" class="wa-tab-badge" style="display:none">0</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- =====================
+             SETTINGS PANE
+        ===================== -->
+    <div id="waPaneSettings">
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+
+            <!-- Left: Connect Form -->
+            <div class="lg:col-span-3">
+                <div class="wa-card p-6">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-9 h-9 rounded-xl bg-green-500 bg-opacity-20 flex items-center justify-center">
+                            <i class="fab fa-whatsapp text-green-400 text-lg"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-semibold text-white text-sm">Connect Brandmo Account</h3>
+                            <p class="text-xs text-gray-400">Enter your API credentials below</p>
+                        </div>
+                    </div>
+                    <form id="waConfigForm" class="space-y-4">
+                        <div class="wa-field-group">
+                            <label class="wa-label">Access Token <span class="text-red-400">*</span></label>
+                            <div class="wa-input-wrap">
+                                <i class="fas fa-key wa-input-icon"></i>
+                                <input type="password" id="waAccessToken" placeholder="EAAxxxx... (your Brandmo token)"
+                                    class="wa-input" />
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div class="wa-field-group">
+                                <label class="wa-label">Phone Number ID <span class="text-red-400">*</span></label>
+                                <div class="wa-input-wrap">
+                                    <i class="fas fa-phone-alt wa-input-icon"></i>
+                                    <input type="text" id="waPhoneNumberId" placeholder="918062177367"
+                                        class="wa-input" />
+                                </div>
+                            </div>
+                            <div class="wa-field-group">
+                                <label class="wa-label">WABA ID <span class="text-red-400">*</span></label>
+                                <div class="wa-input-wrap">
+                                    <i class="fas fa-building wa-input-icon"></i>
+                                    <input type="text" id="waWabaId" placeholder="1234567890" class="wa-input" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex gap-3 pt-2">
+                            <button id="waSaveConfigBtn" type="submit" class="wa-btn-primary flex-1">
+                                <i class="fab fa-whatsapp mr-2"></i>Save &amp; Connect
+                            </button>
+                            <button id="waDisconnectBtn" type="button" class="wa-btn-danger px-5" title="Disconnect">
+                                <i class="fas fa-unlink"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Right: Info Cards -->
+            <div class="lg:col-span-2 flex flex-col gap-4">
+                <!-- Webhook Info -->
+                <div class="wa-card p-5">
+                    <div class="flex items-center gap-2 mb-4">
+                        <i class="fas fa-link text-blue-400 text-sm"></i>
+                        <span class="text-sm font-semibold text-white">Webhook Setup</span>
+                        <span class="ml-auto wa-badge-success text-xs px-2 py-0.5 rounded-full">Active</span>
+                    </div>
+                    <div class="space-y-3">
+                        <div>
+                            <p class="text-xs text-gray-500 mb-1 uppercase tracking-wider">Webhook URL</p>
+                            <div class="wa-copy-box"
+                                onclick="navigator.clipboard.writeText('https://crm-2gkk.onrender.com/api/whatsapp/webhook');this.querySelector('.copy-txt').textContent='Copied!';setTimeout(()=>this.querySelector('.copy-txt').textContent='Copy',1500)">
+                                <span
+                                    class="font-mono text-xs text-green-300 truncate flex-1">crm-2gkk.onrender.com/api/.../webhook</span>
+                                <span class="copy-txt text-gray-500 text-xs flex-shrink-0">Copy</span>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500 mb-1 uppercase tracking-wider">Verify Token</p>
+                            <div class="wa-copy-box"
+                                onclick="navigator.clipboard.writeText('nxtcall_wa_webhook_2026');this.querySelector('.copy-txt').textContent='Copied!';setTimeout(()=>this.querySelector('.copy-txt').textContent='Copy',1500)">
+                                <span class="font-mono text-xs text-green-300 flex-1">nxtcall_wa_webhook_2026</span>
+                                <span class="copy-txt text-gray-500 text-xs flex-shrink-0">Copy</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Guide -->
+                <div class="wa-card p-5 flex-1">
+                    <div class="flex items-center gap-2 mb-4">
+                        <i class="fas fa-lightbulb text-yellow-400 text-sm"></i>
+                        <span class="text-sm font-semibold text-white">Quick Guide</span>
+                    </div>
+                    <ol class="space-y-3">
+                        <li class="flex items-start gap-3 text-xs text-gray-400">
+                            <span
+                                class="w-5 h-5 rounded-full bg-green-500 bg-opacity-20 text-green-400 flex items-center justify-center flex-shrink-0 text-xs font-bold mt-0.5">1</span>
+                            Enter credentials &amp; click <strong class="text-gray-300">Save &amp; Connect</strong>
+                        </li>
+                        <li class="flex items-start gap-3 text-xs text-gray-400">
+                            <span
+                                class="w-5 h-5 rounded-full bg-green-500 bg-opacity-20 text-green-400 flex items-center justify-center flex-shrink-0 text-xs font-bold mt-0.5">2</span>
+                            Go to <strong class="text-gray-300">Templates</strong> &rarr; Sync from Brandmo
+                        </li>
+                        <li class="flex items-start gap-3 text-xs text-gray-400">
+                            <span
+                                class="w-5 h-5 rounded-full bg-green-500 bg-opacity-20 text-green-400 flex items-center justify-center flex-shrink-0 text-xs font-bold mt-0.5">3</span>
+                            Open <strong class="text-gray-300">Inbox</strong> &mdash; messages load automatically
+                        </li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =====================
+             TEMPLATES PANE
+        ===================== -->
+    <div id="waPaneTemplates" class="hidden">
+        <div class="flex flex-col sm:flex-row sm:items-center gap-3 mb-5">
+            <div class="flex-1">
+                <h3 class="font-semibold text-white text-base">Message Templates</h3>
+                <p class="text-xs text-gray-400 mt-0.5">Approved templates can be sent anytime; pending await Meta
+                    review</p>
+            </div>
+            <div class="flex gap-2">
+                <button id="waSyncTemplatesBtn" class="wa-btn-secondary">
+                    <i class="fas fa-sync mr-2"></i>Sync from Brandmo
+                </button>
+                <button id="waCreateTemplateBtn" class="wa-btn-primary">
+                    <i class="fas fa-plus mr-2"></i>New Template
+                </button>
+            </div>
+        </div>
+        <div class="wa-card overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="border-b border-gray-700 border-opacity-60">
+                            <th class="px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">Name
+                            </th>
+                            <th class="px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">Status
+                            </th>
+                            <th class="px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                                Category</th>
+                            <th class="px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">Lang
+                            </th>
+                            <th class="px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">Body
+                                Preview</th>
+                            <th class="px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">Vars
+                            </th>
+                            <th class="px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">Action
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="waTemplatesTableBody">
+                        <tr>
+                            <td colspan="7" class="text-center py-14 text-gray-500">
+                                <i class="fas fa-layer-group text-3xl text-gray-700 block mb-3"></i>
+                                Click <strong class="text-gray-400">Sync from Brandmo</strong> to load templates.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Create Template Modal -->
+        <div id="waCreateTemplateModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div class="absolute inset-0 bg-black bg-opacity-70" style="backdrop-filter:blur(4px)"
+                onclick="window.whatsappManager._hideCreateModal()"></div>
+            <div class="relative wa-modal w-full max-w-lg z-10">
+                <div class="flex items-center justify-between mb-5">
+                    <div>
+                        <h3 class="text-lg font-bold text-white">Create New Template</h3>
+                        <p class="text-xs text-gray-400 mt-0.5">Submitted for Meta review &mdash; approval takes up to
+                            24h</p>
+                    </div>
+                    <button id="waCreateModalClose" class="wa-icon-btn"><i class="fas fa-times"></i></button>
+                </div>
+                <form id="waCreateTemplateForm" class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="wa-field-group">
+                            <label class="wa-label">Template Name *</label>
+                            <div class="wa-input-wrap">
+                                <i class="fas fa-tag wa-input-icon"></i>
+                                <input type="text" id="waTplName" placeholder="e.g. welcome_message" class="wa-input" />
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">lowercase + underscores only</p>
+                        </div>
+                        <div class="wa-field-group">
+                            <label class="wa-label">Category *</label>
+                            <div class="wa-input-wrap">
+                                <i class="fas fa-tag wa-input-icon"></i>
+                                <select id="waTplCategory" class="wa-input">
+                                    <option value="MARKETING">Marketing</option>
+                                    <option value="UTILITY" selected>Utility</option>
+                                    <option value="AUTHENTICATION">Authentication</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="wa-field-group">
+                        <label class="wa-label">Language</label>
+                        <div class="wa-input-wrap">
+                            <i class="fas fa-globe wa-input-icon"></i>
+                            <select id="waTplLanguage" class="wa-input">
+                                <option value="en" selected>English</option>
+                                <option value="hi">Hindi</option>
+                                <option value="mr">Marathi</option>
+                                <option value="gu">Gujarati</option>
+                                <option value="ta">Tamil</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="wa-field-group">
+                        <label class="wa-label">Header Text <span class="text-gray-500">(Optional)</span></label>
+                        <div class="wa-input-wrap">
+                            <i class="fas fa-heading wa-input-icon"></i>
+                            <input type="text" id="waTplHeader" placeholder="e.g. Welcome!" class="wa-input" />
+                        </div>
+                    </div>
+                    <div class="wa-field-group">
+                        <label class="wa-label">Body Message * &mdash; use {{1}}, {{2}} for variables</label>
+                        <textarea id="waTplBody" rows="4"
+                            placeholder="Hello {{1}}, your appointment on {{2}} is confirmed." class="wa-input"
+                            style="resize:none;height:auto"></textarea>
+                        <p class="text-xs text-green-400 mt-1 font-medium" id="waTplVarCount">0 variable(s) detected</p>
+                    </div>
+                    <div class="wa-field-group">
+                        <label class="wa-label">Footer Text <span class="text-gray-500">(Optional)</span></label>
+                        <div class="wa-input-wrap">
+                            <i class="fas fa-align-left wa-input-icon"></i>
+                            <input type="text" id="waTplFooter" placeholder="e.g. Reply STOP to unsubscribe"
+                                class="wa-input" />
+                        </div>
+                    </div>
+                    <button id="waCreateSubmitBtn" type="submit" class="wa-btn-primary w-full mt-1">
+                        <i class="fas fa-paper-plane mr-2"></i>Submit Template for Review
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- =====================
+             INBOX PANE
+        ===================== -->
+    <div id="waPaneInbox" class="hidden">
+        <div class="flex flex-col sm:flex-row sm:items-center gap-3 mb-5">
+            <div class="flex-1">
+                <h3 class="font-semibold text-white text-base">WhatsApp Inbox</h3>
+                <p class="text-xs text-gray-400 mt-0.5">Real-time conversations from your WhatsApp number</p>
+            </div>
+            <button id="waRefreshInboxBtn" class="wa-btn-secondary">
+                <i class="fas fa-sync mr-2"></i>Refresh
+            </button>
+        </div>
+
+        <div class="wa-inbox-wrap" style="height:calc(100vh - 300px);min-height:520px;">
+
+            <!-- Sidebar -->
+            <div class="wa-inbox-sidebar">
+                <div class="wa-inbox-sidebar-header">
+                    <i class="fas fa-comments text-green-400 text-sm"></i>
+                    <p class="text-sm font-semibold text-white">Conversations</p>
+                </div>
+                <div id="waConversationList" class="flex-1 overflow-y-auto">
+                    <div class="flex items-center justify-center h-full text-gray-500">
+                        <i class="fas fa-spinner fa-spin text-xl"></i>
+                    </div>
+                </div>
             </div>
 
             <!-- Chat Panel -->
-            <div
-              class="flex-1 bg-gray-900 rounded-2xl overflow-hidden flex flex-col shadow-lg border border-gray-700 min-w-0">
-              <!-- Empty State -->
-              <div id="waChatEmpty" class="flex-1 flex items-center justify-center">
-                <div class="text-center text-gray-500">
-                  <i class="fab fa-whatsapp text-6xl text-green-500 opacity-20 mb-4 block"></i>
-                  <p class="font-medium">Select a conversation</p>
-                  <p class="text-sm mt-1">Incoming messages appear automatically</p>
+            <div class="wa-inbox-chat">
+                <!-- Empty State -->
+                <div id="waChatEmpty" class="flex-1 flex flex-col items-center justify-center gap-3 text-center px-6">
+                    <div class="w-20 h-20 rounded-full flex items-center justify-center"
+                        style="background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.2)">
+                        <i class="fab fa-whatsapp text-4xl" style="color:rgba(34,197,94,0.4)"></i>
+                    </div>
+                    <p class="font-semibold text-gray-300 text-sm">Select a conversation</p>
+                    <p class="text-xs text-gray-500 max-w-xs">Incoming customer messages appear here automatically</p>
                 </div>
-              </div>
-              <!-- Chat Content -->
-              <div id="waChatPanel" class="hidden flex flex-col h-full">
-                <!-- Header -->
-                <div class="px-4 py-3 border-b border-gray-700 bg-gray-800 flex items-center gap-3 flex-shrink-0">
-                  <div
-                    class="w-9 h-9 rounded-full bg-green-700 flex items-center justify-center text-white font-bold text-sm">
-                    C</div>
-                  <div>
-                    <p id="waChatContactName" class="font-semibold text-white text-sm">Customer</p>
-                    <p id="waChatContactPhone" class="text-xs text-gray-400">+91…</p>
-                  </div>
+
+                <!-- Chat Content -->
+                <div id="waChatPanel" class="hidden flex flex-col h-full">
+                    <!-- Header -->
+                    <div class="wa-chat-header">
+                        <div class="wa-chat-avatar" id="waChatAvatarLetter">C</div>
+                        <div class="flex-1 min-w-0">
+                            <p id="waChatContactName" class="font-semibold text-white text-sm truncate">Customer</p>
+                            <p id="waChatContactPhone" class="text-xs text-gray-400">+91&hellip;</p>
+                        </div>
+                        <div id="waChatWindowChip" class="wa-window-chip wa-window-chip--open">
+                            <span
+                                style="width:6px;height:6px;border-radius:50%;background:#4ade80;display:inline-block"></span>
+                            <span class="text-xs">Window Open</span>
+                        </div>
+                    </div>
+
+                    <!-- 24h Banner -->
+                    <div id="waChatWindowBanner"
+                        class="hidden mx-4 mt-3 px-4 py-2.5 flex-shrink-0 flex items-center gap-2"
+                        style="background:rgba(234,179,8,0.1);border:1px solid rgba(234,179,8,0.3);border-radius:12px;color:#fde047">
+                        <i class="fas fa-clock text-xs"></i>
+                        <span class="text-xs">24-hour window expired &mdash; send a <strong>Template Message</strong> to
+                            restart.</span>
+                    </div>
+
+                    <!-- Messages -->
+                    <div id="waChatMessages" class="flex-1 overflow-y-auto p-4 wa-messages-bg"></div>
+
+                    <!-- Template Panel -->
+                    <div id="waSendTemplatePanel" class="hidden mx-4 mb-3 flex-shrink-0 wa-template-panel">
+                        <div class="flex items-center justify-between mb-3">
+                            <p class="text-xs font-semibold text-white flex items-center gap-2">
+                                <i class="fas fa-layer-group text-green-400"></i> Send Template
+                            </p>
+                            <button onclick="document.getElementById('waSendTemplatePanel').classList.add('hidden')"
+                                style="color:#6b7280;font-size:12px;background:none;border:none;cursor:pointer">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <select id="waSendTplSelect" class="wa-input w-full mb-3">
+                            <option value="">&mdash; Select Template &mdash;</option>
+                        </select>
+                        <div id="waSendTplVarsContainer" class="space-y-2 mb-3"></div>
+                        <p class="text-xs text-gray-500 italic mb-3 px-1" id="waSendTplPreview">(select a template to
+                            preview)</p>
+                        <button id="waSendTemplateConfirmBtn" class="wa-btn-primary w-full">
+                            <i class="fas fa-paper-plane mr-2"></i>Send Template
+                        </button>
+                    </div>
+
+                    <!-- Input Bar -->
+                    <div class="wa-input-bar flex-shrink-0">
+                        <button id="waChatSendTemplateBtn" title="Send Template Message" class="wa-tpl-toggle-btn">
+                            <i class="fas fa-layer-group text-sm"></i>
+                        </button>
+                        <input id="waChatMsgInput" type="text" placeholder="Type a message..." class="wa-chat-input" />
+                        <button id="waChatSendBtn" class="wa-send-btn">
+                            <i class="fas fa-paper-plane text-sm"></i>
+                        </button>
+                    </div>
                 </div>
-                <!-- 24h Banner -->
-                <div id="waChatWindowBanner"
-                  class="hidden mx-4 mt-3 px-3 py-2 bg-yellow-900/50 text-yellow-300 text-xs rounded-lg border border-yellow-700/50 flex-shrink-0">
-                </div>
-                <!-- Messages -->
-                <div id="waChatMessages" class="flex-1 overflow-y-auto p-4 bg-gray-900/50"></div>
-                <!-- Template Send Panel -->
-                <div id="waSendTemplatePanel"
-                  class="hidden mx-4 mb-2 p-3 bg-gray-800 rounded-xl border border-gray-600 flex-shrink-0">
-                  <p class="text-xs font-semibold text-gray-300 mb-2">Send Template</p>
-                  <select id="waSendTplSelect"
-                    class="w-full bg-gray-700 text-white text-sm rounded-lg px-3 py-2 mb-2 border border-gray-600 focus:border-green-500 focus:outline-none">
-                    <option value="">— Select Template —</option>
-                  </select>
-                  <div id="waSendTplVarsContainer" class="space-y-2 mb-2"></div>
-                  <p class="text-xs text-gray-400 italic mb-2" id="waSendTplPreview">(preview)</p>
-                  <button id="waSendTemplateConfirmBtn"
-                    class="w-full py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg font-medium transition-colors">
-                    Send Template
-                  </button>
-                </div>
-                <!-- Input Bar -->
-                <div class="px-4 py-3 border-t border-gray-700 bg-gray-800 flex items-center gap-2 flex-shrink-0">
-                  <button id="waChatSendTemplateBtn" title="Send Template Message"
-                    class="text-green-400 hover:text-green-300 px-2 py-1.5 rounded-lg hover:bg-green-900/30 transition text-sm flex-shrink-0">
-                    <i class="fas fa-file-alt"></i>
-                  </button>
-                  <input id="waChatMsgInput" type="text" placeholder="Type a message…"
-                    class="flex-1 bg-gray-700 text-white text-sm rounded-xl px-4 py-2 border border-gray-600 focus:border-green-500 focus:outline-none min-w-0" />
-                  <button id="waChatSendBtn"
-                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl text-sm transition-colors font-medium flex-shrink-0">
-                    <i class="fas fa-paper-plane"></i>
-                  </button>
-                </div>
-              </div>
             </div>
-          </div>
         </div>
+    </div>
+
+</section>
+<!-- END WHATSAPP SECTION -->
       </section>
       <!-- END WHATSAPP SECTION -->
 
@@ -3408,36 +3550,268 @@
      WHATSAPP SECTION — inserted before closing body
      ============================================================ -->
 <style>
-  .wa-tab-active {
-    border-bottom: 2px solid #22c55e;
-    color: #22c55e;
-    font-weight: 600;
+  /* ═══════════════════════════════════════════
+     WHATSAPP CRM — MODERN SAAS STYLES
+  ═══════════════════════════════════════════ */
+
+  /* Section wrapper */
+  .wa-section { color: #f9fafb; }
+
+  /* Hero gradient banner */
+  .wa-hero {
+    background: linear-gradient(135deg, #064e3b 0%, #065f46 40%, #047857 100%);
+    border: 1px solid rgba(255,255,255,0.07);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+  }
+  .wa-hero-icon {
+    width: 48px; height: 48px; border-radius: 14px;
+    background: rgba(255,255,255,0.15);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  }
+  .wa-stat-pill {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(255,255,255,0.12);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 999px;
+    padding: 6px 14px;
+  }
+  .wa-stat-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #6b7280;
+    display: inline-block;
+  }
+  .wa-stat-dot.online { background: #4ade80; animation: pulse-green 2s infinite; }
+
+  /* Dark glass cards */
+  .wa-card {
+    background: #1a1f2e;
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+  }
+  .wa-modal {
+    background: #1a1f2e;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px;
+    padding: 28px;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.5);
   }
 
-  .wa-tab-inactive {
-    border-bottom: 2px solid transparent;
-    color: #9ca3af;
+  /* Tabs */
+  .wa-tabs-bar {
+    background: #111827;
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 14px;
+    padding: 4px;
+    display: inline-flex;
+  }
+  .wa-tabs-inner { display: flex; gap: 2px; }
+  .wa-tab {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 18px; border-radius: 10px;
+    font-size: 13px; font-weight: 500;
+    color: #9ca3af; background: transparent;
+    border: none; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .wa-tab:hover { color: #e5e7eb; background: rgba(255,255,255,0.05); }
+  .wa-tab--active {
+    background: linear-gradient(135deg, #065f46, #047857);
+    color: #fff;
+    box-shadow: 0 2px 12px rgba(5,150,105,0.4);
+  }
+  .wa-tab-badge {
+    background: #ef4444; color: #fff;
+    font-size: 10px; font-weight: 700;
+    border-radius: 999px; padding: 1px 6px;
+    min-width: 18px; text-align: center;
   }
 
-  .wa-tab-inactive:hover {
-    color: #d1d5db;
+  /* Form fields */
+  .wa-field-group { display: flex; flex-direction: column; gap: 6px; }
+  .wa-label { font-size: 12px; font-weight: 600; color: #d1d5db; letter-spacing: 0.02em; }
+  .wa-input-wrap { position: relative; }
+  .wa-input-icon {
+    position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+    color: #4b5563; font-size: 12px; pointer-events: none;
   }
+  .wa-input {
+    width: 100%;
+    background: #111827;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    color: #f9fafb;
+    font-size: 13px;
+    padding: 10px 12px 10px 34px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .wa-input:focus {
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16,185,129,0.15);
+  }
+  .wa-input::placeholder { color: #4b5563; }
+  textarea.wa-input { padding-left: 12px; resize: vertical; height: 100px; }
+  select.wa-input { cursor: pointer; }
+
+  /* Buttons */
+  .wa-btn-primary {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 10px 20px; border-radius: 10px;
+    background: linear-gradient(135deg, #059669, #10b981);
+    color: #fff; font-size: 13px; font-weight: 600;
+    border: none; cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 12px rgba(5,150,105,0.3);
+  }
+  .wa-btn-primary:hover {
+    background: linear-gradient(135deg, #047857, #059669);
+    box-shadow: 0 4px 20px rgba(5,150,105,0.5);
+    transform: translateY(-1px);
+  }
+  .wa-btn-primary:disabled { opacity: 0.5; transform: none; cursor: not-allowed; }
+  .wa-btn-secondary {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 10px 18px; border-radius: 10px;
+    background: #1f2937;
+    border: 1px solid rgba(255,255,255,0.08);
+    color: #d1d5db; font-size: 13px; font-weight: 500;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .wa-btn-secondary:hover { background: #374151; color: #fff; }
+  .wa-btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
+  .wa-btn-danger {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 10px 16px; border-radius: 10px;
+    background: transparent; border: 1px solid rgba(239,68,68,0.4);
+    color: #f87171; font-size: 13px; cursor: pointer; transition: all 0.2s;
+  }
+  .wa-btn-danger:hover { background: rgba(239,68,68,0.1); }
+  .wa-icon-btn {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: rgba(255,255,255,0.06); border: none;
+    color: #9ca3af; cursor: pointer; transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .wa-icon-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
+
+  /* Webhook copy box */
+  .wa-copy-box {
+    display: flex; align-items: center; gap: 8px;
+    background: #111827; border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 8px; padding: 8px 10px; cursor: pointer;
+    transition: border-color 0.2s;
+    overflow: hidden;
+  }
+  .wa-copy-box:hover { border-color: rgba(16,185,129,0.4); }
+  .wa-badge-success {
+    background: rgba(16,185,129,0.15); color: #6ee7b7;
+    border: 1px solid rgba(16,185,129,0.2);
+  }
+
+  /* Inbox layout */
+  .wa-inbox-wrap {
+    display: flex; gap: 0;
+    border-radius: 16px; overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.06);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+  }
+  .wa-inbox-sidebar {
+    width: 280px; flex-shrink: 0;
+    background: #111827;
+    display: flex; flex-direction: column;
+    border-right: 1px solid rgba(255,255,255,0.06);
+  }
+  .wa-inbox-sidebar-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    background: #0f172a;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .wa-inbox-chat {
+    flex: 1;
+    background: #0f172a;
+    display: flex; flex-direction: column;
+    min-width: 0;
+  }
+  .wa-chat-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    background: #111827;
+    display: flex; align-items: center; gap: 12px;
+    flex-shrink: 0;
+  }
+  .wa-chat-avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: linear-gradient(135deg, #059669, #0d9488);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 700; font-size: 14px;
+    flex-shrink: 0;
+  }
+  .wa-window-chip {
+    display: flex; align-items: center; gap: 6px;
+    padding: 4px 10px; border-radius: 999px;
+    font-size: 11px; font-weight: 500;
+  }
+  .wa-window-chip--open {
+    background: rgba(34,197,94,0.1); color: #86efac;
+    border: 1px solid rgba(34,197,94,0.2);
+  }
+  .wa-window-chip--closed {
+    background: rgba(107,114,128,0.15); color: #9ca3af;
+    border: 1px solid rgba(107,114,128,0.2);
+  }
+  .wa-messages-bg { background: #0a0f1a; }
+  .wa-template-panel {
+    background: #111827;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px; padding: 14px;
+  }
+  .wa-input-bar {
+    padding: 12px 14px;
+    background: #111827;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .wa-tpl-toggle-btn {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: rgba(16,185,129,0.1);
+    border: 1px solid rgba(16,185,129,0.2);
+    color: #6ee7b7; cursor: pointer; transition: all 0.2s;
+    flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  }
+  .wa-tpl-toggle-btn:hover { background: rgba(16,185,129,0.2); }
+  .wa-chat-input {
+    flex: 1; background: #1f2937;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 999px; color: #f9fafb;
+    font-size: 13px; padding: 9px 16px;
+    outline: none; transition: border-color 0.2s;
+    min-width: 0;
+  }
+  .wa-chat-input:focus { border-color: #10b981; }
+  .wa-chat-input:disabled { opacity: 0.5; }
+  .wa-send-btn {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: linear-gradient(135deg, #059669, #10b981);
+    border: none; color: #fff; cursor: pointer;
+    transition: all 0.2s; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 8px rgba(5,150,105,0.4);
+  }
+  .wa-send-btn:hover { transform: scale(1.08); box-shadow: 0 4px 16px rgba(5,150,105,0.5); }
+  .wa-send-btn:disabled { opacity: 0.4; transform: none; cursor: not-allowed; }
 
   @keyframes pulse-green {
-
-    0%,
-    100% {
-      box-shadow: 0 0 0 0 rgba(34, 197, 94, .5);
-    }
-
-    70% {
-      box-shadow: 0 0 0 8px rgba(34, 197, 94, 0);
-    }
+    0%, 100% { box-shadow: 0 0 0 0 rgba(74,222,128,.5); }
+    70% { box-shadow: 0 0 0 6px rgba(74,222,128,0); }
   }
-
-  .wa-btn-pulse {
-    animation: pulse-green 2s infinite;
-  }
+  .wa-btn-pulse { animation: pulse-green 2s infinite; }
 </style>
 
 </html>
