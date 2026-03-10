@@ -819,3 +819,335 @@ class LeadStatusHistory(db.Model):
             "new_status": self.new_status,
             "created_at": self.created_at.isoformat()
         }
+
+
+# =========================================================
+# WHATSAPP CONFIG (Per Admin — Encrypted Credentials)
+# =========================================================
+class WhatsAppConfig(db.Model):
+    __tablename__ = "whatsapp_configs"
+
+    id = db.Column(db.Integer, primary_key=True)
+    admin_id = db.Column(db.Integer, db.ForeignKey("admins.id"), nullable=False, unique=True, index=True)
+
+    # Encrypted Meta credentials
+    _access_token       = db.Column("access_token", db.Text, nullable=True)
+    phone_number_id     = db.Column(db.String(100), nullable=True)
+    waba_id             = db.Column(db.String(100), nullable=True)  # WhatsApp Business Account ID
+    verify_token        = db.Column(db.String(255), nullable=True)  # Webhook verify token
+
+    # Optional business profile cache
+    business_name       = db.Column(db.String(255), nullable=True)
+    phone_display       = db.Column(db.String(30), nullable=True)   # Human-readable number
+
+    is_active           = db.Column(db.Boolean, default=True)
+    created_at          = db.Column(db.DateTime, default=now)
+    updated_at          = db.Column(db.DateTime, default=now, onupdate=now)
+
+    admin = db.relationship("Admin", backref=db.backref("whatsapp_config", uselist=False))
+
+    def set_token(self, token):
+        from app.utils.security import encrypt_value
+        self._access_token = encrypt_value(token)
+
+    def get_token(self):
+        from app.utils.security import decrypt_value
+        if not self._access_token:
+            return None
+        return decrypt_value(self._access_token)
+
+    def to_dict(self, mask_token=True):
+        token = self.get_token()
+        return {
+            "id": self.id,
+            "admin_id": self.admin_id,
+            "phone_number_id": self.phone_number_id,
+            "waba_id": self.waba_id,
+            "verify_token": self.verify_token,
+            "business_name": self.business_name,
+            "phone_display": self.phone_display,
+            "is_active": self.is_active,
+            "is_connected": bool(token and self.phone_number_id),
+            "access_token_masked": ("***" + token[-6:]) if (token and len(token) > 6 and mask_token) else None,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+# =========================================================
+# WA CONTACT (Customer WhatsApp identity)
+# =========================================================
+class WAContact(db.Model):
+    __tablename__ = "wa_contacts"
+
+    id              = db.Column(db.Integer, primary_key=True)
+    admin_id        = db.Column(db.Integer, db.ForeignKey("admins.id"), nullable=False, index=True)
+
+    phone_number    = db.Column(db.String(30), nullable=False, index=True)  # E.164 format, e.g. 919876543210
+    name            = db.Column(db.String(255), nullable=True)              # From Meta profile or manual
+    profile_name    = db.Column(db.String(255), nullable=True)              # As returned by WhatsApp webhook
+
+    # Optional: link to Lead if exists
+    lead_id         = db.Column(db.Integer, db.ForeignKey("leads.id"), nullable=True, index=True)
+
+    created_at      = db.Column(db.DateTime, default=now)
+    updated_at      = db.Column(db.DateTime, default=now, onupdate=now)
+
+    __table_args__ = (
+        db.UniqueConstraint('admin_id', 'phone_number', name='uq_wacontact_admin_phone'),
+    )
+
+    admin           = db.relationship("Admin", backref=db.backref("wa_contacts", lazy="dynamic"))
+    lead            = db.relationship("Lead", backref=db.backref("wa_contact", uselist=False))
+    conversations   = db.relationship("WAConversation", back_populates="contact", lazy="dynamic")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "admin_id": self.admin_id,
+            "phone_number": self.phone_number,
+            "name": self.name or self.profile_name or self.phone_number,
+            "profile_name": self.profile_name,
+            "lead_id": self.lead_id,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+# =========================================================
+# WA CONVERSATION (Thread per contact per admin)
+# =========================================================
+class WAConversation(db.Model):
+    __tablename__ = "wa_conversations"
+
+    id              = db.Column(db.Integer, primary_key=True)
+    admin_id        = db.Column(db.Integer, db.ForeignKey("admins.id"), nullable=False, index=True)
+    contact_id      = db.Column(db.Integer, db.ForeignKey("wa_contacts.id"), nullable=False, index=True)
+    assigned_agent_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
+
+    # Status: open, pending, closed
+    status          = db.Column(db.String(20), default="open", index=True)
+
+    # Counters & timestamps
+    unread_count        = db.Column(db.Integer, default=0)
+    last_message_at     = db.Column(db.DateTime, nullable=True, index=True)
+    last_customer_msg_at = db.Column(db.DateTime, nullable=True)  # For 24h window check
+
+    created_at      = db.Column(db.DateTime, default=now)
+    updated_at      = db.Column(db.DateTime, default=now, onupdate=now)
+
+    __table_args__ = (
+        db.UniqueConstraint('admin_id', 'contact_id', name='uq_waconv_admin_contact'),
+        db.Index('idx_waconv_admin_status', 'admin_id', 'status'),
+        db.Index('idx_waconv_last_msg', 'admin_id', 'last_message_at'),
+    )
+
+    admin           = db.relationship("Admin", backref=db.backref("wa_conversations", lazy="dynamic"))
+    contact         = db.relationship("WAContact", back_populates="conversations")
+    assigned_agent  = db.relationship("User", backref=db.backref("wa_conversations", lazy="dynamic"))
+    messages        = db.relationship("WAMessage", back_populates="conversation",
+                                      order_by="WAMessage.created_at", lazy="dynamic")
+    lock            = db.relationship("WAConversationLock", back_populates="conversation", uselist=False)
+
+    def is_within_24h_window(self):
+        """Return True if customer last messaged within 24 hours."""
+        if not self.last_customer_msg_at:
+            return False
+        delta = datetime.utcnow() - self.last_customer_msg_at
+        return delta.total_seconds() < 86400  # 24h in seconds
+
+    def to_dict(self, include_last_message=False):
+        d = {
+            "id": self.id,
+            "admin_id": self.admin_id,
+            "contact": self.contact.to_dict() if self.contact else None,
+            "assigned_agent_id": self.assigned_agent_id,
+            "assigned_agent_name": self.assigned_agent.name if self.assigned_agent else None,
+            "status": self.status,
+            "unread_count": self.unread_count,
+            "last_message_at": self.last_message_at.isoformat() if self.last_message_at else None,
+            "within_24h_window": self.is_within_24h_window(),
+            "locked_by": self.lock.agent_id if self.lock else None,
+            "locked_by_name": self.lock.agent.name if (self.lock and self.lock.agent) else None,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+        if include_last_message:
+            last_msg = self.messages.order_by(None).order_by(WAMessage.created_at.desc()).first()
+            d["last_message"] = last_msg.to_dict() if last_msg else None
+        return d
+
+
+# =========================================================
+# WA MESSAGE
+# =========================================================
+class WAMessage(db.Model):
+    __tablename__ = "wa_messages"
+
+    id              = db.Column(db.Integer, primary_key=True)
+    conversation_id = db.Column(db.Integer, db.ForeignKey("wa_conversations.id"), nullable=False, index=True)
+    admin_id        = db.Column(db.Integer, db.ForeignKey("admins.id"), nullable=False, index=True)
+
+    # Meta's message ID (wamid.xxx)
+    whatsapp_msg_id = db.Column(db.String(255), nullable=True, unique=True, index=True)
+
+    # Direction: customer → agent or agent → customer
+    sender_type     = db.Column(db.String(20), nullable=False)   # 'customer', 'agent', 'system'
+    sender_id       = db.Column(db.Integer, nullable=True)        # user.id if agent
+
+    # Content
+    message_type    = db.Column(db.String(30), default="text")    # text, image, video, audio, document, template, location, sticker
+    message_text    = db.Column(db.Text, nullable=True)
+    media_url       = db.Column(db.Text, nullable=True)           # Resolved public URL
+    media_id        = db.Column(db.String(255), nullable=True)    # Meta media ID
+    media_mime_type = db.Column(db.String(100), nullable=True)
+    media_filename  = db.Column(db.String(255), nullable=True)
+    caption         = db.Column(db.Text, nullable=True)
+
+    # Template info (when message_type = 'template')
+    template_name   = db.Column(db.String(255), nullable=True)
+
+    # Context (reply-to)
+    reply_to_wamid  = db.Column(db.String(255), nullable=True)
+
+    # Delivery status (for outbound messages)
+    # sent, delivered, read, failed
+    status          = db.Column(db.String(20), default="sent")
+    error_code      = db.Column(db.String(50), nullable=True)
+    error_message   = db.Column(db.Text, nullable=True)
+
+    created_at      = db.Column(db.DateTime, default=now, index=True)
+
+    __table_args__ = (
+        db.Index('idx_wamsg_conv_created', 'conversation_id', 'created_at'),
+    )
+
+    conversation    = db.relationship("WAConversation", back_populates="messages")
+    status_logs     = db.relationship("WAMessageStatusLog", back_populates="message", lazy="dynamic")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "conversation_id": self.conversation_id,
+            "whatsapp_msg_id": self.whatsapp_msg_id,
+            "sender_type": self.sender_type,
+            "sender_id": self.sender_id,
+            "message_type": self.message_type,
+            "message_text": self.message_text,
+            "media_url": self.media_url,
+            "media_id": self.media_id,
+            "media_mime_type": self.media_mime_type,
+            "media_filename": self.media_filename,
+            "caption": self.caption,
+            "template_name": self.template_name,
+            "reply_to_wamid": self.reply_to_wamid,
+            "status": self.status,
+            "error_code": self.error_code,
+            "error_message": self.error_message,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+# =========================================================
+# WA MESSAGE STATUS LOG (Delivery receipts)
+# =========================================================
+class WAMessageStatusLog(db.Model):
+    __tablename__ = "wa_message_status_logs"
+
+    id          = db.Column(db.Integer, primary_key=True)
+    message_id  = db.Column(db.Integer, db.ForeignKey("wa_messages.id"), nullable=False, index=True)
+    status      = db.Column(db.String(20), nullable=False)   # sent, delivered, read, failed
+    timestamp   = db.Column(db.DateTime, default=now)
+    raw_payload = db.Column(db.Text, nullable=True)          # Store raw Meta status object
+
+    message     = db.relationship("WAMessage", back_populates="status_logs")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "message_id": self.message_id,
+            "status": self.status,
+            "timestamp": self.timestamp.isoformat() if self.timestamp else None,
+        }
+
+
+# =========================================================
+# WA TEMPLATE (Approved Meta templates cache)
+# =========================================================
+class WATemplate(db.Model):
+    __tablename__ = "wa_templates"
+
+    id              = db.Column(db.Integer, primary_key=True)
+    admin_id        = db.Column(db.Integer, db.ForeignKey("admins.id"), nullable=False, index=True)
+
+    template_id     = db.Column(db.String(100), nullable=True)    # Meta template ID
+    name            = db.Column(db.String(255), nullable=False)
+    language        = db.Column(db.String(20), default="en")
+    category        = db.Column(db.String(50), nullable=True)      # MARKETING, UTILITY, AUTHENTICATION
+    status          = db.Column(db.String(30), default="APPROVED") # APPROVED, PENDING, REJECTED
+
+    # Parsed structure as JSON for quick re-use
+    components      = db.Column(JSONAuto())                        # Header, Body, Footer, Buttons
+    header_type     = db.Column(db.String(20), nullable=True)      # TEXT, IMAGE, VIDEO, DOCUMENT, NONE
+    body_text       = db.Column(db.Text, nullable=True)            # Body text with {{1}} placeholders
+    variable_count  = db.Column(db.Integer, default=0)            # # of {{n}} variables in body
+
+    created_at      = db.Column(db.DateTime, default=now)
+    synced_at       = db.Column(db.DateTime, default=now)         # Last sync from Meta
+
+    __table_args__ = (
+        db.UniqueConstraint('admin_id', 'name', 'language', name='uq_watemplate_admin_name_lang'),
+    )
+
+    admin = db.relationship("Admin", backref=db.backref("wa_templates", lazy="dynamic"))
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "admin_id": self.admin_id,
+            "template_id": self.template_id,
+            "name": self.name,
+            "language": self.language,
+            "category": self.category,
+            "status": self.status,
+            "header_type": self.header_type,
+            "body_text": self.body_text,
+            "variable_count": self.variable_count,
+            "components": self.components,
+            "synced_at": self.synced_at.isoformat() if self.synced_at else None,
+        }
+
+
+# =========================================================
+# WA CONVERSATION LOCK (Prevent simultaneous agent replies)
+# =========================================================
+class WAConversationLock(db.Model):
+    __tablename__ = "wa_conversation_locks"
+
+    id              = db.Column(db.Integer, primary_key=True)
+    conversation_id = db.Column(db.Integer, db.ForeignKey("wa_conversations.id"), nullable=False, unique=True, index=True)
+    # Stored as plain int — no FK so both admin and user IDs are valid holders
+    agent_id        = db.Column(db.Integer, nullable=False)
+    locked_at       = db.Column(db.DateTime, default=now)
+    expires_at      = db.Column(db.DateTime, nullable=True)  # Auto-expire after e.g. 15 min of inactivity
+
+    conversation    = db.relationship("WAConversation", back_populates="lock")
+
+    @property
+    def agent(self):
+        """Soft-link to User — may return None for admin lock holders."""
+        return db.session.get(User, self.agent_id)
+
+    def is_expired(self):
+        if not self.expires_at:
+            return False
+        return datetime.utcnow() > self.expires_at
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "conversation_id": self.conversation_id,
+            "agent_id": self.agent_id,
+            "agent_name": self.agent.name if self.agent else None,
+            "locked_at": self.locked_at.isoformat() if self.locked_at else None,
+            "expires_at": self.expires_at.isoformat() if self.expires_at else None,
+            "is_expired": self.is_expired(),
+        }

@@ -1,0 +1,231 @@
+# app/services/whatsapp_service.py
+"""
+BrandmoService — Wrapper around Brandmo WhatsApp Cloud API.
+Base URL: https://crmpi.brandmo.in/api/meta
+Version:  v19.0
+"""
+
+import requests
+import re
+from datetime import datetime
+from flask import current_app
+
+
+class BrandmoService:
+    """All calls go through this class so we have one place to change if the API changes."""
+
+    def __init__(self, config):
+        """
+        config: WhatsAppConfig model instance.
+        Resolves base_url and version from Flask app config.
+        """
+        self.config = config
+        try:
+            base_url = current_app.config.get("BRANDMO_BASE_URL", "https://crmpi.brandmo.in/api/meta")
+            version  = current_app.config.get("BRANDMO_API_VERSION", "v19.0")
+        except RuntimeError:
+            # Outside app context — use defaults
+            base_url = "https://crmpi.brandmo.in/api/meta"
+            version  = "v19.0"
+
+        self.base      = f"{base_url}/{version}"
+        self.token     = config.get_token()
+        self.phone_id  = config.phone_number_id
+        self.waba_id   = config.waba_id
+
+    def _headers(self):
+        return {
+            "Authorization": f"Bearer {self.token}",
+            "Content-Type":  "application/json",
+        }
+
+    def _msg_url(self):
+        """Messages endpoint."""
+        return f"{self.base}/{self.phone_id}/messages"
+
+    # ------------------------------------------------------------------
+    # SEND TEXT MESSAGE (session window)
+    # ------------------------------------------------------------------
+    def send_text(self, phone: str, text: str) -> dict:
+        payload = {
+            "messaging_product": "whatsapp",
+            "recipient_type":    "individual",
+            "to":                phone,
+            "type":              "text",
+            "text":              {"body": text},
+        }
+        r = requests.post(self._msg_url(), json=payload, headers=self._headers(), timeout=20)
+        r.raise_for_status()
+        return r.json()
+
+    # ------------------------------------------------------------------
+    # SEND TEMPLATE MESSAGE
+    # ------------------------------------------------------------------
+    def send_template(self, phone: str, template_name: str, language: str,
+                      parameters: list) -> dict:
+        """
+        parameters: list of str values for {{1}}, {{2}}, ... body variables.
+        Builds a standard body-parameter template payload.
+        """
+        components = []
+        if parameters:
+            components.append({
+                "type": "body",
+                "parameters": [{"type": "text", "text": p} for p in parameters],
+            })
+
+        payload = {
+            "messaging_product": "whatsapp",
+            "recipient_type":    "individual",
+            "to":                phone,
+            "type":              "template",
+            "template": {
+                "language": {"policy": "deterministic", "code": language},
+                "name":     template_name,
+                "components": components,
+            },
+        }
+        r = requests.post(self._msg_url(), json=payload, headers=self._headers(), timeout=20)
+        r.raise_for_status()
+        return r.json()
+
+    # ------------------------------------------------------------------
+    # SYNC TEMPLATES FROM BRANDMO → DB
+    # ------------------------------------------------------------------
+    def sync_templates(self) -> int:
+        """
+        Fetch all approved templates from Brandmo, upsert into wa_templates.
+        Returns count of templates synced.
+        """
+        from app.models import db, WATemplate
+
+        url = f"{self.base}/{self.waba_id}/message_templates"
+        params = {"limit": 200}
+        templates_data = []
+        count = 0
+
+        # Paginate through all templates
+        while url:
+            r = requests.get(url, headers=self._headers(), params=params, timeout=20)
+            r.raise_for_status()
+            data = r.json()
+
+            templates_data.extend(data.get("data", []))
+            paging = data.get("paging", {})
+            next_url = paging.get("next")
+            # Stop if next page url is same (avoid infinite loop) or absent
+            url = next_url if next_url and next_url != url else None
+            params = {}  # next URL already includes params
+
+        for t in templates_data:
+            name       = t.get("name")
+            language   = t.get("language", "en")
+            category   = t.get("category")
+            status     = t.get("status", "APPROVED")
+            template_id = t.get("id")
+            components  = t.get("components", [])
+
+            if not name:
+                continue
+
+            # Parse body text and variable count
+            body_text      = None
+            variable_count = 0
+            header_type    = None
+
+            for comp in components:
+                comp_type = comp.get("type", "").upper()
+                if comp_type == "BODY":
+                    body_text = comp.get("text", "")
+                    variable_count = len(re.findall(r"\{\{\d+\}\}", body_text or ""))
+                elif comp_type == "HEADER":
+                    header_type = comp.get("format", "TEXT").upper()
+
+            # Upsert (admin_id + name + language must be unique)
+            existing = WATemplate.query.filter_by(
+                admin_id=self.config.admin_id,
+                name=name,
+                language=language,
+            ).first()
+
+            now = datetime.utcnow()
+            if existing:
+                existing.template_id    = template_id
+                existing.category       = category
+                existing.status         = status
+                existing.components     = components
+                existing.header_type    = header_type
+                existing.body_text      = body_text
+                existing.variable_count = variable_count
+                existing.synced_at      = now
+            else:
+                tmpl = WATemplate(
+                    admin_id       = self.config.admin_id,
+                    template_id    = template_id,
+                    name           = name,
+                    language       = language,
+                    category       = category,
+                    status         = status,
+                    components     = components,
+                    header_type    = header_type,
+                    body_text      = body_text,
+                    variable_count = variable_count,
+                    synced_at      = now,
+                )
+                db.session.add(tmpl)
+            count += 1
+
+        db.session.commit()
+        return count
+
+    # ------------------------------------------------------------------
+    # CREATE TEMPLATE VIA BRANDMO API
+    # ------------------------------------------------------------------
+    def create_template(self, name: str, category: str, language: str,
+                        components: list) -> dict:
+        """
+        Submit a new template to Brandmo/Meta for approval.
+        components: list of component dicts (HEADER, BODY, FOOTER, BUTTONS).
+        """
+        url = f"{self.base}/{self.waba_id}/message_templates"
+        payload = {
+            "name":       name,
+            "category":   category.upper(),
+            "language":   language,
+            "components": components,
+        }
+        r = requests.post(url, json=payload, headers=self._headers(), timeout=20)
+        r.raise_for_status()
+        return r.json()
+
+    # ------------------------------------------------------------------
+    # DELETE TEMPLATE VIA BRANDMO API
+    # ------------------------------------------------------------------
+    def delete_template(self, template_name: str) -> dict:
+        url = f"{self.base}/{self.waba_id}/message_templates"
+        params = {"name": template_name}
+        r = requests.delete(url, headers=self._headers(), params=params, timeout=20)
+        r.raise_for_status()
+        return r.json()
+
+
+# ------------------------------------------------------------------
+# GLOBAL SCHEDULED SYNC TASK
+# ------------------------------------------------------------------
+def sync_all_wa_templates(app):
+    """
+    APScheduler job: sync templates for every admin that has WhatsApp configured.
+    Called from app/__init__.py on a schedule.
+    """
+    with app.app_context():
+        from app.models import WhatsAppConfig
+        configs = WhatsAppConfig.query.filter_by(is_active=True).all()
+        for cfg in configs:
+            try:
+                svc = BrandmoService(cfg)
+                if not svc.token or not svc.waba_id:
+                    continue
+                n = svc.sync_templates()
+                print(f"[WA Sync] Admin {cfg.admin_id}: synced {n} templates")
+            except Exception as e:
+                print(f"[WA Sync] Admin {cfg.admin_id} error: {e}")

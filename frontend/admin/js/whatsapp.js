@@ -1,0 +1,702 @@
+/* frontend/admin/js/whatsapp.js
+   WhatsApp Template Messaging Manager
+   Handles: Settings, Template Management, Inbox (Conversations + Chat)
+*/
+
+class WhatsAppManager {
+    constructor() {
+        this._eventsBound = false;   // guard for event listeners (bind once)
+        this._initialized = false;   // guard for first-time load
+        this.conversations = [];
+        this.activeConvId = null;
+        this.templates = [];
+        this.config = null;
+        this.pollInterval = null;
+    }
+
+    /* ─────────────────────────────────────────
+       INIT
+    ───────────────────────────────────────── */
+    init() {
+        if (!this._eventsBound) {
+            this._eventsBound = true;
+            this._bindTabs();
+            this._bindConfigForm();
+            this._bindTemplateActions();
+            this._bindInboxActions();
+            this._bindCreateTemplateModal();
+        }
+
+        // Always reload config/status when user navigates to this section
+        this.loadConfig();
+    }
+
+    /* ─────────────────────────────────────────
+       TAB SWITCHING
+    ───────────────────────────────────────── */
+    _bindTabs() {
+        const tabs = ['Settings', 'Templates', 'Inbox'];
+        tabs.forEach(tab => {
+            const btn = document.getElementById(`waTab${tab}`);
+            if (btn) {
+                btn.addEventListener('click', () => this._switchTab(tab.toLowerCase()));
+            }
+        });
+    }
+
+    _switchTab(tab) {
+        ['settings', 'templates', 'inbox'].forEach(t => {
+            const pane = document.getElementById(`waPane${t.charAt(0).toUpperCase() + t.slice(1)}`);
+            const btn = document.getElementById(`waTab${t.charAt(0).toUpperCase() + t.slice(1)}`);
+            if (pane) pane.classList.add('hidden');
+            if (btn) { btn.classList.remove('wa-tab-active'); btn.classList.add('wa-tab-inactive'); }
+        });
+
+        const activePane = document.getElementById(`waPane${tab.charAt(0).toUpperCase() + tab.slice(1)}`);
+        const activeBtn = document.getElementById(`waTab${tab.charAt(0).toUpperCase() + tab.slice(1)}`);
+        if (activePane) activePane.classList.remove('hidden');
+        if (activeBtn) { activeBtn.classList.add('wa-tab-active'); activeBtn.classList.remove('wa-tab-inactive'); }
+
+        if (tab === 'templates') this.loadTemplates();
+        if (tab === 'inbox') this.loadInbox();
+    }
+
+    /* ─────────────────────────────────────────
+       SETTINGS TAB
+    ───────────────────────────────────────── */
+    async loadConfig() {
+        try {
+            const res = await this._api('GET', '/api/whatsapp/config');
+            const data = await res.json();
+            this.config = data.config;
+            this._renderConfigStatus(data.config);
+        } catch (e) {
+            console.error('WA config load error', e);
+        }
+    }
+
+    _renderConfigStatus(cfg) {
+        const statusBadge = document.getElementById('waConnectionStatus');
+        const phoneEl = document.getElementById('waDisplayPhone');
+        const wabaEl = document.getElementById('waDisplayWaba');
+        if (!statusBadge) return;
+
+        if (cfg && cfg.is_connected) {
+            statusBadge.textContent = '✅ Connected';
+            statusBadge.className = 'text-green-400 font-semibold';
+            if (phoneEl) phoneEl.textContent = cfg.phone_number_id || '—';
+            if (wabaEl) wabaEl.textContent = cfg.waba_id || '—';
+        } else {
+            statusBadge.textContent = '⚠️ Not Connected';
+            statusBadge.className = 'text-yellow-400 font-semibold';
+            if (phoneEl) phoneEl.textContent = '—';
+            if (wabaEl) wabaEl.textContent = '—';
+        }
+    }
+
+    _bindConfigForm() {
+        const form = document.getElementById('waConfigForm');
+        if (!form) return;
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await this.saveConfig();
+        });
+
+        const disconnectBtn = document.getElementById('waDisconnectBtn');
+        if (disconnectBtn) {
+            disconnectBtn.addEventListener('click', () => this.disconnectWA());
+        }
+    }
+
+    async saveConfig() {
+        const token = document.getElementById('waAccessToken')?.value?.trim();
+        const phoneId = document.getElementById('waPhoneNumberId')?.value?.trim();
+        const wabaId = document.getElementById('waWabaId')?.value?.trim();
+
+        if (!token || !phoneId || !wabaId) {
+            this._toast('Please fill in all required fields.', 'error');
+            return;
+        }
+
+        const btn = document.getElementById('waSaveConfigBtn');
+        if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+
+        try {
+            const res = await this._api('POST', '/api/whatsapp/config', {
+                access_token: token, phone_number_id: phoneId, waba_id: wabaId
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Save failed');
+            this.config = data.config;
+            this._renderConfigStatus(data.config);
+            this._toast('WhatsApp connected successfully! 🎉', 'success');
+
+            // Clear token field for security
+            const tokenEl = document.getElementById('waAccessToken');
+            if (tokenEl) tokenEl.value = '';
+        } catch (e) {
+            this._toast(e.message, 'error');
+        } finally {
+            if (btn) { btn.disabled = false; btn.textContent = 'Save & Connect'; }
+        }
+    }
+
+    async disconnectWA() {
+        if (!confirm('Disconnect WhatsApp? This will stop all messaging.')) return;
+        try {
+            await this._api('DELETE', '/api/whatsapp/config');
+            this.config = null;
+            this._renderConfigStatus(null);
+            this._toast('WhatsApp disconnected.', 'info');
+        } catch (e) {
+            this._toast('Failed to disconnect.', 'error');
+        }
+    }
+
+    /* ─────────────────────────────────────────
+       TEMPLATES TAB
+    ───────────────────────────────────────── */
+    _bindTemplateActions() {
+        const syncBtn = document.getElementById('waSyncTemplatesBtn');
+        if (syncBtn) syncBtn.addEventListener('click', () => this.syncTemplates());
+
+        const createBtn = document.getElementById('waCreateTemplateBtn');
+        if (createBtn) createBtn.addEventListener('click', () => this._showCreateModal());
+    }
+
+    async loadTemplates(statusFilter = '') {
+        const tbody = document.getElementById('waTemplatesTableBody');
+        if (!tbody) return;
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-gray-400"><i class="fas fa-spinner fa-spin mr-2"></i>Loading templates…</td></tr>';
+
+        try {
+            const params = statusFilter ? `?status=${statusFilter}` : '';
+            const res = await this._api('GET', `/api/whatsapp/templates${params}`);
+            const data = await res.json();
+            this.templates = data.templates || [];
+            this._renderTemplatesTable(this.templates);
+        } catch (e) {
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-red-400">${e.message}</td></tr>`;
+        }
+    }
+
+    _renderTemplatesTable(templates) {
+        const tbody = document.getElementById('waTemplatesTableBody');
+        if (!tbody) return;
+
+        if (!templates.length) {
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center py-12 text-gray-400">
+                <i class="fab fa-whatsapp text-4xl mb-3 block text-green-500 opacity-30"></i>
+                No templates found. Click <strong>Sync</strong> to fetch from Brandmo.
+            </td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = templates.map(t => {
+            const statusColors = {
+                APPROVED: 'bg-green-900 text-green-300',
+                PENDING: 'bg-yellow-900 text-yellow-300',
+                REJECTED: 'bg-red-900 text-red-300',
+            };
+            const badge = statusColors[t.status] || 'bg-gray-700 text-gray-300';
+            const bodyPreview = (t.body_text || '').substring(0, 80) + (t.body_text?.length > 80 ? '…' : '');
+
+            return `<tr class="border-b border-gray-700 hover:bg-gray-800 transition-colors">
+                <td class="px-4 py-3 font-mono text-sm text-green-300">${this._esc(t.name)}</td>
+                <td class="px-4 py-3">
+                    <span class="px-2 py-0.5 rounded text-xs font-medium ${badge}">${t.status}</span>
+                </td>
+                <td class="px-4 py-3 text-xs text-gray-400 uppercase">${t.category || '—'}</td>
+                <td class="px-4 py-3 text-xs text-gray-300">${this._esc(t.language)}</td>
+                <td class="px-4 py-3 text-sm text-gray-300 max-w-xs truncate" title="${this._esc(t.body_text || '')}">${this._esc(bodyPreview)}</td>
+                <td class="px-4 py-3 text-xs text-gray-400">${t.variable_count} var(s)</td>
+                <td class="px-4 py-3">
+                    <button onclick="window.whatsappManager.deleteTemplate(${t.id}, '${this._esc(t.name)}')"
+                        class="text-red-400 hover:text-red-300 text-xs px-2 py-1 rounded hover:bg-red-900/30 transition">
+                        <i class="fas fa-trash mr-1"></i>Delete
+                    </button>
+                </td>
+            </tr>`;
+        }).join('');
+    }
+
+    async syncTemplates() {
+        const btn = document.getElementById('waSyncTemplatesBtn');
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Syncing…'; }
+
+        try {
+            const res = await this._api('POST', '/api/whatsapp/templates/sync');
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Sync failed');
+            this._toast(`✅ Synced ${data.synced} templates`, 'success');
+            await this.loadTemplates();
+        } catch (e) {
+            this._toast(e.message, 'error');
+        } finally {
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sync mr-1"></i>Sync from Brandmo'; }
+        }
+    }
+
+    async deleteTemplate(id, name) {
+        if (!confirm(`Delete template "${name}"? This will also remove it from Meta.`)) return;
+        try {
+            const res = await this._api('DELETE', `/api/whatsapp/templates/${id}`);
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Delete failed');
+            this._toast('Template deleted.', 'success');
+            this.loadTemplates();
+        } catch (e) {
+            this._toast(e.message, 'error');
+        }
+    }
+
+    /* ─────────────────────────────────────────
+       CREATE TEMPLATE MODAL
+    ───────────────────────────────────────── */
+    _bindCreateTemplateModal() {
+        const closeBtn = document.getElementById('waCreateModalClose');
+        if (closeBtn) closeBtn.addEventListener('click', () => this._hideCreateModal());
+
+        const form = document.getElementById('waCreateTemplateForm');
+        if (form) form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await this.submitCreateTemplate();
+        });
+
+        const bodyInput = document.getElementById('waTplBody');
+        if (bodyInput) {
+            bodyInput.addEventListener('input', () => {
+                const varCount = (bodyInput.value.match(/\{\{\d+\}\}/g) || []).length;
+                const counter = document.getElementById('waTplVarCount');
+                if (counter) counter.textContent = `${varCount} variable(s) detected`;
+            });
+        }
+    }
+
+    _showCreateModal() {
+        const modal = document.getElementById('waCreateTemplateModal');
+        if (modal) modal.classList.remove('hidden');
+    }
+
+    _hideCreateModal() {
+        const modal = document.getElementById('waCreateTemplateModal');
+        if (modal) modal.classList.add('hidden');
+        const form = document.getElementById('waCreateTemplateForm');
+        if (form) form.reset();
+    }
+
+    async submitCreateTemplate() {
+        const name = document.getElementById('waTplName')?.value?.trim();
+        const category = document.getElementById('waTplCategory')?.value;
+        const language = document.getElementById('waTplLanguage')?.value;
+        const header = document.getElementById('waTplHeader')?.value?.trim();
+        const body = document.getElementById('waTplBody')?.value?.trim();
+        const footer = document.getElementById('waTplFooter')?.value?.trim();
+
+        if (!name || !body) { this._toast('Template name and body are required.', 'error'); return; }
+
+        const submitBtn = document.getElementById('waCreateSubmitBtn');
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Submitting…'; }
+
+        try {
+            const res = await this._api('POST', '/api/whatsapp/templates/create', {
+                name, category, language, header_text: header, body_text: body, footer_text: footer
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Create failed');
+            this._toast('Template submitted for Meta review! It may take up to 24 hours.', 'success');
+            this._hideCreateModal();
+            this.loadTemplates();
+        } catch (e) {
+            this._toast(e.message, 'error');
+        } finally {
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Submit Template'; }
+        }
+    }
+
+    /* ─────────────────────────────────────────
+       INBOX TAB — CONVERSATION LIST
+    ───────────────────────────────────────── */
+    _bindInboxActions() {
+        const refreshBtn = document.getElementById('waRefreshInboxBtn');
+        if (refreshBtn) refreshBtn.addEventListener('click', () => this.loadInbox());
+
+        const sendBtn = document.getElementById('waChatSendBtn');
+        if (sendBtn) sendBtn.addEventListener('click', () => this._sendChatMessage());
+
+        const msgInput = document.getElementById('waChatMsgInput');
+        if (msgInput) {
+            msgInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this._sendChatMessage(); }
+            });
+        }
+
+        const sendTplBtn = document.getElementById('waChatSendTemplateBtn');
+        if (sendTplBtn) sendTplBtn.addEventListener('click', () => this._openSendTemplatePanel());
+    }
+
+    async loadInbox() {
+        const listEl = document.getElementById('waConversationList');
+        if (!listEl) return;
+        listEl.innerHTML = '<div class="text-center py-6 text-gray-400"><i class="fas fa-spinner fa-spin"></i></div>';
+
+        try {
+            const res = await this._api('GET', '/api/whatsapp/conversations?status=all&per_page=50');
+            const data = await res.json();
+            this.conversations = data.conversations || [];
+            this._renderConversationList(this.conversations);
+        } catch (e) {
+            listEl.innerHTML = `<div class="p-4 text-red-400">${e.message}</div>`;
+        }
+    }
+
+    _renderConversationList(convs) {
+        const listEl = document.getElementById('waConversationList');
+        if (!listEl) return;
+
+        if (!convs.length) {
+            listEl.innerHTML = `<div class="text-center py-12 text-gray-400">
+                <i class="fab fa-whatsapp text-4xl mb-3 block text-green-500 opacity-30"></i>
+                No conversations yet. Incoming messages will appear here.
+            </div>`;
+            return;
+        }
+
+        listEl.innerHTML = convs.map(c => {
+            const contact = c.contact || {};
+            const name = contact.name || contact.phone_number || 'Unknown';
+            const phone = contact.phone_number || '';
+            const lastMsg = c.last_message ? (c.last_message.message_text || c.last_message.message_type || '') : '';
+            const lastAt = c.last_message_at ? this._timeAgo(c.last_message_at) : '';
+            const unread = c.unread_count || 0;
+            const windowOk = c.within_24h_window;
+            const isActive = this.activeConvId === c.id;
+
+            return `<div onclick="window.whatsappManager.openConversation(${c.id})"
+                class="flex items-center gap-3 px-4 py-3 cursor-pointer border-b border-gray-700 hover:bg-gray-800 transition-colors ${isActive ? 'bg-gray-800' : ''}"
+                data-conv-id="${c.id}">
+                <div class="relative flex-shrink-0">
+                    <div class="w-10 h-10 rounded-full bg-green-700 flex items-center justify-center text-white font-bold text-sm">
+                        ${name.charAt(0).toUpperCase()}
+                    </div>
+                    <span class="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-gray-900 ${windowOk ? 'bg-green-400' : 'bg-gray-500'}"></span>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex justify-between items-center">
+                        <p class="font-medium text-sm text-white truncate">${this._esc(name)}</p>
+                        <span class="text-xs text-gray-500 flex-shrink-0">${lastAt}</span>
+                    </div>
+                    <p class="text-xs text-gray-400 truncate">${this._esc(lastMsg.substring(0, 50))}</p>
+                </div>
+                ${unread ? `<span class="bg-green-500 text-white text-xs rounded-full px-1.5 py-0.5 flex-shrink-0">${unread}</span>` : ''}
+            </div>`;
+        }).join('');
+    }
+
+    async openConversation(convId) {
+        this.activeConvId = convId;
+
+        // Highlight active conversation
+        document.querySelectorAll('[data-conv-id]').forEach(el => {
+            el.classList.toggle('bg-gray-800', parseInt(el.dataset.convId) === convId);
+        });
+
+        const chatPanel = document.getElementById('waChatPanel');
+        const emptyState = document.getElementById('waChatEmpty');
+        if (chatPanel) chatPanel.classList.remove('hidden');
+        if (emptyState) emptyState.classList.add('hidden');
+
+        try {
+            const res = await this._api('GET', `/api/whatsapp/conversations/${convId}/messages?per_page=100`);
+            const data = await res.json();
+
+            const conv = data.conversation || {};
+            const contact = conv.contact || {};
+            const msgs = data.messages || [];
+
+            // Set header
+            const headerName = document.getElementById('waChatContactName');
+            const headerPhone = document.getElementById('waChatContactPhone');
+            if (headerName) headerName.textContent = contact.name || contact.phone_number || 'Customer';
+            if (headerPhone) headerPhone.textContent = contact.phone_number || '';
+
+            // Check 24h window
+            const windowRes = await this._api('GET', `/api/whatsapp/conversations/${convId}/window`);
+            const windowData = await windowRes.json();
+            this._updateChatWindowUI(windowData);
+
+            // Render messages
+            this._renderMessages(msgs);
+
+            // Reload the conversation item to reset unread badge
+            this._updateConvItemUnread(convId, 0);
+        } catch (e) {
+            console.error('Open conversation error', e);
+        }
+    }
+
+    _updateConvItemUnread(convId, count) {
+        const item = document.querySelector(`[data-conv-id="${convId}"]`);
+        if (!item) return;
+        const badge = item.querySelector('.bg-green-500');
+        if (badge) badge.remove();
+    }
+
+    _updateChatWindowUI(windowData) {
+        const withinWindow = windowData.within_window;
+        const windowBanner = document.getElementById('waChatWindowBanner');
+        const textInput = document.getElementById('waChatMsgInput');
+        const sendBtn = document.getElementById('waChatSendBtn');
+        const tplBtn = document.getElementById('waChatSendTemplateBtn');
+
+        if (!withinWindow) {
+            if (windowBanner) {
+                windowBanner.innerHTML = `<i class="fas fa-clock mr-2"></i>
+                    24-hour window expired. You must send a <strong>Template Message</strong> to re-open this conversation.`;
+                windowBanner.classList.remove('hidden');
+            }
+            if (textInput) { textInput.disabled = true; textInput.placeholder = 'Send a template to re-open the conversation…'; }
+            if (sendBtn) sendBtn.disabled = true;
+            if (tplBtn) tplBtn.classList.add('wa-btn-pulse');
+        } else {
+            if (windowBanner) windowBanner.classList.add('hidden');
+            if (textInput) { textInput.disabled = false; textInput.placeholder = 'Type a message…'; }
+            if (sendBtn) sendBtn.disabled = false;
+            if (tplBtn) tplBtn.classList.remove('wa-btn-pulse');
+        }
+    }
+
+    _renderMessages(msgs) {
+        const container = document.getElementById('waChatMessages');
+        if (!container) return;
+        container.innerHTML = '';
+
+        if (!msgs.length) {
+            container.innerHTML = '<div class="text-center text-gray-500 py-8">No messages yet. Start the conversation with a template.</div>';
+            return;
+        }
+
+        msgs.forEach(m => {
+            const isAgent = m.sender_type === 'agent';
+            const isSystem = m.sender_type === 'system';
+            const isTemplate = m.message_type === 'template';
+            const timeStr = m.created_at ? new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+            const statusIcon = isAgent ? this._statusIcon(m.status) : '';
+
+            let msgContent = this._esc(m.message_text || '');
+            if (isTemplate) {
+                msgContent = `<span class="inline-block mr-1 text-green-400"><i class="fas fa-file-alt"></i></span>${msgContent}`;
+            }
+            if (m.message_type === 'image') msgContent = '<i class="fas fa-image mr-1 text-blue-400"></i> Image';
+            if (m.message_type === 'audio') msgContent = '<i class="fas fa-microphone mr-1 text-purple-400"></i> Voice message';
+            if (m.message_type === 'video') msgContent = '<i class="fas fa-video mr-1 text-red-400"></i> Video';
+            if (m.message_type === 'document') msgContent = `<i class="fas fa-file mr-1 text-orange-400"></i> ${this._esc(m.media_filename || 'Document')}`;
+
+            const bubble = document.createElement('div');
+            bubble.className = `flex ${isAgent ? 'justify-end' : 'justify-start'} mb-2`;
+            bubble.innerHTML = `
+                <div class="max-w-xs lg:max-w-md px-3 py-2 rounded-2xl text-sm shadow-md break-words
+                    ${isAgent
+                    ? 'bg-green-700 text-white rounded-br-sm'
+                    : isSystem
+                        ? 'bg-gray-700 text-gray-300 italic text-xs'
+                        : 'bg-gray-700 text-white rounded-bl-sm'}">
+                    ${msgContent}
+                    <div class="text-right text-xs mt-1 ${isAgent ? 'text-green-200' : 'text-gray-400'}">
+                        ${timeStr} ${statusIcon}
+                    </div>
+                </div>`;
+            container.appendChild(bubble);
+        });
+
+        // Scroll to bottom
+        container.scrollTop = container.scrollHeight;
+    }
+
+    _statusIcon(status) {
+        if (status === 'read') return '<i class="fas fa-check-double text-blue-300"></i>';
+        if (status === 'delivered') return '<i class="fas fa-check-double text-green-200"></i>';
+        if (status === 'sent') return '<i class="fas fa-check text-green-200"></i>';
+        if (status === 'failed') return '<i class="fas fa-times text-red-400"></i>';
+        return '';
+    }
+
+    async _sendChatMessage() {
+        if (!this.activeConvId) return;
+        const input = document.getElementById('waChatMsgInput');
+        const text = input?.value?.trim();
+        if (!text) return;
+
+        input.value = '';
+        input.disabled = true;
+
+        try {
+            const res = await this._api('POST', `/api/whatsapp/conversations/${this.activeConvId}/send`, {
+                type: 'text', text
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Send failed');
+            // Refresh messages
+            await this.openConversation(this.activeConvId);
+        } catch (e) {
+            this._toast(e.message, 'error');
+        } finally {
+            if (input) input.disabled = false;
+            if (input) input.focus();
+        }
+    }
+
+    /* ─────────────────────────────────────────
+       SEND TEMPLATE FROM INBOX
+    ───────────────────────────────────────── */
+    _openSendTemplatePanel() {
+        const panel = document.getElementById('waSendTemplatePanel');
+        if (!panel) return;
+        panel.classList.toggle('hidden');
+
+        // Populate template dropdown
+        const select = document.getElementById('waSendTplSelect');
+        if (select) {
+            const approved = this.templates.filter(t => t.status === 'APPROVED');
+            select.innerHTML = `<option value="">— Select Template —</option>` +
+                approved.map(t => `<option value="${t.id}" data-name="${this._esc(t.name)}" data-vars="${t.variable_count}" data-body="${this._esc(t.body_text || '')}" data-lang="${t.language}">${this._esc(t.name)} (${t.variable_count} var)</option>`).join('');
+
+            select.onchange = () => this._onTemplateSelectChange(select);
+        }
+
+        const sendBtn = document.getElementById('waSendTemplateConfirmBtn');
+        if (sendBtn) {
+            sendBtn.onclick = () => this._sendTemplateFromInbox();
+        }
+    }
+
+    _onTemplateSelectChange(select) {
+        const opt = select.options[select.selectedIndex];
+        const varCount = parseInt(opt.dataset.vars || '0');
+        const body = opt.dataset.body || '';
+        const container = document.getElementById('waSendTplVarsContainer');
+        if (!container) return;
+
+        container.innerHTML = '';
+        if (varCount > 0) {
+            for (let i = 1; i <= varCount; i++) {
+                container.innerHTML += `<div class="mb-2">
+                    <label class="text-xs text-gray-400 block mb-1">Variable {{${i}}}</label>
+                    <input type="text" id="waSendVar${i}" placeholder="Value for {{${i}}}"
+                        class="bg-gray-700 text-white text-sm rounded px-3 py-1.5 w-full border border-gray-600 focus:border-green-500 focus:outline-none" />
+                </div>`;
+            }
+        }
+
+        const preview = document.getElementById('waSendTplPreview');
+        if (preview) preview.textContent = body || '(select a template to preview)';
+    }
+
+    async _sendTemplateFromInbox() {
+        if (!this.activeConvId) return;
+        const select = document.getElementById('waSendTplSelect');
+        const tplId = select?.value;
+        if (!tplId) { this._toast('Please select a template.', 'error'); return; }
+
+        const opt = select.options[select.selectedIndex];
+        // Use data-name attribute (robust — avoids splitting on '(')
+        const tplName = opt.dataset.name;
+        const language = opt.dataset.lang || 'en';
+        const varCount = parseInt(opt.dataset.vars || '0');
+        const params = [];
+        for (let i = 1; i <= varCount; i++) {
+            const val = document.getElementById(`waSendVar${i}`)?.value?.trim();
+            if (!val) { this._toast(`Please fill in variable {{${i}}}`, 'error'); return; }
+            params.push(val);
+        }
+
+        const btn = document.getElementById('waSendTemplateConfirmBtn');
+        if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+
+        try {
+            const res = await this._api('POST', `/api/whatsapp/conversations/${this.activeConvId}/send`, {
+                type: 'template', template_name: tplName, parameters: params, language
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Send failed');
+            this._toast('Template sent! ✅', 'success');
+
+            // Close panel, refresh window check + messages
+            document.getElementById('waSendTemplatePanel')?.classList.add('hidden');
+            await this.openConversation(this.activeConvId);
+        } catch (e) {
+            this._toast(e.message, 'error');
+        } finally {
+            if (btn) { btn.disabled = false; btn.textContent = 'Send Template'; }
+        }
+    }
+
+    /* ─────────────────────────────────────────
+       SEND TEMPLATE FROM LEADS / EXTERNAL
+    ───────────────────────────────────────── */
+    async sendTemplateToPhone(phone, templateName, parameters) {
+        try {
+            const res = await this._api('POST', '/api/whatsapp/send-template', {
+                phone, template_name: templateName, parameters
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Send failed');
+            this._toast(`Template sent to ${phone} ✅`, 'success');
+            return data;
+        } catch (e) {
+            this._toast(e.message, 'error');
+            throw e;
+        }
+    }
+
+    /* ─────────────────────────────────────────
+       UTILITIES
+    ───────────────────────────────────────── */
+    async _api(method, path, body = null) {
+        const opts = { method };
+        if (body) opts.body = JSON.stringify(body);
+        // Use auth.makeAuthenticatedRequest for proper 401/403/5xx handling
+        const res = await auth.makeAuthenticatedRequest(path, opts);
+        if (!res) throw new Error('Request failed or session expired');
+        return res;
+    }
+
+    _esc(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    _timeAgo(dateStr) {
+        if (!dateStr) return '';
+        const diff = Math.floor((Date.now() - new Date(dateStr)) / 1000);
+        if (diff < 60) return 'just now';
+        if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+        if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+        return new Date(dateStr).toLocaleDateString();
+    }
+
+    _toast(msg, type = 'info') {
+        const colors = { success: '#22c55e', error: '#ef4444', info: '#3b82f6', warning: '#f59e0b' };
+        const toast = document.createElement('div');
+        toast.style.cssText = `
+            position:fixed; bottom:24px; right:24px; z-index:9999; padding:12px 20px;
+            background:${colors[type] || colors.info}; color:#fff; border-radius:8px;
+            font-size:14px; font-weight:500; box-shadow:0 4px 16px rgba(0,0,0,0.3);
+            transform:translateY(10px); opacity:0; transition:all .3s;
+        `;
+        toast.textContent = msg;
+        document.body.appendChild(toast);
+        requestAnimationFrame(() => { toast.style.transform = 'translateY(0)'; toast.style.opacity = '1'; });
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 300);
+        }, 4000);
+    }
+}
+
+// Global singleton
+window.whatsappManager = new WhatsAppManager();

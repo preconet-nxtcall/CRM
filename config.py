@@ -24,11 +24,17 @@ class Config:
     FACEBOOK_APP_ID = os.environ.get("FACEBOOK_APP_ID", "1537220340728257")
     FACEBOOK_APP_SECRET = os.environ.get("FACEBOOK_APP_SECRET", "774f3a44a2590515de08680001d7bbaf")
 
+
+
     # Wasabi / S3 Storage
     WASABI_ACCESS_KEY = os.environ.get("WASABI_ACCESS_KEY", "")
     WASABI_SECRET_KEY = os.environ.get("WASABI_SECRET_KEY", "")
     WASABI_REGION = os.environ.get("WASABI_REGION", "us-east-1")
     WASABI_BUCKET_NAME = os.environ.get("WASABI_BUCKET", os.environ.get("WASABI_BUCKET_NAME", ""))
     WASABI_ENDPOINT_URL = os.environ.get("WASABI_ENDPOINT", os.environ.get("WASABI_ENDPOINT_URL", "https://s3.wasabisys.com"))
+    # WhatsApp / Brandmo Integration
+    BRANDMO_BASE_URL       = os.environ.get("BRANDMO_BASE_URL",       "https://crmpi.brandmo.in/api/meta")
+    BRANDMO_API_VERSION    = os.environ.get("BRANDMO_API_VERSION",    "v19.0")
+    WA_WEBHOOK_VERIFY_TOKEN = os.environ.get("WA_WEBHOOK_VERIFY_TOKEN", "nxtcall_wa_webhook_2026")
 
 

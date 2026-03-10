@@ -106,6 +106,20 @@ def create_app(config_class=Config):
             trigger='interval', 
             minutes=10
         )
+
+        # WhatsApp Template Auto-Sync (Every 30 mins)
+        from app.services.whatsapp_service import sync_all_wa_templates
+        if scheduler.get_job('wa_template_sync'):
+             scheduler.remove_job('wa_template_sync')
+             
+        scheduler.add_job(
+            id='wa_template_sync',
+            func=sync_all_wa_templates,
+            args=[app],
+            trigger='interval',
+            minutes=30
+        )
+
     except Exception as e:
         print(f"Scheduler Error: {e}")
 
@@ -131,7 +145,7 @@ def create_app(config_class=Config):
         
         # Let's identify if we should skip strict session checks.
         endpoint = request.endpoint
-        is_login_flow = endpoint in ["users.login", "admin.login", "auth_pwd.forgot_password", "auth_pwd.reset_password", "super_admin_login_page", "super_admin_login_redirect", "forgot_password_redirect", "reset_password_redirect", "super_admin_fix_db_redirect"]
+        is_login_flow = endpoint in ["users.login", "admin.login", "auth_pwd.forgot_password", "auth_pwd.reset_password", "super_admin_login_page", "super_admin_login_redirect", "forgot_password_redirect", "reset_password_redirect", "super_admin_fix_db_redirect", "whatsapp.webhook"]
 
         try:
             from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity, get_jwt
@@ -319,6 +333,9 @@ def create_app(config_class=Config):
 
     from app.routes.debug import bp as debug_bp
     app.register_blueprint(debug_bp)
+
+    from app.routes.whatsapp import bp as whatsapp_bp
+    app.register_blueprint(whatsapp_bp)  # WhatsApp CRM Messaging
 
 
     # =======================================================

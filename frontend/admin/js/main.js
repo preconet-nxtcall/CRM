@@ -144,7 +144,8 @@ document.addEventListener("DOMContentLoaded", () => {
         { id: "menuLeads", section: "sectionLeads", title: "Leads Management", manager: window.leadsManager },
         { id: "menuPipeline", section: "sectionPipeline", title: "Lead Pipeline", manager: window.pipelineManager },
         { id: "menuKanban", section: "sectionKanban", title: "Kanban Dashboard", manager: window.kanbanManager },
-        { id: "menuIntegrations", mobileId: null, section: "sectionIntegrations", title: "Lead Integrations", manager: window.integrationsManager }
+        { id: "menuIntegrations", mobileId: null, section: "sectionIntegrations", title: "Lead Integrations", manager: window.integrationsManager },
+        { id: "menuWhatsApp", mobileId: null, section: "sectionWhatsApp", title: "WhatsApp CRM", manager: window.whatsappManager }
     ];
 
     const pageTitle = document.getElementById("pageTitle");
@@ -188,6 +189,11 @@ document.addEventListener("DOMContentLoaded", () => {
         // Init Integrations Grid Manager if needed
         if (item.id === "menuIntegrations" && window.integrationsManager) {
             window.integrationsManager.init();
+        }
+
+        // Init WhatsApp Manager if needed
+        if (item.id === "menuWhatsApp" && window.whatsappManager) {
+            window.whatsappManager.init();
         }
 
         // 3. Highlight menu item
