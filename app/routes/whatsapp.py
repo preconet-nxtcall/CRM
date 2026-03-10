@@ -46,6 +46,19 @@ def get_wa_config(admin_id):
     """Return WhatsAppConfig or None."""
     return WhatsAppConfig.query.filter_by(admin_id=admin_id).first()
 
+def get_wa_config_missing_fields(cfg):
+    """Return a list of missing required WhatsApp config fields."""
+    missing = []
+    if not cfg:
+        return ["access_token", "phone_number_id", "waba_id"]
+    if not cfg.get_token():
+        missing.append("access_token")
+    if not (cfg.phone_number_id or "").strip():
+        missing.append("phone_number_id")
+    if not (cfg.waba_id or "").strip():
+        missing.append("waba_id")
+    return missing
+
 def get_or_create_contact(admin_id, phone, profile_name=None, lead_id=None):
     """Find or create WAContact for this admin+phone.
     
@@ -205,6 +218,12 @@ def sync_templates():
     cfg = get_wa_config(admin.id)
     if not cfg or not cfg.is_active:
         return jsonify({"error": "WhatsApp not connected. Please save your config first."}), 400
+    missing = get_wa_config_missing_fields(cfg)
+    if missing:
+        return jsonify({
+            "error": "WhatsApp configuration is incomplete.",
+            "missing_fields": missing,
+        }), 400
 
     try:
         from app.services.whatsapp_service import BrandmoService
@@ -320,6 +339,10 @@ def create_template():
         except Exception:
             current_app.logger.error(f"Template create error (non-JSON): {e.response.text}")
         return jsonify({"error": f"Brandmo API error: {error_msg}"}), 502
+    except ValueError as e:
+        db.session.rollback()
+        current_app.logger.error(f"Template create ValueError: {e}")
+        return jsonify({"error": str(e)}), 502
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception("Template creation failed")
@@ -377,9 +400,15 @@ def send_template():
     cfg = get_wa_config(admin.id)
     if not cfg or not cfg.is_active:
         return jsonify({"error": "WhatsApp not connected"}), 400
+    missing = get_wa_config_missing_fields(cfg)
+    if missing:
+        return jsonify({
+            "error": "WhatsApp configuration is incomplete.",
+            "missing_fields": missing,
+        }), 400
 
     data          = request.get_json() or {}
-    phone         = (data.get("phone") or "").strip()
+    phone         = normalize_phone((data.get("phone") or "").strip())
     template_name = (data.get("template_name") or "").strip()
     parameters    = data.get("parameters", [])
     header        = data.get("header", None)
@@ -451,6 +480,10 @@ def send_template():
             body = str(e)
         current_app.logger.error(f"Send template HTTP error: {body}")
         return jsonify({"error": f"Brandmo API error: {body}"}), 502
+    except ValueError as e:
+        db.session.rollback()
+        current_app.logger.error(f"Send template ValueError: {e}")
+        return jsonify({"error": str(e)}), 502
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception("Send template failed")
@@ -565,10 +598,16 @@ def send_in_conversation(conv_id):
     cfg = get_wa_config(admin.id)
     if not cfg or not cfg.is_active:
         return jsonify({"error": "WhatsApp not connected"}), 400
+    missing = get_wa_config_missing_fields(cfg)
+    if missing:
+        return jsonify({
+            "error": "WhatsApp configuration is incomplete.",
+            "missing_fields": missing,
+        }), 400
 
     data      = request.get_json() or {}
     msg_type  = data.get("type", "text")
-    phone     = conv.contact.phone_number if conv.contact else None
+    phone     = normalize_phone(conv.contact.phone_number) if conv.contact else None
 
     if not phone:
         return jsonify({"error": "No phone number for contact"}), 400
@@ -684,6 +723,10 @@ def send_in_conversation(conv_id):
             body = str(e)
         current_app.logger.error(f"Send message HTTP error: {body}")
         return jsonify({"error": f"Brandmo API error: {body}"}), 502
+    except ValueError as e:
+        db.session.rollback()
+        current_app.logger.error(f"Send message ValueError: {e}")
+        return jsonify({"error": str(e)}), 502
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception("Send in conversation failed")

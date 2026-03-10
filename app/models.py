@@ -867,7 +867,7 @@ class WhatsAppConfig(db.Model):
             "business_name": self.business_name,
             "phone_display": self.phone_display,
             "is_active": self.is_active,
-            "is_connected": bool(token and self.phone_number_id),
+            "is_connected": bool(self.is_active and token and self.phone_number_id and self.waba_id),
             "access_token_masked": ("***" + token[-6:]) if (token and len(token) > 6 and mask_token) else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,

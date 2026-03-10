@@ -164,6 +164,13 @@ class WhatsAppManager {
        AUTOMATIONS TAB
     ───────────────────────────────────────── */
     async loadLeadAssignConfig() {
+        try {
+            await this._ensureTemplatesLoaded();
+        } catch (e) {
+            this._toast(e.message || 'Failed to load templates', 'error');
+            return;
+        }
+
         const panes = ['Agent', 'Lead'];
         panes.forEach(p => {
             const select = document.getElementById(`waAuto${p}Tpl`);
@@ -303,6 +310,19 @@ class WhatsAppManager {
 
         const createBtn = document.getElementById('waCreateTemplateBtn');
         if (createBtn) createBtn.addEventListener('click', () => this._showCreateModal());
+
+        const tableBody = document.getElementById('waTemplatesTableBody');
+        if (tableBody && !tableBody._boundDelete) {
+            tableBody._boundDelete = true;
+            tableBody.addEventListener('click', (e) => {
+                const btn = e.target.closest('.wa-delete-template-btn');
+                if (!btn) return;
+                const id = parseInt(btn.dataset.templateId || '0', 10);
+                const name = btn.dataset.templateName || '';
+                if (!id) return;
+                this.deleteTemplate(id, name);
+            });
+        }
     }
 
     async loadTemplates(statusFilter = '') {
@@ -352,8 +372,11 @@ class WhatsAppManager {
                 <td class="px-4 py-3 text-sm text-gray-700 max-w-xs truncate" title="${this._esc(t.body_text || '')}">${this._esc(bodyPreview)}</td>
                 <td class="px-4 py-3 text-xs text-gray-500">${t.variable_count} var(s)</td>
                 <td class="px-4 py-3">
-                    <button onclick="window.whatsappManager.deleteTemplate(${t.id}, '${this._esc(t.name)}')"
-                        class="text-red-500 hover:text-red-700 text-xs px-2 py-1 rounded hover:bg-red-50 transition">
+                    <button
+                        type="button"
+                        class="wa-delete-template-btn text-red-500 hover:text-red-700 text-xs px-2 py-1 rounded hover:bg-red-50 transition"
+                        data-template-id="${t.id}"
+                        data-template-name="${this._esc(t.name)}">
                         <i class="fas fa-trash mr-1"></i>Delete
                     </button>
                 </td>
@@ -533,7 +556,7 @@ class WhatsAppManager {
                     </div>
                     <p class="text-xs text-gray-500 truncate">${this._esc(lastMsg.substring(0, 50))}</p>
                 </div>
-                ${unread ? `<span class="bg-green-500 text-white text-xs rounded-full px-1.5 py-0.5 flex-shrink-0">${unread}</span>` : ''}
+                ${unread ? `<span data-unread-badge="1" class="bg-green-500 text-white text-xs rounded-full px-1.5 py-0.5 flex-shrink-0">${unread}</span>` : ''}
             </div>`;
         }).join('');
     }
@@ -543,7 +566,8 @@ class WhatsAppManager {
 
         // Highlight active conversation
         document.querySelectorAll('[data-conv-id]').forEach(el => {
-            el.classList.toggle('bg-gray-800', parseInt(el.dataset.convId) === convId);
+            el.classList.toggle('bg-gray-50', parseInt(el.dataset.convId) === convId);
+            el.classList.remove('bg-gray-800');
         });
 
         const chatPanel = document.getElementById('waChatPanel');
@@ -583,7 +607,7 @@ class WhatsAppManager {
     _updateConvItemUnread(convId, count) {
         const item = document.querySelector(`[data-conv-id="${convId}"]`);
         if (!item) return;
-        const badge = item.querySelector('.bg-green-500');
+        const badge = item.querySelector('[data-unread-badge="1"]');
         if (badge) badge.remove();
     }
 
@@ -734,7 +758,14 @@ class WhatsAppManager {
     /* ─────────────────────────────────────────
        SEND TEMPLATE FROM INBOX
     ───────────────────────────────────────── */
-    _openSendTemplatePanel() {
+    async _openSendTemplatePanel() {
+        try {
+            await this._ensureTemplatesLoaded();
+        } catch (e) {
+            this._toast(e.message || 'Failed to load templates', 'error');
+            return;
+        }
+
         const panel = document.getElementById('waSendTemplatePanel');
         if (!panel) return;
         panel.classList.toggle('hidden');
@@ -881,7 +912,16 @@ class WhatsAppManager {
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;');
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    async _ensureTemplatesLoaded() {
+        if (this.templates && this.templates.length) return;
+        const res = await this._api('GET', '/api/whatsapp/templates');
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to load templates');
+        this.templates = data.templates || [];
     }
 
     _timeAgo(dateStr) {

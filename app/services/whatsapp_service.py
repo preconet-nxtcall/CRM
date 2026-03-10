@@ -28,20 +28,75 @@ class BrandmoService:
             base_url = "https://crmpi.brandmo.in/api/meta"
             version  = "v19.0"
 
-        self.base      = f"{base_url}/{version}"
+        normalized_base, normalized_version = self._normalize_base_and_version(base_url, version)
+        self.base      = f"{normalized_base}/{normalized_version}"
         self.token     = config.get_token()
         self.phone_id  = config.phone_number_id
         self.waba_id   = config.waba_id
+        self._validate_required_config()
 
     def _headers(self):
         return {
             "Authorization": f"Bearer {self.token}",
             "Content-Type":  "application/json",
+            "Accept":        "application/json",
         }
+
+    @staticmethod
+    def _normalize_base_and_version(base_url: str, version: str):
+        """
+        Normalize Brandmo base URL so misconfigured env values still resolve correctly.
+        Supports values like:
+          - https://crmpi.brandmo.in
+          - https://crmpi.brandmo.in/api/meta
+          - https://crmpi.brandmo.in/api/meta/v19.0
+        """
+        raw_base = (base_url or "https://crmpi.brandmo.in/api/meta").strip().rstrip("/")
+        raw_version = (version or "v19.0").strip()
+
+        # Accept host-only config by attaching default scheme.
+        if raw_base and "://" not in raw_base:
+            raw_base = f"https://{raw_base}"
+
+        # If version is included in base url, extract and keep only /api/meta in base.
+        m = re.search(r"/(v\d+(?:\.\d+)?)$", raw_base)
+        if m:
+            raw_version = m.group(1)
+            raw_base = raw_base[: -(len(raw_version) + 1)]
+
+        # Ensure Brandmo meta path exists even when BRANDMO_BASE_URL is host-only.
+        if "/api/meta" not in raw_base:
+            raw_base = f"{raw_base}/api/meta"
+
+        return raw_base.rstrip("/"), raw_version
 
     def _msg_url(self):
         """Messages endpoint."""
         return f"{self.base}/{self.phone_id}/messages"
+
+    def _validate_required_config(self):
+        missing = []
+        if not self.token:
+            missing.append("access_token")
+        if not (self.phone_id or "").strip():
+            missing.append("phone_number_id")
+        if not (self.waba_id or "").strip():
+            missing.append("waba_id")
+        if missing:
+            raise ValueError(
+                f"WhatsApp configuration is incomplete. Missing: {', '.join(missing)}"
+            )
+
+    @staticmethod
+    def _json_or_raise(response: requests.Response, context: str) -> dict:
+        try:
+            return response.json()
+        except Exception:
+            short_text = (response.text or "")[:200].replace("<", "&lt;").replace(">", "&gt;")
+            raise ValueError(
+                f"Brandmo returned a non-JSON response for {context}. "
+                f"Status: {response.status_code}. Response preview: {short_text}..."
+            )
 
     # ------------------------------------------------------------------
     # SEND TEXT MESSAGE (session window)
@@ -56,7 +111,7 @@ class BrandmoService:
         }
         r = requests.post(self._msg_url(), json=payload, headers=self._headers(), timeout=20)
         r.raise_for_status()
-        return r.json()
+        return self._json_or_raise(r, "send_text")
 
     # ------------------------------------------------------------------
     # SEND TEMPLATE MESSAGE
@@ -99,7 +154,7 @@ class BrandmoService:
 
         r = requests.post(self._msg_url(), json=payload, headers=self._headers(), timeout=20)
         r.raise_for_status()
-        return r.json()
+        return self._json_or_raise(r, "send_template")
 
     # ------------------------------------------------------------------
     # SEND MEDIA MESSAGE (Direct format outside template)
@@ -138,7 +193,7 @@ class BrandmoService:
 
         r = requests.post(self._msg_url(), json=payload, headers=self._headers(), timeout=20)
         r.raise_for_status()
-        return r.json()
+        return self._json_or_raise(r, "send_media")
 
     # ------------------------------------------------------------------
     # SYNC TEMPLATES FROM BRANDMO → DB
@@ -172,7 +227,7 @@ class BrandmoService:
             # Try to parse JSON — Brandmo sometimes returns HTML on auth errors
             try:
                 data = r.json()
-            except Exception as json_err:
+            except Exception:
                 short_text = r.text[:200].replace("<", "&lt;").replace(">", "&gt;")
                 current_app.logger.error(
                     f"[WA Sync] Non-JSON response from Brandmo (status {r.status_code}): {r.text[:500]}"
@@ -180,8 +235,9 @@ class BrandmoService:
                 raise ValueError(
                     f"Brandmo returned an unexpected response (not JSON). "
                     f"Status: {r.status_code}. "
+                    f"Requested URL: {url}. "
                     f"Response preview: {short_text}... "
-                    "This usually means your Access Token or WABA ID is invalid or the API is currently unavailable."
+                    "This usually means your Access Token/WABA ID is invalid, or BRANDMO_BASE_URL is misconfigured."
                 )
 
             # Now raise for HTTP errors (after JSON parsed, so we can include the message)
@@ -279,7 +335,7 @@ class BrandmoService:
         }
         r = requests.post(url, json=payload, headers=self._headers(), timeout=30)
         r.raise_for_status()
-        return r.json()
+        return self._json_or_raise(r, "create_template")
 
     # ------------------------------------------------------------------
     # DELETE TEMPLATE VIA BRANDMO API
@@ -289,7 +345,7 @@ class BrandmoService:
         params = {"name": template_name}
         r = requests.delete(url, headers=self._headers(), params=params, timeout=20)
         r.raise_for_status()
-        return r.json()
+        return self._json_or_raise(r, "delete_template")
 
 
 # ------------------------------------------------------------------
