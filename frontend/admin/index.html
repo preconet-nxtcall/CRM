@@ -991,86 +991,7 @@
               </table>
             </div>
           </div>
-
-          <div id="waCreateTemplateModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div class="absolute inset-0 bg-black bg-opacity-60" style="backdrop-filter:blur(3px)"
-              onclick="window.whatsappManager._hideCreateModal()"></div>
-            <!-- Modal Box -->
-            <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg z-10 flex flex-col"
-              style="max-height:90vh;">
-              <!-- Pinned Header -->
-              <div class="flex items-center justify-between px-6 py-5 border-b border-gray-100 flex-shrink-0">
-                <div>
-                  <h3 class="text-lg font-bold text-gray-900">Create New Template</h3>
-                  <p class="text-xs text-gray-500 mt-0.5">Submitted for Meta review &mdash; approval takes up to 24h</p>
-                </div>
-                <button id="waCreateModalClose" class="wa-icon-btn flex-shrink-0"><i class="fas fa-times"></i></button>
-              </div>
-              <!-- Scrollable Body -->
-              <div class="overflow-y-auto flex-1 px-6 py-5">
-                <form id="waCreateTemplateForm" class="space-y-4">
-                  <div class="grid grid-cols-2 gap-4">
-                    <div class="wa-field-group">
-                      <label class="wa-label">Template Name *</label>
-                      <div class="wa-input-wrap">
-                        <i class="fas fa-tag wa-input-icon"></i>
-                        <input type="text" id="waTplName" placeholder="e.g. welcome_message" class="wa-input" />
-                      </div>
-                      <p class="text-xs text-gray-500 mt-1">lowercase + underscores only</p>
-                    </div>
-                    <div class="wa-field-group">
-                      <label class="wa-label">Category *</label>
-                      <div class="wa-input-wrap">
-                        <i class="fas fa-tag wa-input-icon"></i>
-                        <select id="waTplCategory" class="wa-input">
-                          <option value="MARKETING">Marketing</option>
-                          <option value="UTILITY" selected>Utility</option>
-                          <option value="AUTHENTICATION">Authentication</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="wa-field-group">
-                    <label class="wa-label">Language</label>
-                    <div class="wa-input-wrap">
-                      <i class="fas fa-globe wa-input-icon"></i>
-                      <select id="waTplLanguage" class="wa-input">
-                        <option value="en" selected>English</option>
-                        <option value="hi">Hindi</option>
-                        <option value="mr">Marathi</option>
-                        <option value="gu">Gujarati</option>
-                        <option value="ta">Tamil</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div class="wa-field-group">
-                    <label class="wa-label">Header Text <span class="text-gray-500">(Optional)</span></label>
-                    <div class="wa-input-wrap">
-                      <i class="fas fa-heading wa-input-icon"></i>
-                      <input type="text" id="waTplHeader" placeholder="e.g. Welcome!" class="wa-input" />
-                    </div>
-                  </div>
-                  <div class="wa-field-group">
-                    <label class="wa-label">Body Message * &mdash; use {{1}}, {{2}} for variables</label>
-                    <textarea id="waTplBody" rows="4" placeholder="Hello {{1}}, your appointment on {{2}} is confirmed."
-                      class="wa-input" style="resize:vertical;min-height:100px;padding-left:12px"></textarea>
-                    <p class="text-xs text-green-600 mt-1 font-medium" id="waTplVarCount">0 variable(s) detected</p>
-                  </div>
-                  <div class="wa-field-group">
-                    <label class="wa-label">Footer Text <span class="text-gray-500">(Optional)</span></label>
-                    <div class="wa-input-wrap">
-                      <i class="fas fa-align-left wa-input-icon"></i>
-                      <input type="text" id="waTplFooter" placeholder="e.g. Reply STOP to unsubscribe"
-                        class="wa-input" />
-                    </div>
-                  </div>
-                  <button id="waCreateSubmitBtn" type="submit" class="wa-btn-primary w-full mt-1">
-                    <i class="fas fa-paper-plane mr-2"></i>Submit Template for Review
-                  </button>
-                </form>
-              </div>
-            </div>
-          </div>
+          <!-- Create Template Modal moved to body level -->
         </div>
 
         <!-- =====================
@@ -3518,6 +3439,89 @@
     </div>
   </div>
 </body>
+
+<!-- ============================================================
+     WHATSAPP — CREATE TEMPLATE MODAL (body-level, no stacking issues)
+     ============================================================ -->
+<div id="waCreateTemplateModal" class="hidden fixed inset-0 z-[9999] flex items-center justify-center p-4">
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black bg-opacity-60" style="backdrop-filter:blur(3px)"
+    onclick="window.whatsappManager._hideCreateModal()"></div>
+  <!-- Modal Box -->
+  <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg z-10 flex flex-col" style="max-height:90vh;">
+    <!-- Pinned Header -->
+    <div class="flex items-center justify-between px-6 py-5 border-b border-gray-100 flex-shrink-0">
+      <div>
+        <h3 class="text-lg font-bold text-gray-900">Create New Template</h3>
+        <p class="text-xs text-gray-500 mt-0.5">Submitted for Meta review &mdash; approval takes up to 24h</p>
+      </div>
+      <button id="waCreateModalClose" class="wa-icon-btn flex-shrink-0"><i class="fas fa-times"></i></button>
+    </div>
+    <!-- Scrollable Body -->
+    <div class="overflow-y-auto flex-1 px-6 py-5">
+      <form id="waCreateTemplateForm" class="space-y-4">
+        <div class="grid grid-cols-2 gap-4">
+          <div class="wa-field-group">
+            <label class="wa-label">Template Name *</label>
+            <div class="wa-input-wrap">
+              <i class="fas fa-tag wa-input-icon"></i>
+              <input type="text" id="waTplName" placeholder="e.g. welcome_message" class="wa-input" />
+            </div>
+            <p class="text-xs text-gray-500 mt-1">lowercase + underscores only</p>
+          </div>
+          <div class="wa-field-group">
+            <label class="wa-label">Category *</label>
+            <div class="wa-input-wrap">
+              <i class="fas fa-tag wa-input-icon"></i>
+              <select id="waTplCategory" class="wa-input">
+                <option value="MARKETING">Marketing</option>
+                <option value="UTILITY" selected>Utility</option>
+                <option value="AUTHENTICATION">Authentication</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="wa-field-group">
+          <label class="wa-label">Language</label>
+          <div class="wa-input-wrap">
+            <i class="fas fa-globe wa-input-icon"></i>
+            <select id="waTplLanguage" class="wa-input">
+              <option value="en" selected>English</option>
+              <option value="hi">Hindi</option>
+              <option value="mr">Marathi</option>
+              <option value="gu">Gujarati</option>
+              <option value="ta">Tamil</option>
+            </select>
+          </div>
+        </div>
+        <div class="wa-field-group">
+          <label class="wa-label">Header Text <span class="text-gray-400">(Optional)</span></label>
+          <div class="wa-input-wrap">
+            <i class="fas fa-heading wa-input-icon"></i>
+            <input type="text" id="waTplHeader" placeholder="e.g. Welcome!" class="wa-input" />
+          </div>
+        </div>
+        <div class="wa-field-group">
+          <label class="wa-label">Body Message * &mdash; use {{1}}, {{2}} for variables</label>
+          <textarea id="waTplBody" rows="4" placeholder="Hello {{1}}, your appointment on {{2}} is confirmed."
+            class="wa-input" style="resize:vertical;min-height:100px;padding-left:12px"></textarea>
+          <p class="text-xs text-green-600 mt-1 font-medium" id="waTplVarCount">0 variable(s) detected</p>
+        </div>
+        <div class="wa-field-group">
+          <label class="wa-label">Footer Text <span class="text-gray-400">(Optional)</span></label>
+          <div class="wa-input-wrap">
+            <i class="fas fa-align-left wa-input-icon"></i>
+            <input type="text" id="waTplFooter" placeholder="e.g. Reply STOP to unsubscribe" class="wa-input" />
+          </div>
+        </div>
+        <button id="waCreateSubmitBtn" type="submit" class="wa-btn-primary w-full mt-1">
+          <i class="fas fa-paper-plane mr-2"></i>Submit Template for Review
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
 
 <!-- ============================================================
      WHATSAPP SECTION — inserted before closing body
