@@ -53,7 +53,11 @@ class BrandmoService:
           - https://crmpi.brandmo.in/api/meta/v19.0
         """
         raw_base = (base_url or "https://crmpi.brandmo.in/api/meta").strip().rstrip("/")
-        raw_version = (version or "v19.0").strip()
+        # Preserve explicit empty version ("") so non-versioned Brandmo routes can be used.
+        if version is None:
+            raw_version = "v19.0"
+        else:
+            raw_version = str(version).strip()
 
         # Accept host-only config by attaching default scheme.
         if raw_base and "://" not in raw_base:
@@ -274,13 +278,14 @@ class BrandmoService:
                 data = r.json()
             except Exception:
                 short_text = r.text[:200].replace("<", "&lt;").replace(">", "&gt;")
+                content_type = r.headers.get("Content-Type", "")
                 current_app.logger.error(
                     f"[WA Sync] Non-JSON response from Brandmo (status {r.status_code}): {r.text[:500]}"
                 )
                 raise ValueError(
                     f"Brandmo returned an unexpected response (not JSON). "
                     f"Status: {r.status_code}. "
-                    f"Requested URL: {url}. "
+                    f"Requested URL: {url}. Final URL: {r.url}. Content-Type: {content_type}. "
                     f"Response preview: {short_text}... "
                     "This usually means your Access Token/WABA ID is invalid, or BRANDMO_BASE_URL is misconfigured."
                 )
