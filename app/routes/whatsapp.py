@@ -632,12 +632,13 @@ def send_in_conversation(conv_id):
 
     try:
         from app.services.whatsapp_service import BrandmoService
-        svc    = BrandmoService(cfg)
-        wamid  = None
+        svc = BrandmoService(cfg)
+        wamid = None
+        msg = None
         body_preview = ""
 
         if msg_type == "text":
-            text   = (data.get("text") or "").strip()
+            text = (data.get("text") or "").strip()
             if not text:
                 return jsonify({"error": "text is required"}), 400
             result = svc.send_text(phone, text)
@@ -648,20 +649,19 @@ def send_in_conversation(conv_id):
 
         elif msg_type == "template":
             template_name = (data.get("template_name") or "").strip()
-            parameters    = data.get("parameters", [])
-            header        = data.get("header", None)
+            parameters = data.get("parameters", [])
+            header = data.get("header", None)
             if not template_name:
                 return jsonify({"error": "template_name is required"}), 400
 
             tmpl = WATemplate.query.filter_by(admin_id=admin.id, name=template_name).first()
             if not tmpl:
                 return jsonify({"error": "Template not found"}), 404
-            # Enforce approval status (case-insensitive)
             if tmpl.status.upper() != "APPROVED":
                 return jsonify({"error": f"Template '{template_name}' is not APPROVED (status: {tmpl.status}). Cannot send."}), 400
 
             language = tmpl.language or "en"
-            result   = svc.send_template(phone, template_name, language, parameters, header)
+            result = svc.send_template(phone, template_name, language, parameters, header)
             messages_list = result.get("messages", [])
             if messages_list:
                 wamid = messages_list[0].get("id")
@@ -669,16 +669,16 @@ def send_in_conversation(conv_id):
             body_preview = tmpl.body_text or template_name
             for i, val in enumerate(parameters, start=1):
                 body_preview = body_preview.replace(f"{{{{{i}}}}}", val)
-                
+
         elif msg_type in ["image", "video", "audio", "document"]:
             media_link = data.get("media_link")
-            media_id   = data.get("media_id")
-            caption    = data.get("caption")
-            filename   = data.get("filename")
-            
+            media_id = data.get("media_id")
+            caption = data.get("caption")
+            filename = data.get("filename")
+
             if not media_link and not media_id:
                 return jsonify({"error": "Either media_link or media_id is required for media messages"}), 400
-                
+
             result = svc.send_media(phone, msg_type, media_link, media_id, caption, filename)
             messages_list = result.get("messages", [])
             if messages_list:
@@ -690,28 +690,29 @@ def send_in_conversation(conv_id):
         # Only save WAMessage when Brandmo confirmed a real message ID
         if wamid:
             msg = WAMessage(
-                conversation_id = conv_id,
-                admin_id        = admin.id,
-                whatsapp_msg_id = wamid,
-                sender_type     = "agent",
-                sender_id       = admin.id,
-                message_type    = msg_type,
-                message_text    = body_preview,
-                media_url       = data.get("media_link") if msg_type in ["image", "video", "audio", "document"] else None,
-                media_id        = data.get("media_id") if msg_type in ["image", "video", "audio", "document"] else None,
-                media_filename  = data.get("filename") if msg_type == "document" else None,
-                caption         = data.get("caption") if msg_type in ["image", "video", "document"] else None,
-                template_name   = data.get("template_name") if msg_type == "template" else None,
-                status          = "sent",
+                conversation_id=conv_id,
+                admin_id=admin.id,
+                whatsapp_msg_id=wamid,
+                sender_type="agent",
+                sender_id=admin.id,
+                message_type=msg_type,
+                message_text=body_preview,
+                media_url=data.get("media_link") if msg_type in ["image", "video", "audio", "document"] else None,
+                media_id=data.get("media_id") if msg_type in ["image", "video", "audio", "document"] else None,
+                media_filename=data.get("filename") if msg_type == "document" else None,
+                caption=data.get("caption") if msg_type in ["image", "video", "document"] else None,
+                template_name=data.get("template_name") if msg_type == "template" else None,
+                status="sent",
             )
             db.session.add(msg)
+
         conv.last_message_at = datetime.utcnow()
         db.session.commit()
 
         return jsonify({
-            "message":    "Sent",
-            "wamid":      wamid,
-            "message_id": msg.id if wamid else None,
+            "message": "Sent",
+            "wamid": wamid,
+            "message_id": msg.id if msg else None,
         }), 200
 
     except _ext_requests.HTTPError as e:
@@ -1007,20 +1008,62 @@ def normalize_phone(phone: str) -> str:
       - If already has country code (11-13 digits), use as-is
       - Returns empty string if input is empty/None
     """
-    if not phone:
+    if phone is None:
         return ""
     import re as _re
-    # Remove all non-digit characters
-    digits = _re.sub(r"\D", "", phone)
+
+    raw = str(phone).strip()
+    if not raw:
+        return ""
+
+    # Prefer first valid Indian-style mobile from mixed strings
+    m = _re.search(r"(?:\+?91[\s\-]?)?([6-9]\d{9})", raw)
+    if m:
+        return "91" + m.group(1)
+
+    digits = _re.sub(r"\D", "", raw)
     if not digits:
         return ""
-    # 10-digit number → assume Indian → prepend 91
-    if len(digits) == 10:
+
+    if digits.startswith("00") and len(digits) > 2:
+        digits = digits[2:]
+
+    if len(digits) == 10 and digits[0] in "6789":
         return "91" + digits
-    # Already has country code (11-13 digits) → use as-is
-    return digits
+    if len(digits) == 11 and digits.startswith("0") and digits[1] in "6789":
+        return "91" + digits[1:]
+    if len(digits) == 12 and digits.startswith("91") and digits[2] in "6789":
+        return digits
+
+    # Last-resort salvage when source contains concatenated numbers
+    if len(digits) > 12:
+        tail10 = digits[-10:]
+        if tail10 and tail10[0] in "6789":
+            return "91" + tail10
+
+    if 8 <= len(digits) <= 15:
+        return digits
+    return ""
 
 
+def _get_best_lead_phone(lead) -> str:
+    """Best-effort extraction for lead phone from lead + custom_fields."""
+    candidates = []
+    if getattr(lead, "phone", None):
+        candidates.append(lead.phone)
+
+    cf = getattr(lead, "custom_fields", None)
+    if isinstance(cf, dict):
+        for key in ("phone", "mobile", "phone_number", "contact_number", "contact", "customer_phone"):
+            val = cf.get(key)
+            if val:
+                candidates.append(val)
+
+    for candidate in candidates:
+        normalized = normalize_phone(candidate)
+        if normalized:
+            return normalized
+    return ""
 def send_lead_assignment_whatsapp(admin_id, lead, agent):
     """
     Non-blocking. Call this after a lead is assigned to an agent.
@@ -1122,7 +1165,7 @@ def send_lead_assignment_whatsapp(admin_id, lead, agent):
                                  "reason": "no agent template, no agent, or agent phone invalid"}
 
         # ── Send to LEAD ───────────────────────────────────
-        lead_phone_e164 = normalize_phone(lead.phone) if lead.phone else ""
+        lead_phone_e164 = _get_best_lead_phone(lead)
         if cfg_auto.lead_template_name and lead_phone_e164:
             try:
                 tmpl = WATemplate.query.filter_by(
@@ -1182,6 +1225,11 @@ def send_lead_assignment_whatsapp(admin_id, lead, agent):
         else:
             results["lead"] = {"status": "skipped",
                                 "reason": "no lead template or lead phone invalid"}
+            current_app.logger.info(
+                f"[LeadAssign WA] Lead skipped (admin={admin_id}, lead_id={getattr(lead, 'id', None)}): "
+                f"template={bool(cfg_auto.lead_template_name)}, raw_phone={getattr(lead, 'phone', None)!r}, "
+                f"normalized={lead_phone_e164!r}"
+            )
 
         return results
 
@@ -1253,3 +1301,5 @@ def save_lead_assign_config():
 
     db.session.commit()
     return jsonify({"message": "Config saved", "config": cfg.to_dict()}), 200
+
+

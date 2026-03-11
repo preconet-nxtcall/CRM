@@ -1,4 +1,4 @@
-﻿/* frontend/admin/js/whatsapp.js
+/* frontend/admin/js/whatsapp.js
    WhatsApp Template Messaging Manager
    Handles: Settings, Template Management, Inbox (Conversations + Chat)
 */
@@ -58,8 +58,33 @@ class WhatsAppManager {
         if (activeBtn) { activeBtn.classList.add('wa-tab--active'); }
 
         if (tab === 'templates') this.loadTemplates();
-        if (tab === 'inbox') this.loadInbox();
+        if (tab === 'inbox') {
+            this.loadInbox();
+            this._startPolling();
+        } else {
+            this._stopPolling();
+        }
         if (tab === 'automations') this.loadLeadAssignConfig();
+    }
+
+    _startPolling() {
+        this._stopPolling();
+        this.pollInterval = setInterval(() => {
+            // Silently refresh inbox list if no active conversation, 
+            // or refresh active conversation specifically to avoid jumping UI.
+            if (this.activeConvId) {
+                this._silentlyRefreshActiveConversation();
+            } else {
+                this.loadInbox(true); // true = silent
+            }
+        }, 10000); // 10 seconds
+    }
+
+    _stopPolling() {
+        if (this.pollInterval) {
+            clearInterval(this.pollInterval);
+            this.pollInterval = null;
+        }
     }
 
     /* ─────────────────────────────────────────
@@ -93,6 +118,16 @@ class WhatsAppManager {
             if (statusDot) statusDot.classList.add('online');
             if (phoneEl) phoneEl.textContent = cfg.phone_number_id || '-';
             if (phonePill) phonePill.style.display = 'flex';
+            
+            if (document.getElementById('waPhoneNumberId') && !document.getElementById('waPhoneNumberId').value) {
+                document.getElementById('waPhoneNumberId').value = cfg.phone_number_id || '';
+            }
+            if (document.getElementById('waWabaId') && !document.getElementById('waWabaId').value) {
+                document.getElementById('waWabaId').value = cfg.waba_id || '';
+            }
+            if (document.getElementById('waAccessToken') && cfg.access_token_masked) {
+                document.getElementById('waAccessToken').placeholder = cfg.access_token_masked;
+            }
         } else {
             statusBadge.textContent = 'Not Connected';
             statusBadge.style.color = '#fcd34d';
@@ -503,10 +538,12 @@ class WhatsAppManager {
         if (sendMediaBtn) sendMediaBtn.addEventListener('click', () => this._sendDirectMediaMessage());
     }
 
-    async loadInbox() {
+    async loadInbox(silent = false) {
         const listEl = document.getElementById('waConversationList');
         if (!listEl) return;
-        listEl.innerHTML = '<div class="text-center py-6 text-gray-400"><i class="fas fa-spinner fa-spin"></i></div>';
+        if (!silent) {
+            listEl.innerHTML = '<div class="text-center py-6 text-gray-400"><i class="fas fa-spinner fa-spin"></i></div>';
+        }
 
         try {
             const res = await this._api('GET', '/api/whatsapp/conversations?status=all&per_page=50');
@@ -514,7 +551,7 @@ class WhatsAppManager {
             this.conversations = data.conversations || [];
             this._renderConversationList(this.conversations);
         } catch (e) {
-            listEl.innerHTML = `<div class="p-4 text-red-400">${e.message}</div>`;
+            if (!silent) listEl.innerHTML = `<div class="p-4 text-red-400">${e.message}</div>`;
         }
     }
 
@@ -604,6 +641,28 @@ class WhatsAppManager {
         }
     }
 
+    async _silentlyRefreshActiveConversation() {
+        if (!this.activeConvId) return;
+        try {
+            const res = await this._api('GET', `/api/whatsapp/conversations/${this.activeConvId}/messages?per_page=100`);
+            const data = await res.json();
+            if (data.messages) {
+                this._renderMessages(data.messages);
+            }
+            
+            // Refresh conversation list quietly as well to get unread badges for other threads
+            const listRes = await this._api('GET', '/api/whatsapp/conversations?status=all&per_page=50');
+            const listData = await listRes.json();
+            if (listData.conversations) {
+                this.conversations = listData.conversations;
+                this._renderConversationList(this.conversations);
+            }
+            this._updateConvItemUnread(this.activeConvId, 0);
+        } catch (e) {
+            console.warn('Silent refresh failed', e);
+        }
+    }
+
     _updateConvItemUnread(convId, count) {
         const item = document.querySelector(`[data-conv-id="${convId}"]`);
         if (!item) return;
@@ -654,6 +713,10 @@ class WhatsAppManager {
     _renderMessages(msgs) {
         const container = document.getElementById('waChatMessages');
         if (!container) return;
+        
+        // Save scroll pos
+        const isScrolledToBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 50;
+        
         container.innerHTML = '';
 
         if (!msgs.length) {
@@ -694,8 +757,10 @@ class WhatsAppManager {
             container.appendChild(bubble);
         });
 
-        // Scroll to bottom
-        container.scrollTop = container.scrollHeight;
+        // Scroll to bottom if we were already there
+        if (isScrolledToBottom) {
+            container.scrollTop = container.scrollHeight;
+        }
     }
 
     _statusIcon(status) {
@@ -895,22 +960,42 @@ class WhatsAppManager {
         }
     }
 
-    /* ─────────────────────────────────────────
-       SEND TEMPLATE FROM LEADS / EXTERNAL
-    ───────────────────────────────────────── */
-    async sendTemplateToPhone(phone, templateName, parameters) {
-        try {
-            const res = await this._api('POST', '/api/whatsapp/send-template', {
-                phone, template_name: templateName, parameters
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Send failed');
-            this._toast(`Template sent to ${phone} ✅`, 'success');
-            return data;
-        } catch (e) {
-            this._toast(e.message, 'error');
-            throw e;
-        }
+    async _ensureTemplatesLoaded(force = false) {
+        if (!force && this.templates && this.templates.length) return;
+        const qs = force ? `?_=${Date.now()}` : '';
+        const res = await this._api('GET', `/api/whatsapp/templates${qs}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to load templates');
+        this.templates = data.templates || [];
+    }
+
+    _timeAgo(dateStr) {
+        if (!dateStr) return '';
+        // Ensure UTC interpretation if missing 'Z'
+        const utcStr = dateStr.endsWith('Z') ? dateStr : dateStr + 'Z';
+        const diff = Math.floor((Date.now() - new Date(utcStr)) / 1000);
+        if (diff < 60) return 'just now';
+        if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+        if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+        return new Date(utcStr).toLocaleDateString();
+    }
+
+    _toast(msg, type = 'info') {
+        const colors = { success: '#22c55e', error: '#ef4444', info: '#3b82f6', warning: '#f59e0b' };
+        const toast = document.createElement('div');
+        toast.style.cssText = `
+            position:fixed; bottom:24px; right:24px; z-index:9999; padding:12px 20px;
+            background:${colors[type] || colors.info}; color:#fff; border-radius:8px;
+            font-size:14px; font-weight:500; box-shadow:0 4px 16px rgba(0,0,0,0.3);
+            transform:translateY(10px); opacity:0; transition:all .3s;
+        `;
+        toast.textContent = msg;
+        document.body.appendChild(toast);
+        requestAnimationFrame(() => { toast.style.transform = 'translateY(0)'; toast.style.opacity = '1'; });
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 300);
+        }, 4000);
     }
 
     /* ─────────────────────────────────────────
@@ -935,41 +1020,6 @@ class WhatsAppManager {
             .replace(/'/g, '&#39;');
     }
 
-    async _ensureTemplatesLoaded(force = false) {
-        if (!force && this.templates && this.templates.length) return;
-        const qs = force ? `?_=${Date.now()}` : '';
-        const res = await this._api('GET', `/api/whatsapp/templates${qs}`);
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed to load templates');
-        this.templates = data.templates || [];
-    }
-
-    _timeAgo(dateStr) {
-        if (!dateStr) return '';
-        const diff = Math.floor((Date.now() - new Date(dateStr)) / 1000);
-        if (diff < 60) return 'just now';
-        if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-        if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-        return new Date(dateStr).toLocaleDateString();
-    }
-
-    _toast(msg, type = 'info') {
-        const colors = { success: '#22c55e', error: '#ef4444', info: '#3b82f6', warning: '#f59e0b' };
-        const toast = document.createElement('div');
-        toast.style.cssText = `
-            position:fixed; bottom:24px; right:24px; z-index:9999; padding:12px 20px;
-            background:${colors[type] || colors.info}; color:#fff; border-radius:8px;
-            font-size:14px; font-weight:500; box-shadow:0 4px 16px rgba(0,0,0,0.3);
-            transform:translateY(10px); opacity:0; transition:all .3s;
-        `;
-        toast.textContent = msg;
-        document.body.appendChild(toast);
-        requestAnimationFrame(() => { toast.style.transform = 'translateY(0)'; toast.style.opacity = '1'; });
-        setTimeout(() => {
-            toast.style.opacity = '0';
-            setTimeout(() => toast.remove(), 300);
-        }, 4000);
-    }
 }
 
 // Global singleton
