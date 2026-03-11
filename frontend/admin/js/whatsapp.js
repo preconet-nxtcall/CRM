@@ -614,20 +614,36 @@ class WhatsAppManager {
     _updateChatWindowUI(windowData) {
         const withinWindow = windowData.within_window;
         const windowBanner = document.getElementById('waChatWindowBanner');
+        const windowChip = document.getElementById('waChatWindowChip');
         const textInput = document.getElementById('waChatMsgInput');
         const sendBtn = document.getElementById('waChatSendBtn');
         const tplBtn = document.getElementById('waChatSendTemplateBtn');
 
         if (!withinWindow) {
+            if (windowChip) {
+                windowChip.classList.remove('wa-window-chip--open');
+                windowChip.classList.add('wa-window-chip--closed');
+                windowChip.innerHTML = '<span style="width:6px;height:6px;border-radius:50%;background:#9ca3af;display:inline-block"></span><span class="text-xs">Window Closed</span>';
+            }
             if (windowBanner) {
                 windowBanner.innerHTML = `<i class="fas fa-clock mr-2"></i>
-                    24-hour window expired. You must send a <strong>Template Message</strong> to re-open this conversation.`;
+                    <span>24-hour window expired. Send a template to re-open this conversation.</span>
+                    <button id="waBannerSendTemplateBtn" type="button" class="ml-auto text-xs font-semibold underline hover:no-underline">Send Template</button>`;
                 windowBanner.classList.remove('hidden');
+                const bannerBtn = document.getElementById('waBannerSendTemplateBtn');
+                if (bannerBtn) {
+                    bannerBtn.onclick = () => this._openSendTemplatePanel();
+                }
             }
             if (textInput) { textInput.disabled = true; textInput.placeholder = 'Send a template to re-open the conversation…'; }
             if (sendBtn) sendBtn.disabled = true;
             if (tplBtn) tplBtn.classList.add('wa-btn-pulse');
         } else {
+            if (windowChip) {
+                windowChip.classList.remove('wa-window-chip--closed');
+                windowChip.classList.add('wa-window-chip--open');
+                windowChip.innerHTML = '<span style="width:6px;height:6px;border-radius:50%;background:#4ade80;display:inline-block"></span><span class="text-xs">Window Open</span>';
+            }
             if (windowBanner) windowBanner.classList.add('hidden');
             if (textInput) { textInput.disabled = false; textInput.placeholder = 'Type a message…'; }
             if (sendBtn) sendBtn.disabled = false;
@@ -921,7 +937,8 @@ class WhatsAppManager {
 
     async _ensureTemplatesLoaded(force = false) {
         if (!force && this.templates && this.templates.length) return;
-        const res = await this._api('GET', '/api/whatsapp/templates');
+        const qs = force ? `?_=${Date.now()}` : '';
+        const res = await this._api('GET', `/api/whatsapp/templates${qs}`);
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Failed to load templates');
         this.templates = data.templates || [];
@@ -957,3 +974,10 @@ class WhatsAppManager {
 
 // Global singleton
 window.whatsappManager = new WhatsAppManager();
+
+// Fallback initialization in case section is opened before main nav init wiring.
+document.addEventListener('DOMContentLoaded', () => {
+    if (window.whatsappManager && !window.whatsappManager._eventsBound) {
+        window.whatsappManager.init();
+    }
+});
