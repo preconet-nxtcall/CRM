@@ -165,7 +165,7 @@ class WhatsAppManager {
     ───────────────────────────────────────── */
     async loadLeadAssignConfig() {
         try {
-            await this._ensureTemplatesLoaded();
+            await this._ensureTemplatesLoaded(true);
         } catch (e) {
             this._toast(e.message || 'Failed to load templates', 'error');
             return;
@@ -175,7 +175,7 @@ class WhatsAppManager {
         panes.forEach(p => {
             const select = document.getElementById(`waAuto${p}Tpl`);
             if (select) {
-                const approved = this.templates.filter(t => t.status === 'APPROVED');
+                const approved = this.templates.filter(t => String(t.status || '').trim().toUpperCase() === 'APPROVED');
                 select.innerHTML = '<option value="">-- No Message --</option>' +
                     approved.map(t => `<option value="${t.name}" data-vars="${t.variable_count}" data-header-type="${t.header_type}">${this._esc(t.name)}</option>`).join('');
                 select.onchange = () => this._onAutoTemplateChange(p.toLowerCase(), select);
@@ -760,7 +760,7 @@ class WhatsAppManager {
     ───────────────────────────────────────── */
     async _openSendTemplatePanel() {
         try {
-            await this._ensureTemplatesLoaded();
+            await this._ensureTemplatesLoaded(true);
         } catch (e) {
             this._toast(e.message || 'Failed to load templates', 'error');
             return;
@@ -773,11 +773,14 @@ class WhatsAppManager {
         // Populate template dropdown
         const select = document.getElementById('waSendTplSelect');
         if (select) {
-            const approved = this.templates.filter(t => t.status === 'APPROVED');
+            const approved = this.templates.filter(t => String(t.status || '').trim().toUpperCase() === 'APPROVED');
             select.innerHTML = `<option value="">— Select Template —</option>` +
                 approved.map(t => `<option value="${t.id}" data-name="${this._esc(t.name)}" data-vars="${t.variable_count}" data-body="${this._esc(t.body_text || '')}" data-lang="${t.language}" data-header-type="${t.header_type}">${this._esc(t.name)} (${t.variable_count} var)</option>`).join('');
 
             select.onchange = () => this._onTemplateSelectChange(select);
+            if (!approved.length) {
+                this._toast('No APPROVED templates found. Go to Templates tab and Sync from Brandmo.', 'warning');
+            }
         }
 
         const sendBtn = document.getElementById('waSendTemplateConfirmBtn');
@@ -916,8 +919,8 @@ class WhatsAppManager {
             .replace(/'/g, '&#39;');
     }
 
-    async _ensureTemplatesLoaded() {
-        if (this.templates && this.templates.length) return;
+    async _ensureTemplatesLoaded(force = false) {
+        if (!force && this.templates && this.templates.length) return;
         const res = await this._api('GET', '/api/whatsapp/templates');
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Failed to load templates');
