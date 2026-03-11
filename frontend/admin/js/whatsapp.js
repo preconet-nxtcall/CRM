@@ -533,6 +533,9 @@ class WhatsAppManager {
         const sendTplBtn = document.getElementById('waChatSendTemplateBtn');
         if (sendTplBtn) sendTplBtn.addEventListener('click', () => this._openSendTemplatePanel());
 
+        const closeTplBtn = document.getElementById('waSendTemplateCloseBtn');
+        if (closeTplBtn) closeTplBtn.addEventListener('click', () => this._closeSendTemplatePanel());
+
         // New: Bind Direct Media Panel Send Button
         const sendMediaBtn = document.getElementById('waDirectMediaSendBtn');
         if (sendMediaBtn) sendMediaBtn.addEventListener('click', () => this._sendDirectMediaMessage());
@@ -870,6 +873,12 @@ class WhatsAppManager {
         }
     }
 
+    _closeSendTemplatePanel() {
+        const panel = document.getElementById('waSendTemplatePanel');
+        if (!panel) return;
+        panel.classList.add('hidden');
+    }
+
     _onTemplateSelectChange(select) {
         const opt = select.options[select.selectedIndex];
         const varCount = parseInt(opt.dataset.vars || '0');
@@ -951,7 +960,7 @@ class WhatsAppManager {
             this._toast('Template sent! ✅', 'success');
 
             // Close panel, refresh window check + messages
-            document.getElementById('waSendTemplatePanel')?.classList.add('hidden');
+            this._closeSendTemplatePanel();
             await this.openConversation(this.activeConvId);
         } catch (e) {
             this._toast(e.message, 'error');
